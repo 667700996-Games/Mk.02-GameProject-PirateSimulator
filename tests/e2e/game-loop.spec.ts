@@ -17,7 +17,6 @@ test('creates a captain and reaches the live sea scene', async ({ page }, testIn
 
   await page.getByRole('button', { name: '⚓ 출항 준비', exact: true }).click();
   await expect(page.getByRole('heading', { name: '검은 해도' })).toBeVisible();
-  await page.locator('.zone-node').filter({ hasText: '초보자의 만' }).click();
   await page.getByRole('button', { name: '이 해역으로 출항' }).click();
 
   await expect(page.locator('.phaser-host canvas')).toBeVisible({ timeout: 15_000 });
