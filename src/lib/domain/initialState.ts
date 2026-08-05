@@ -1,5 +1,6 @@
 import { SETTLEMENTS, SHIP_CLASSES } from './catalog';
 import { createId } from './rng';
+import { createInitialSettlement } from '$lib/settlement/initialState';
 import {
   SAVE_VERSION,
   type CaptainProfile,
@@ -241,6 +242,7 @@ export function createNewGame(options: NewGameOptions, now = Date.now()): GameSt
       raidThreat: 0,
       nextUpkeepAt: now + 86_400_000
     },
+    settlement: createInitialSettlement(seed, now),
     factions: createFactions(now),
     bounty: 0,
     heat: 0,

@@ -1,4 +1,5 @@
 import { SAVE_VERSION, type GameState } from '$lib/domain/types';
+import { createInitialSettlement } from '$lib/settlement/initialState';
 
 export class SaveMigrationError extends Error {
   constructor(message: string) {
@@ -51,12 +52,19 @@ export function migrateGameState(input: unknown): GameState {
       } : migrated.defense
     };
   }
+  if ((migrated.version ?? 0) === 2) {
+    migrated = {
+      ...migrated,
+      version: 3,
+      settlement: migrated.settlement ?? createInitialSettlement(migrated.world?.seed ?? 1, migrated.lastSavedAt ?? Date.now())
+    };
+  }
   validateRequiredFields(migrated);
   return migrated as GameState;
 }
 
 function validateRequiredFields(value: LegacySave): asserts value is GameState {
-  if (!value.saveId || !value.captain || !value.haven || !value.world || !value.ships?.length) {
+  if (!value.saveId || !value.captain || !value.haven || !value.settlement || !value.world || !value.ships?.length) {
     throw new SaveMigrationError('저장 파일에 필수 게임 상태가 없습니다.');
   }
   if (!value.activeShipId || !value.resources || !value.factions) {

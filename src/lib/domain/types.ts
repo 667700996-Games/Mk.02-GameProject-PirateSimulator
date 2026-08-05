@@ -1,4 +1,6 @@
-export const SAVE_VERSION = 2;
+import type { SettlementSimulationState } from '$lib/settlement/types';
+
+export const SAVE_VERSION = 3;
 
 export type GameScreen =
   | 'title'
@@ -505,6 +507,7 @@ export interface GameState {
   activeShipId: string;
   fleet: FleetState;
   haven: HavenState;
+  settlement: SettlementSimulationState;
   factions: Record<FactionId, FactionRelation>;
   bounty: number;
   heat: number;

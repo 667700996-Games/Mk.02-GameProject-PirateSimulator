@@ -71,7 +71,7 @@ export interface SettlementBuilding {
 
 export type PopulationTier = 'castaway' | 'laborer' | 'skilled' | 'pirate' | 'elite' | 'officer';
 export type JobId =
-  | 'unassigned' | 'logger' | 'miner' | 'fisher' | 'farmer' | 'hunter' | 'hauler' | 'builder' | 'smelter' | 'blacksmith' | 'powder-maker' | 'tailor'
+  | 'unassigned' | 'laborer' | 'logger' | 'miner' | 'fisher' | 'farmer' | 'hunter' | 'hauler' | 'builder' | 'smelter' | 'blacksmith' | 'powder-maker' | 'tailor'
   | 'cook' | 'distiller' | 'medic' | 'shipwright' | 'gunner' | 'navigator' | 'raider' | 'informant' | 'guard' | 'officer' | 'captain';
 export type ResidentAction = 'IDLE' | 'SLEEPING' | 'WORKING' | 'HAULING' | 'EATING' | 'DRINKING' | 'HEALING' | 'RESTING' | 'TRAINING' | 'BOARDING' | 'FIREFIGHTING' | 'DEFENDING' | 'MOVING';
 

@@ -26,9 +26,10 @@ describe('save migrations', () => {
     delete defense.preparation;
     delete defense.attackerRemaining;
     const migrated = migrateGameState(legacy);
-    expect(migrated.version).toBe(2);
+    expect(migrated.version).toBe(3);
     expect(migrated.fleet.formation).toBe('line-ahead');
     expect(migrated.defense.preparation).toBe(0);
     expect(migrated.officers.every((officer) => officer.isCaptain === false)).toBe(true);
+    expect(migrated.settlement.residents).toHaveLength(16);
   });
 });
