@@ -10,7 +10,7 @@
   let { game } = $props<{ game: GameState }>();
   let tab = $state<'prepare' | 'active' | 'composition'>('prepare');
   let selectedShipIds = $state<string[]>([]);
-  let selectedZone = $state<ZoneId>('beginners-bay');
+  let selectedZone = $state<ZoneId>(game.voyage.zoneId);
   let purpose = $state<ExpeditionPurpose>('explore');
   let crewCount = $state(8);
   let expeditionName = $state('검은 수평선 원정대');
@@ -73,7 +73,7 @@
     <div class="expedition-layout">
       <article class="panel fleet-picker"><div class="panel-title"><div><span class="eyebrow">SELECT VESSELS</span><h2>원정 함선</h2></div><span class="tag">{selectedShips.length}척</span></div>
         <div class="ship-cards">{#each ships as ship}<button class:selected={selectedShipIds.includes(ship.id)} class:busy={busyShips.has(ship.id)} onclick={() => !busyShips.has(ship.id) && toggleShip(ship.id)} disabled={busyShips.has(ship.id)}><span class="ship-mark">{ship.isFlagship ? '♛' : '◢'}</span><span><strong>{ship.name}</strong><small>{SHIP_CLASSES[ship.class].name} · 선체 {Math.round(ship.hull / ship.stats.hullMax * 100)}% · 선원 정원 {ship.stats.crewMax}</small></span><b>{selectedShipIds.includes(ship.id) ? '선택됨' : busyShips.has(ship.id) ? '원정 중' : '대기'}</b></button>{/each}</div>
-        <div class="field-row"><label>작전명<input bind:value={expeditionName}/></label><label>목적 해역<select bind:value={selectedZone}>{#each Object.values(ZONES) as zone}<option value={zone.id} disabled={!game.world.zones[zone.id].discovered}>{zone.name} · 위험 {zone.difficulty}</option>{/each}</select></label></div>
+        <div class="field-row"><label>작전명<input bind:value={expeditionName}/></label><label>목적 해역<select bind:value={selectedZone}>{#each Object.values(ZONES) as zone}<option value={zone.id} disabled={!game.world.zones[zone.id].discovered && purpose !== 'explore'}>{game.world.zones[zone.id].discovered ? zone.name : '미탐사 해역'} · 위험 {zone.difficulty}</option>{/each}</select></label></div>
         <div class="purpose-grid">{#each purposes as item}<button class:selected={purpose === item.id} onclick={() => (purpose = item.id)}><strong>{item.name}</strong><small>{item.description}</small></button>{/each}</div>
       </article>
 

@@ -30,14 +30,33 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
     world: { ...state.world, day, hour }
   }, now), now);
 
+  const newlyCompleted = settlement.expeditions.filter((expedition) => expedition.state === 'COMPLETED' && state.settlement.expeditions.find((previous) => previous.id === expedition.id)?.state !== 'COMPLETED');
+  if (newlyCompleted.length > 0) {
+    const zones = { ...next.world.zones };
+    for (const expedition of newlyCompleted) zones[expedition.zoneId] = { ...zones[expedition.zoneId], discovered: true, intel: Math.min(100, zones[expedition.zoneId].intel + 24) };
+    next = { ...next, world: { ...next.world, zones, recentEvents: [`${newlyCompleted[0].name}이 새로운 항로와 섬을 해도에 기록했다.`, ...next.world.recentEvents].slice(0, 6) } };
+  }
+
   if (day > previousDay) {
     next = { ...next, world: { ...next.world, marketCycle: next.world.marketCycle + (day - previousDay) } };
   }
 
   const threatGain = realSeconds * (next.bounty / 10000 + next.haven.detectionRisk / 5000);
   const raidThreat = clamp(next.haven.raidThreat + threatGain, 0, 100);
-  next = { ...next, haven: { ...next.haven, raidThreat, defense: calculateHavenDefense(next.haven) } };
-  if (raidThreat >= 100 && !next.defense.active && next.screen === 'haven') {
+  let invasion = { ...next.settlement.threat };
+  if (raidThreat >= 65 && !invasion.active) {
+    const watchtower = next.settlement.buildings.some((building) => building.definitionId === 'watchtower' && building.state === 'ACTIVE' && building.workers.length > 0);
+    invasion = {
+      active: true,
+      source: next.bounty > 1600 ? 'imperial-navy' : 'red-tide',
+      discovered: watchtower,
+      strength: Math.round(48 + next.haven.tier * 32 + next.bounty / 85),
+      etaHours: watchtower ? 18 : 7,
+      fleetDescription: next.bounty > 1600 ? '프리깃과 해병 수송선' : '무장 브리그와 화공선'
+    };
+  } else if (invasion.active) invasion.etaHours = Math.max(0, invasion.etaHours - elapsedGameHours);
+  next = { ...next, settlement: { ...next.settlement, threat: invasion }, haven: { ...next.haven, raidThreat, defense: Math.max(next.haven.defense, calculateHavenDefense(next.haven)) } };
+  if ((raidThreat >= 100 || (invasion.active && invasion.etaHours <= 0)) && !next.defense.active && next.screen === 'haven') {
     next = {
       ...next,
       screen: 'defense',
@@ -45,10 +64,10 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
         active: true,
         attacker: next.bounty > 1600 ? 'imperial-navy' : 'red-tide',
         stage: 'warning',
-        attackStrength: Math.round(48 + next.haven.tier * 32 + next.bounty / 85),
+        attackStrength: invasion.strength || Math.round(48 + next.haven.tier * 32 + next.bounty / 85),
         defenseStrength: calculateHavenDefense(next.haven),
         timeToAttack: 90,
-        attackerRemaining: Math.round(48 + next.haven.tier * 32 + next.bounty / 85),
+        attackerRemaining: invasion.strength || Math.round(48 + next.haven.tier * 32 + next.bounty / 85),
         preparation: 0,
         civilianRisk: 55,
         selectedActions: [],

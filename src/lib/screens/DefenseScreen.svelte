@@ -2,6 +2,7 @@
   import { FACTIONS } from '$lib/domain/catalog';
   import {
     beginDefensePreparation,
+    batteryAmmunition,
     claimDefenseResult,
     launchDefense,
     prepareDefense,
@@ -15,21 +16,26 @@
   } from '$lib/domain/defense';
   import { fleetDefensePower } from '$lib/domain/fleet';
   import { gameSession } from '$lib/stores/gameStore';
-  import type { FactionId, GameState, ResourceId } from '$lib/domain/types';
+  import { aggregateInventory } from '$lib/settlement/construction';
+  import { SETTLEMENT_RESOURCES } from '$lib/settlement/catalog';
+  import type { PartialSettlementInventory, SettlementResourceId } from '$lib/settlement/types';
+  import type { FactionId, GameState } from '$lib/domain/types';
 
   let { game } = $props<{ game: GameState }>();
   let attacker = $derived(FACTIONS[game.defense.attacker as FactionId]);
   let fleetPower = $derived(fleetDefensePower(game));
   let remaining = $derived(game.defense.attackerRemaining ?? game.defense.attackStrength);
+  let inventory = $derived(aggregateInventory(game.settlement));
+  let batteryAmmo = $derived(batteryAmmunition(game.settlement));
 
   const stageLabels = [
     ['preparation', '준비'], ['naval', '해상 방어'], ['landing', '상륙 저지'], ['interior', '본거지 내부'], ['resolved', '결과']
   ] as const;
-  const prepActions: { id: PreparationAction; name: string; detail: string; cost: Partial<Record<ResourceId, number>> }[] = [
-    { id: 'muster', name: '민병 소집', detail: '방어 +16 · 민간 위험 -4', cost: { food: 10, rum: 4 } },
-    { id: 'powder', name: '화약 배치', detail: '방어 +24 · 본거지 피해 위험', cost: { powder: 12, cannonballs: 18 } },
-    { id: 'barricades', name: '목책 강화', detail: '방어 +20 · 민간 위험 -8', cost: { timber: 18, iron: 5 } },
-    { id: 'evacuate', name: '주민 대피', detail: '방어 +6 · 민간 위험 -30', cost: { food: 8 } }
+  const prepActions: { id: PreparationAction; name: string; detail: string; cost: PartialSettlementInventory }[] = [
+    { id: 'muster', name: '민병 소집', detail: '방어 +16 · 민간 위험 -4', cost: { hardtack: 10, rum: 4 } },
+    { id: 'powder', name: '포대 장전 확인', detail: '방어 +24 · 현장 탄약 18 이상 필요', cost: {} },
+    { id: 'barricades', name: '목책 강화', detail: '방어 +20 · 민간 위험 -8', cost: { planks: 18, 'iron-ingots': 5 } },
+    { id: 'evacuate', name: '주민 대피', detail: '방어 +6 · 민간 위험 -30', cost: { hardtack: 8 } }
   ];
   const navalActions: { id: NavalAction; name: string; detail: string }[] = [
     { id: 'crossfire', name: '포대 교차 사격', detail: '균형 전술 · 함선과 본거지 위험 보통' },
@@ -51,13 +57,14 @@
     gameSession.updateGame(transform, save);
   }
 
-  function canAfford(cost: Partial<Record<ResourceId, number>>): boolean {
-    return (Object.entries(cost) as [ResourceId, number][]).every(([id, amount]) => game.resources[id] >= amount);
+  function canAfford(action: (typeof prepActions)[number]): boolean {
+    if (action.id === 'powder') return batteryAmmo >= 18;
+    return (Object.entries(action.cost) as [SettlementResourceId, number][]).every(([id, amount]) => (inventory[id] ?? 0) >= amount);
   }
 
-  function costLabel(cost: Partial<Record<ResourceId, number>>): string {
-    const names: Partial<Record<ResourceId, string>> = { food: '식량', rum: '럼주', powder: '화약', cannonballs: '포탄', timber: '목재', iron: '철' };
-    return (Object.entries(cost) as [ResourceId, number][]).map(([id, amount]) => `${names[id] ?? id} ${amount}`).join(' · ');
+  function costLabel(action: (typeof prepActions)[number]): string {
+    if (action.id === 'powder') return `포대 현장 탄약 ${Math.floor(batteryAmmo)} / 18`;
+    return (Object.entries(action.cost) as [SettlementResourceId, number][]).map(([id, amount]) => `${SETTLEMENT_RESOURCES[id].name} ${amount}`).join(' · ');
   }
 </script>
 
@@ -89,7 +96,7 @@
       <div class="action-grid defense-actions">
         {#each prepActions as action}
           {@const selected = game.defense.selectedActions?.includes(action.id)}
-          <button class="btn tactical" class:selected onclick={() => update((state) => prepareDefense(state, action.id), true)} disabled={selected || !canAfford(action.cost)}><strong>{selected ? '✓ ' : ''}{action.name}</strong><small>{action.detail}</small><em>{costLabel(action.cost)}</em></button>
+          <button class="btn tactical" class:selected onclick={() => update((state) => prepareDefense(state, action.id), true)} disabled={selected || !canAfford(action)}><strong>{selected ? '✓ ' : ''}{action.name}</strong><small>{action.detail}</small><em>{costLabel(action)}</em></button>
         {/each}
       </div>
       <button class="btn primary wide" onclick={() => update(launchDefense, true)}>해안 포대 발사 · 방어전 개시</button>

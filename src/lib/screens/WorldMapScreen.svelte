@@ -1,7 +1,5 @@
 <script lang="ts">
   import { ZONES } from '$lib/domain/catalog';
-  import { beginRaidPlanning } from '$lib/domain/raid';
-  import { departForZone } from '$lib/domain/voyage';
   import { gameSession } from '$lib/stores/gameStore';
   import type { GameState, SettlementState, ZoneId } from '$lib/domain/types';
 
@@ -18,19 +16,15 @@
     selectedZone = settlement.zoneId;
   }
 
-  function depart(): void {
-    gameSession.updateGame((state) => departForZone(state, selectedZone), true);
+  function planExpedition(): void {
+    gameSession.updateGame((state) => ({ ...state, screen: 'fleet', previousScreen: 'world-map', voyage: { ...state.voyage, zoneId: selectedZone, destinationId: selectedSettlement?.id } }));
   }
 
-  function raid(): void {
-    if (!selectedSettlement) return;
-    gameSession.updateGame((state) => ({ ...state, screen: 'raid', previousScreen: 'world-map', raid: beginRaidPlanning(selectedSettlement!, state.ships.find((ship) => ship.id === state.activeShipId)?.crew ?? 8) }));
-  }
 </script>
 
 <section class="map-screen">
   <div class="map-canvas">
-    <div class="map-title"><span class="eyebrow">THE SHATTERED ARCHIPELAGO</span><h1>검은 해도</h1><p class="muted">발견한 소문과 항로만 기록됩니다.</p></div>
+    <div class="map-title"><span class="eyebrow">THE SHATTERED ARCHIPELAGO</span><h1>검은 해도</h1><p class="muted">정착지의 함대가 발견한 항로와 왕실 순찰 정보가 기록됩니다.</p></div>
     {#each Object.values(ZONES) as item}
       {@const discovered = game.world.zones[item.id].discovered}
       <button class:locked={!discovered} class:selected={selectedZone === item.id} class="zone-node" style={`left:${positions[item.id].x}%;top:${positions[item.id].y}%;--zone-color:${item.color};--zone-accent:${item.accent}`} onclick={() => discovered && ((selectedZone = item.id), (selectedSettlement = null))}>
@@ -40,6 +34,11 @@
     {#each game.world.settlements.filter((item: SettlementState) => item.discovered) as settlement}
       <button class="settlement-dot" style={`left:${settlement.position.x}%;top:${settlement.position.y}%`} onclick={() => selectSettlement(settlement)} aria-label={settlement.name}></button>
       <span class="settlement-label" style={`left:${settlement.position.x}%;top:${settlement.position.y}%`}>{settlement.name}</span>
+    {/each}
+    {#each game.settlement.expeditions.filter((expedition) => !['COMPLETED','LOST'].includes(expedition.state)) as expedition}
+      {@const destination = positions[expedition.zoneId]}
+      {@const progress = expedition.state === 'RETURNING' ? 1 - expedition.routeProgress : expedition.routeProgress}
+      <span class="expedition-marker" style={`left:${18 + (destination.x - 18) * progress}%;top:${73 + (destination.y - 73) * progress}%`} title={expedition.name}>◢</span>
     {/each}
   </div>
 
@@ -56,7 +55,7 @@
         <div class="map-row"><span>경계 수준</span><b>{selectedSettlement.alert}%</b></div>
       </div>
       {#if ['coastal-village', 'fishing-village', 'trade-city', 'military-port'].includes(selectedSettlement.type)}
-        <button class="btn danger-button wide" onclick={raid}>상륙 작전 계획</button>
+        <button class="btn danger-button wide" onclick={planExpedition}>이 거점 약탈 원정 편성</button>
       {:else if selectedSettlement.type === 'freeport'}
         <button class="btn primary wide" onclick={() => gameSession.setScreen('freeport')}>자유항 입항</button>
       {:else if selectedSettlement.type === 'player-haven'}
@@ -76,7 +75,11 @@
         <div class="map-row"><span>정보 수준</span><b>{game.world.zones[selectedZone].intel}%</b></div>
       </div>
       <p class="faint" style="font-size:.72rem">희귀 자원: {zone.rareResources.join(' · ')}</p>
-      <button class="btn primary wide" onclick={depart}>이 해역으로 출항</button>
+      <button class="btn primary wide" onclick={planExpedition}>이 해역 원정 편성</button>
     {/if}
   </aside>
 </section>
+
+<style>
+  .expedition-marker{position:absolute;z-index:8;transform:translate(-50%,-50%);display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#172c2c;border:1px solid #e2bd6d;color:#f0ce82;box-shadow:0 0 20px #df9e4d88;animation:map-fleet-pulse 1.6s infinite alternate}@keyframes map-fleet-pulse{to{transform:translate(-50%,-50%) scale(1.14);box-shadow:0 0 32px #df9e4daa}}
+</style>

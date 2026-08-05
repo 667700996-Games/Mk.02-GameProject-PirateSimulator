@@ -1,6 +1,8 @@
 import { BUILDINGS, POPULATION_TIERS, RECIPES } from './catalog';
 import { advanceTransports, scheduleLogistics } from './logistics';
 import type { JobId, Resident, SettlementBuilding, SettlementResourceId, SettlementSimulationState } from './types';
+import { aggregateInventory } from './construction';
+import { createId } from '$lib/domain/rng';
 
 function amount(inventory: Partial<Record<SettlementResourceId, number>>, id: SettlementResourceId): number {
   return inventory[id] ?? 0;
@@ -14,12 +16,18 @@ function requiredWorkers(recipeId?: string): number {
 function autoAssign(state: SettlementSimulationState): void {
   const assigned = new Set(state.buildings.flatMap((building) => building.workers));
   const available = state.residents.filter((resident) => !assigned.has(resident.id) && !['builder', 'hauler'].includes(resident.job));
-  for (const building of state.buildings) {
+  const priority = (job?: JobId) => state.workforce.find((rule) => rule.job === job)?.priority ?? 3;
+  const buildings = [...state.buildings].sort((a, b) => priority(BUILDINGS[b.definitionId]?.workerJob) - priority(BUILDINGS[a.definitionId]?.workerJob));
+  for (const building of buildings) {
     const definition = BUILDINGS[building.definitionId];
     if (!definition?.workerJob || building.state !== 'ACTIVE') continue;
+    const rule = state.workforce.find((item) => item.job === definition.workerJob);
+    if (rule && !rule.autoAssign) continue;
     building.workers = building.workers.filter((id) => state.residents.some((resident) => resident.id === id));
-    while (building.workers.length < definition.workerSlots) {
-      let resident = available.find((person) => person.job === definition.workerJob);
+    const target = Math.min(definition.workerSlots, rule?.maximum ?? definition.workerSlots);
+    while (building.workers.length < target) {
+      let resident = rule?.preferSkilled ? available.find((person) => person.job === definition.workerJob && ['skilled', 'pirate', 'elite', 'officer'].includes(person.tier)) : undefined;
+      resident ??= available.find((person) => person.job === definition.workerJob);
       resident ??= available.find((person) => person.job === 'unassigned');
       if (!resident) break;
       available.splice(available.indexOf(resident), 1);
@@ -168,6 +176,60 @@ function consumeAtHome(state: SettlementSimulationState): void {
   }
 }
 
+function populationTierPromotion(state: SettlementSimulationState): void {
+  const trainingActive = state.buildings.some((building) => building.definitionId === 'training-yard' && building.state === 'ACTIVE' && building.workers.length > 0);
+  for (const resident of state.residents) {
+    const averageNeeds = Object.values(resident.needs).reduce((sum, value) => sum + value, 0) / Object.values(resident.needs).length;
+    if (resident.tier === 'castaway' && resident.homeId && resident.experience >= 8 && resident.needs.food > 55 && resident.needs.water > 55) {
+      resident.tier = 'laborer';
+      resident.morale = Math.min(100, resident.morale + 8);
+    } else if (resident.tier === 'laborer' && resident.experience >= 28 && averageNeeds > 62) {
+      resident.tier = 'skilled';
+      resident.morale = Math.min(100, resident.morale + 6);
+    } else if (resident.tier === 'skilled' && trainingActive && resident.experience >= 60 && averageNeeds > 68) {
+      resident.tier = 'pirate';
+      resident.morale = Math.min(100, resident.morale + 7);
+    } else if (resident.tier === 'pirate' && resident.experience >= 130 && resident.loyalty > 72 && averageNeeds > 74) resident.tier = 'elite';
+  }
+}
+
+function settlementHousingCapacity(state: SettlementSimulationState): number {
+  return state.buildings.filter((building) => building.state === 'ACTIVE').reduce((sum, building) => sum + Object.values(BUILDINGS[building.definitionId]?.housing ?? {}).reduce((subtotal, value) => subtotal + (value ?? 0), 0), 0);
+}
+
+function assignAvailableHome(state: SettlementSimulationState, resident: Resident): void {
+  const homes = state.buildings.filter((building) => building.state === 'ACTIVE' && BUILDINGS[building.definitionId]?.housing);
+  for (const home of homes) {
+    const capacity = Object.values(BUILDINGS[home.definitionId]?.housing ?? {}).reduce((sum, value) => sum + (value ?? 0), 0);
+    if (state.residents.filter((person) => person.homeId === home.id).length >= capacity) continue;
+    resident.homeId = home.id;
+    resident.position = { x: home.x, y: home.y };
+    return;
+  }
+}
+
+function advancePopulationDay(state: SettlementSimulationState): void {
+  populationTierPromotion(state);
+  const capacity = settlementHousingCapacity(state);
+  const inventory = aggregateInventory(state);
+  const food = (inventory.hardtack ?? 0) + (inventory['fish-stew'] ?? 0) + (inventory['meat-dish'] ?? 0);
+  const morale = state.residents.reduce((sum, resident) => sum + resident.morale, 0) / Math.max(1, state.residents.length);
+  if (state.residents.length >= capacity || food < state.residents.length * 0.8 || (inventory.water ?? 0) < state.residents.length * 0.7 || morale < 58) return;
+  const arrivals = Math.min(capacity - state.residents.length, Math.max(1, Math.floor(state.residents.length * 0.04)));
+  const firstNames = ['아샤', '핀', '로완', '마티', '이네스', '카엘', '세라', '오린'];
+  const lastNames = ['솔트', '베인', '코브', '리드', '해로', '벨'];
+  for (let index = 0; index < arrivals; index += 1) {
+    const person: Resident = {
+      id: createId('resident'), name: `${firstNames[(state.residents.length + index) % firstNames.length]} ${lastNames[(Math.floor(state.simulationMinutes / 1440) + index) % lastNames.length]}`,
+      tier: 'castaway', job: 'unassigned', health: 72, morale: 58, loyalty: 46, fatigue: 28, experience: 0,
+      needs: { water: 60, food: 58, housing: 45, clothing: 30, health: 62, leisure: 38, pirateCulture: 20, equipment: 18 },
+      equipment: {}, position: { x: 10, y: 14 }, path: [], pathProgress: 0, action: 'IDLE', actionUntil: state.simulationMinutes
+    };
+    state.residents.push(person);
+    assignAvailableHome(state, person);
+  }
+}
+
 function updateWarnings(state: SettlementSimulationState): void {
   const activeCodes = new Set<string>();
   const add = (code: string, severity: 'info' | 'caution' | 'danger' | 'emergency', title: string, detail: string, buildingId?: string) => {
@@ -183,6 +245,7 @@ function updateWarnings(state: SettlementSimulationState): void {
   if (blocked.length > 0) add('blocked-production', 'caution', '생산·건설 병목', `${blocked.length}개 시설이 자재 또는 인력을 기다립니다.`, blocked[0].id);
   const waiting = state.transports.filter((job) => job.state === 'WAITING').length;
   if (waiting > 3) add('hauler-shortage', 'caution', '운반 인력 부족', `${waiting}건의 화물이 운반자를 기다립니다.`);
+  if (state.threat.active && state.threat.discovered) add('invasion-warning', state.threat.etaHours < 5 ? 'emergency' : 'danger', '적 함대 접근', `${state.threat.fleetDescription} · 도착까지 ${state.threat.etaHours.toFixed(1)}시간`);
   state.warnings = state.warnings.filter((warning) => activeCodes.has(warning.code) || state.simulationMinutes - warning.createdAt < 90).slice(-20);
 }
 
@@ -190,6 +253,7 @@ export function advanceSettlement(input: SettlementSimulationState, realSeconds:
   if (input.speed === 0 || realSeconds <= 0) return input;
   const gameMinutes = realSeconds * input.speed;
   const previousHour = Math.floor(input.simulationMinutes / 60);
+  const previousDay = Math.floor(input.simulationMinutes / 1440);
   let state = structuredClone(input);
   state.simulationMinutes += gameMinutes;
   state.lastTickAt = Date.now();
@@ -199,6 +263,7 @@ export function advanceSettlement(input: SettlementSimulationState, realSeconds:
   state = scheduleLogistics(state);
   state = advanceTransports(state, gameMinutes);
   if (Math.floor(state.simulationMinutes / 60) > previousHour) consumeAtHome(state);
+  if (Math.floor(state.simulationMinutes / 1440) > previousDay) advancePopulationDay(state);
   updateWarnings(state);
   return state;
 }

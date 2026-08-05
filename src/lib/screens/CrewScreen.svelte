@@ -1,6 +1,6 @@
 <script lang="ts">
   import { JOB_NAMES, POPULATION_TIERS } from '$lib/settlement/catalog';
-  import { aggregateInventory } from '$lib/settlement/construction';
+  import { aggregateInventory, spendSettlementResources } from '$lib/settlement/construction';
   import { setResidentJob } from '$lib/settlement/simulation';
   import { gameSession } from '$lib/stores/gameStore';
   import type { JobId, PopulationTier, Resident, SettlementBuilding, WorkforceRule } from '$lib/settlement/types';
@@ -39,14 +39,11 @@
 
   function pay(): void {
     if ((inventory.gold ?? 0) < wages) return;
-    gameSession.updateGame((state) => ({
-      ...state,
-      settlement: {
-        ...state.settlement,
-        looseInventory: { ...state.settlement.looseInventory, gold: Math.max(0, (state.settlement.looseInventory.gold ?? 0) - wages) },
-        residents: state.settlement.residents.map((resident) => ({ ...resident, morale: Math.min(100, resident.morale + 4), loyalty: Math.min(100, resident.loyalty + 6) }))
-      }
-    }), true);
+    gameSession.updateGame((state) => {
+      const paid = spendSettlementResources(state.settlement, { gold: wages });
+      if (!paid) return state;
+      return { ...state, settlement: { ...paid, residents: paid.residents.map((resident) => ({ ...resident, morale: Math.min(100, resident.morale + 4), loyalty: Math.min(100, resident.loyalty + 6) })) } };
+    }, true);
   }
 </script>
 

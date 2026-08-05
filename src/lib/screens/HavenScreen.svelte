@@ -164,6 +164,7 @@
     <div class="city-metric"><span>♨</span><b>{Math.round(summary.morale)}%</b><small>사기</small></div>
     <div class="city-metric"><span>⇄</span><b class:danger={waitingTransports > 3}>{activeTransports}</b><small>운송 중 / 대기 {waitingTransports}</small></div>
     <div class="city-metric"><span>✹</span><b>{summary.defense}</b><small>해안 방어</small></div>
+    <div class="city-metric"><span>⚑</span><b class:danger={game.settlement.threat.active}>{game.settlement.threat.active ? `${game.settlement.threat.etaHours.toFixed(1)}h` : '안전'}</b><small>해군 위협</small></div>
     <div class="speed-control" aria-label="게임 속도">
       <button class:active={game.settlement.speed === 0} onclick={() => setSpeed(0)} title="일시정지">Ⅱ</button>
       {#each [1, 2, 3] as speed}<button class:active={game.settlement.speed === speed} onclick={() => setSpeed(speed as 1 | 2 | 3)}>{speed}×</button>{/each}

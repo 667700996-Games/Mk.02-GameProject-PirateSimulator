@@ -25,6 +25,29 @@ export function hasSettlementResources(state: SettlementSimulationState, cost: P
   return (Object.entries(cost) as [SettlementResourceId, number][]).every(([id, amount]) => (total[id] ?? 0) >= amount);
 }
 
+export function spendSettlementResources(state: SettlementSimulationState, cost: PartialSettlementInventory): SettlementSimulationState | undefined {
+  if (!hasSettlementResources(state, cost)) return undefined;
+  const next = structuredClone(state);
+  for (const [resource, required] of Object.entries(cost) as [SettlementResourceId, number][]) {
+    let remaining = required;
+    const loose = next.looseInventory[resource] ?? 0;
+    const looseSpent = Math.min(loose, remaining);
+    next.looseInventory[resource] = loose - looseSpent;
+    remaining -= looseSpent;
+    const stores = next.buildings.filter((building) => building.state === 'ACTIVE' || building.definitionId === 'wreckage');
+    for (const building of stores) {
+      if (remaining <= 0) break;
+      const stored = building.outputInventory[resource] ?? 0;
+      const reserved = building.reservedInventory[resource] ?? 0;
+      const available = Math.max(0, stored - reserved);
+      const spent = Math.min(available, remaining);
+      building.outputInventory[resource] = stored - spent;
+      remaining -= spent;
+    }
+  }
+  return next;
+}
+
 export function placeBuilding(
   state: SettlementSimulationState,
   definitionId: SettlementBuildingId,
