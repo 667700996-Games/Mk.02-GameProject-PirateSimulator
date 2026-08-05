@@ -21,13 +21,13 @@
 <section class="haven-screen" style={`--haven-tier:${game.haven.tier};--growth-opacity:${.34 + game.haven.tier * .085};--ship-opacity:${.42 + game.haven.tier * .07}`}>
   <div class="haven-backdrop"></div>
   <div class="haven-evolution" aria-hidden="true">
-    <div class="harbor-docks">{#each Array.from({ length: Math.min(5, 1 + Math.floor(game.haven.tier / 2)) }) as _, index}<i style={`--left:${10 + index * 18}%;--angle:${-4 + index * 2}deg`}></i>{/each}</div>
-    <div class="harbor-buildings">{#each Array.from({ length: game.haven.tier * 2 }) as _, index}<i class:large={index % 4 === 0} style={`--x:${index * 9.1 + 2}%;--bottom:${(index % 3) * 4}px;--height:${24 + (index % 4) * 7}px`}></i>{/each}</div>
-    <div class="harbor-ships">{#each Array.from({ length: Math.min(7, game.ships.length + game.haven.tier - 1) }) as _, index}<i style={`--left:${7 + index * 13}%;--bottom:${(index % 3) * 13}px`}><b></b></i>{/each}</div>
+    <div class="harbor-docks">{#each Array.from({ length: Math.min(5, 1 + Math.floor(game.haven.tier / 2)) }, (_, index) => index) as index}<i style={`--left:${10 + index * 18}%;--angle:${-4 + index * 2}deg`}></i>{/each}</div>
+    <div class="harbor-buildings">{#each Array.from({ length: game.haven.tier * 2 }, (_, index) => index) as index}<i class:large={index % 4 === 0} style={`--x:${index * 9.1 + 2}%;--bottom:${(index % 3) * 4}px;--height:${24 + (index % 4) * 7}px`}></i>{/each}</div>
+    <div class="harbor-ships">{#each Array.from({ length: Math.min(7, game.ships.length + game.haven.tier - 1) }, (_, index) => index) as index}<i style={`--left:${7 + index * 13}%;--bottom:${(index % 3) * 13}px`}><b></b></i>{/each}</div>
     {#if game.haven.tier >= 4}<div class="watch-tower left"><i></i></div><div class="watch-tower right"><i></i></div>{/if}
     {#if game.haven.tier >= 5}<div class="fort-wall"><i></i><i></i><i></i></div>{/if}
     {#if game.haven.tier >= 7}<div class="pirate-citadel"><i></i><b style={`--flag:${game.captain.flagColor}`}>{game.captain.flagMark}</b></div>{/if}
-    <div class="haven-lights">{#each Array.from({ length: game.haven.tier * 5 }) as _, index}<i style={`--x:${(index * 17.3) % 96}%;--y:${(index * 23) % 85}%;--flicker:${1.1 + (index % 4) * .3}s`}></i>{/each}</div>
+    <div class="haven-lights">{#each Array.from({ length: game.haven.tier * 5 }, (_, index) => index) as index}<i style={`--x:${(index * 17.3) % 96}%;--y:${(index * 23) % 85}%;--flicker:${1.1 + (index % 4) * .3}s`}></i>{/each}</div>
   </div>
   <div class="haven-tier-banner">
     <span class="eyebrow">HAVEN TIER {game.haven.tier} · {tier.name}</span>
