@@ -9,6 +9,7 @@
   import RaidScreen from '$lib/screens/RaidScreen.svelte';
   import FreeportScreen from '$lib/screens/FreeportScreen.svelte';
   import ShipyardScreen from '$lib/screens/ShipyardScreen.svelte';
+  import FleetScreen from '$lib/screens/FleetScreen.svelte';
   import CrewScreen from '$lib/screens/CrewScreen.svelte';
   import MissionsScreen from '$lib/screens/MissionsScreen.svelte';
   import FactionsScreen from '$lib/screens/FactionsScreen.svelte';
@@ -34,6 +35,7 @@
     {:else if game.screen === 'raid'}<RaidScreen {game} />
     {:else if game.screen === 'freeport' || game.screen === 'trade'}<FreeportScreen {game} />
     {:else if game.screen === 'shipyard'}<ShipyardScreen {game} />
+    {:else if game.screen === 'fleet'}<FleetScreen {game} />
     {:else if game.screen === 'crew'}<CrewScreen {game} />
     {:else if game.screen === 'missions'}<MissionsScreen {game} />
     {:else if game.screen === 'factions'}<FactionsScreen {game} />

@@ -55,9 +55,7 @@
         ...next,
         screen: 'world-map',
         boarding: { ...next.boarding, active: false },
-        tutorialStep: Math.max(next.tutorialStep, 4),
-        missions: next.missions.map((mission) => mission.id === 'story-first-prize' ? { ...mission, progress: 1, status: 'complete' as const } : mission),
-        resources: { ...next.resources, gold: next.resources.gold + 240, timber: next.resources.timber + 20, food: next.resources.food + 25 }
+        tutorialStep: Math.max(next.tutorialStep, 4)
       };
     }, true);
   }

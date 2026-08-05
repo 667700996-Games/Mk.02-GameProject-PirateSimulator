@@ -34,7 +34,7 @@ const TYPES_BY_DANGER: MissionType[][] = [
 ];
 
 export function generateMissionBoard(state: GameState, count = 4, now = Date.now()): Mission[] {
-  const existing = state.missions.filter((mission) => mission.story || mission.status === 'active' || (mission.status === 'complete' && !mission.claimed));
+  const existing = state.missions.filter((mission) => mission.story || mission.status === 'available' || mission.status === 'active' || (mission.status === 'complete' && !mission.claimed));
   const random = mulberry32(state.world.seed + state.world.day * 7919 + state.world.marketCycle * 31);
   const discoveredZones = (Object.values(state.world.zones).filter((zone) => zone.discovered).map((zone) => zone.id) as ZoneId[]);
   const generated: Mission[] = [];

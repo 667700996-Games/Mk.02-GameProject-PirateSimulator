@@ -2,6 +2,7 @@ import { calculateHavenDefense, calculateHavenTier, completeConstructions, facil
 import { clamp } from './physics';
 import { createId } from './rng';
 import { updateFleetAssignments } from './fleet';
+import { expireAndRefreshMissions } from './missions';
 import type { GameState } from './types';
 
 export function advanceSimulation(state: GameState, realSeconds: number, now = Date.now()): GameState {
@@ -11,12 +12,12 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
   const absoluteHours = (state.world.day - 1) * 24 + state.world.hour + elapsedGameHours;
   const day = Math.floor(absoluteHours / 24) + 1;
   const hour = absoluteHours % 24;
-  let next: GameState = updateFleetAssignments({
+  let next: GameState = expireAndRefreshMissions(updateFleetAssignments({
     ...state,
     playTimeSeconds: state.playTimeSeconds + realSeconds,
     haven: completeConstructions(state.haven, now),
     world: { ...state.world, day, hour }
-  }, now);
+  }, now), now);
 
   if (day > previousDay) {
     for (let elapsedDay = previousDay; elapsedDay < day; elapsedDay += 1) next = advanceDay(next);
@@ -35,7 +36,12 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
         stage: 'warning',
         attackStrength: Math.round(48 + next.haven.tier * 32 + next.bounty / 85),
         defenseStrength: calculateHavenDefense(next.haven),
-        timeToAttack: 90
+        timeToAttack: 90,
+        attackerRemaining: Math.round(48 + next.haven.tier * 32 + next.bounty / 85),
+        preparation: 0,
+        civilianRisk: 55,
+        selectedActions: [],
+        log: []
       },
       toasts: [...next.toasts, { id: createId('toast'), kind: 'danger', title: '본거지 공격 경보', detail: '감시탑이 수평선 위의 적 함대를 발견했습니다.', createdAt: now }]
     };

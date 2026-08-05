@@ -2,6 +2,7 @@
   import { RESOURCE_META } from '$lib/domain/catalog';
   import { addCargo, cargoSpace, cargoWeight, marketPrice } from '$lib/domain/economy';
   import { gameSession } from '$lib/stores/gameStore';
+  import { progressMissions } from '$lib/domain/missions';
   import type { GameState, ResourceId, SettlementState, Ship } from '$lib/domain/types';
 
   let { game } = $props<{ game: GameState }>();
@@ -28,7 +29,9 @@
       if (amount <= 0) return state;
       const price = marketPrice(port, resource, 'sell', state.world.marketCycle, port.attitude, state.captain.trait);
       const cargo = { ...active.cargo, [resource]: 0 };
-      return { ...state, resources: { ...state.resources, gold: state.resources.gold + price * amount }, ships: state.ships.map((item) => item.id === active.id ? { ...active, cargo, cargoWeight: cargoWeight(cargo) } : item) };
+      let next = { ...state, resources: { ...state.resources, gold: state.resources.gold + price * amount }, ships: state.ships.map((item) => item.id === active.id ? { ...active, cargo, cargoWeight: cargoWeight(cargo) } : item) };
+      if (resource === 'contraband') next = progressMissions(next, { kind: 'contraband-delivered', zoneId: 'freeport-waters', targetId: port.id, amount });
+      return next;
     }, true);
   }
 

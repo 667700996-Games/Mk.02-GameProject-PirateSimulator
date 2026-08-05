@@ -2,6 +2,7 @@ import { DIFFICULTIES, SHIP_CLASSES, ZONES } from './catalog';
 import { cargoWeight } from './economy';
 import { applyNotoriety, NOTORIETY_EVENTS } from './factions';
 import { clamp } from './physics';
+import { progressMissions } from './missions';
 import { createId, mulberry32, pickOne, randomBetween, randomInt } from './rng';
 import type { EncounterState, GameState, ResourceId, Ship, ShipClass, ZoneId } from './types';
 
@@ -106,6 +107,11 @@ export function finishEncounter(state: GameState, outcome: 'victory' | 'defeat' 
   if (outcome === 'victory' || outcome === 'captured') {
     const event = state.voyage.currentEncounter?.type === 'navy' ? NOTORIETY_EVENTS.navySink : NOTORIETY_EVENTS.merchantRaid;
     next = applyNotoriety(next, event);
+    const opponent = state.voyage.currentEncounter?.type;
+    if (opponent === 'merchant' || opponent === 'navy' || opponent === 'pirate') {
+      next = progressMissions(next, { kind: 'ship-defeated', zoneId: state.voyage.zoneId, opponent });
+      if (outcome === 'captured') next = progressMissions(next, { kind: 'ship-captured', zoneId: state.voyage.zoneId, opponent });
+    }
   }
   return next;
 }

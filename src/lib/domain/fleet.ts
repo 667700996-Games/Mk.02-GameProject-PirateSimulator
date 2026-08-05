@@ -10,7 +10,7 @@ const ROLES: OfficerRole[] = ['first-mate', 'sailing-master', 'master-gunner', '
 export function captainCandidate(seed: number): Officer {
   const random = mulberry32(seed);
   return {
-    id: createId('captain'),
+    id: `captain-candidate-${seed}`,
     name: CAPTAIN_NAMES[randomInt(random, 0, CAPTAIN_NAMES.length - 1)],
     role: ROLES[randomInt(random, 0, ROLES.length - 1)],
     rank: 1,

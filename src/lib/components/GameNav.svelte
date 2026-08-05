@@ -6,6 +6,7 @@
     { screen: 'world-map', icon: '✥', label: '해도' },
     { screen: 'freeport', icon: '⚓', label: '자유항' },
     { screen: 'shipyard', icon: '◢', label: '함선' },
+    { screen: 'fleet', icon: '♜', label: '함대' },
     { screen: 'crew', icon: '♞', label: '선원단' },
     { screen: 'missions', icon: '▤', label: '임무' },
     { screen: 'factions', icon: '♛', label: '세력' }
