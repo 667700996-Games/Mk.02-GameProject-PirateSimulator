@@ -8,7 +8,12 @@
   let { game } = $props<{ game: GameState }>();
   let port = $derived(game.world.settlements.find((item: SettlementState) => item.id === 'liberty-cove')!);
   let ship = $derived(game.ships.find((item: Ship) => item.id === game.activeShipId) ?? game.ships[0]);
+  let recruitCount = $derived(Math.min(5, ship.stats.crewMax - ship.crew));
+  let recruitCost = $derived(recruitCount * 32);
   const supplies: ResourceId[] = ['food', 'rum', 'medicine', 'timber', 'powder', 'cannonballs'];
+
+  function supplyPrice(resource: ResourceId): number { return marketPrice(port, resource, 'buy', game.world.marketCycle, port.attitude, game.captain.trait) * 5; }
+  function canBuy(resource: ResourceId): boolean { return game.resources.gold >= supplyPrice(resource) && cargoSpace(ship) >= RESOURCE_META[resource].weight * 5; }
 
   function buy(resource: ResourceId, amount: number): void {
     gameSession.updateGame((state) => {
@@ -72,10 +77,10 @@
     </article>
     <article class="panel span-5">
       <div class="panel-title"><div><span class="eyebrow">DOCK MARKET</span><h2>보급 상인</h2></div></div>
-      <div class="resource-list">{#each supplies as id}<div class="resource-row"><span><span class="icon">{RESOURCE_META[id].icon}</span> <strong>{RESOURCE_META[id].name}</strong></span><b>{marketPrice(port, id, 'buy', game.world.marketCycle, port.attitude, game.captain.trait) * 5}</b><button class="btn small" onclick={() => buy(id, 5)}>5개 구매</button></div>{/each}</div>
+      <div class="resource-list">{#each supplies as id}<div class="resource-row"><span><span class="icon">{RESOURCE_META[id].icon}</span> <strong>{RESOURCE_META[id].name}</strong></span><b>{supplyPrice(id)}</b><button class="btn small" onclick={() => buy(id, 5)} disabled={!canBuy(id)}>5개 구매</button></div>{/each}</div>
     </article>
-    <article class="panel span-4"><span class="eyebrow">THE DROWNED CROW</span><h2>익사한 까마귀 선술집</h2><p class="muted">신참, 탈영병, 망한 항해사가 다음 배를 기다립니다.</p><button class="btn wide" onclick={recruit} disabled={ship.crew >= ship.stats.crewMax}>선원 5명 모집 · 160 금화</button><button class="btn ghost wide" style="margin-top:.5rem" onclick={drink}>모두에게 한 잔 · 45 금화</button></article>
-    <article class="panel span-4"><span class="eyebrow">BONES & DICE</span><h2>검은 뼈 도박장</h2><p class="muted">승률은 공평하지 않지만, 보상은 실제입니다.</p><button class="btn wide" onclick={gamble}>주사위 승부 · 판돈 50</button></article>
+    <article class="panel span-4"><span class="eyebrow">THE DROWNED CROW</span><h2>익사한 까마귀 선술집</h2><p class="muted">신참, 탈영병, 망한 항해사가 다음 배를 기다립니다.</p><button class="btn wide" onclick={recruit} disabled={recruitCount <= 0 || game.resources.gold < recruitCost}>선원 {recruitCount}명 모집 · {recruitCost} 금화</button><button class="btn ghost wide" style="margin-top:.5rem" onclick={drink} disabled={game.resources.gold < 45}>모두에게 한 잔 · 45 금화</button></article>
+    <article class="panel span-4"><span class="eyebrow">BONES & DICE</span><h2>검은 뼈 도박장</h2><p class="muted">승률은 공평하지 않지만, 보상은 실제입니다.</p><button class="btn wide" onclick={gamble} disabled={game.resources.gold < 50}>주사위 승부 · 판돈 50</button></article>
     <article class="panel span-4"><span class="eyebrow">AUCTION HOUSE</span><h2>검은 돛 경매장</h2><p class="muted">희귀 함포 설계도가 오늘 밤 공개됩니다.</p><button class="btn wide" onclick={() => gameSession.updateGame((state) => state.resources.gold < 900 ? state : ({ ...state, resources: { ...state.resources, gold: state.resources.gold - 900, blueprints: state.resources.blueprints + 1 } }), true)} disabled={game.resources.gold < 900}>설계도 낙찰 · 900 금화</button></article>
   </div>
 </section>

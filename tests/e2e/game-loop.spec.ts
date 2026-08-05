@@ -129,3 +129,47 @@ test('scouts, plans, loots, and withdraws from a coastal raid', async ({ page })
   await expect(page.getByRole('heading', { name: '검은물결 은신처' })).toBeVisible();
   await expect(page.getByText('전리품이 함선 화물칸에 실렸습니다. 자유항이나 암시장에서 판매하십시오.')).toBeVisible();
 });
+
+test('captures a boarded ship, appoints a captain, and dispatches a fleet order', async ({ page }) => {
+  await createCaptain(page);
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.getByText('항해 기록을 안전하게 보관했습니다.')).toBeVisible();
+
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve, reject) => {
+      const open = indexedDB.open('blackwake-pirate-simulator', 1);
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const db = open.result;
+        const tx = db.transaction('saves', 'readwrite');
+        const store = tx.objectStore('saves');
+        const all = store.getAll();
+        all.onerror = () => reject(all.error);
+        all.onsuccess = () => {
+          const record = all.result[0] as { state: { screen: string; ships: Array<{ id: string; name: string; crew: number; morale: number; hull: number; cargo: Record<string, number>; isFlagship: boolean; [key: string]: unknown }>; boarding: Record<string, unknown>; voyage: Record<string, unknown> } };
+          const flagship = record.state.ships[0];
+          const enemy = { ...flagship, id: 'e2e-prize', name: '황금 어척', crew: 1, morale: 8, hull: 20, cargo: { timber: 8, spices: 3 }, isFlagship: false };
+          record.state.screen = 'boarding';
+          record.state.boarding = { active: true, enemyShip: enemy, committedCrew: 10, playerStrength: 100, enemyStrength: 1, round: 1, log: ['갈고리가 걸렸다.'] };
+          record.state.voyage = { ...record.state.voyage, active: true, zoneId: 'beginners-bay', currentEncounter: { id: 'e2e-encounter', type: 'merchant', title: '황금 어척', description: '나포 대상', threat: 1, distance: 40, resolved: false, enemyShip: enemy } };
+          const put = store.put(record);
+          put.onerror = () => reject(put.error);
+          put.onsuccess = () => resolve();
+        };
+      };
+    });
+  });
+
+  await page.reload();
+  await page.getByRole('button', { name: /항해 계속하기 · 검은수염 테스트/ }).click();
+  await expect(page.getByRole('heading', { name: '갈고리와 강철' })).toBeVisible();
+  await page.getByRole('button', { name: /항복 유도/ }).click();
+  await expect(page.getByRole('heading', { name: '적선이 무릎 꿇었다' })).toBeVisible();
+  await page.getByRole('button', { name: /함선 나포/ }).click();
+  await page.locator('.game-nav').getByRole('button', { name: '♜ 함대', exact: true }).click();
+  await expect(page.getByText('황금 어척 (나포선)')).toBeVisible();
+  await page.getByRole('button', { name: /부하 선장 고용/ }).click();
+  await page.getByLabel('황금 어척 (나포선) 선장').selectOption({ index: 1 });
+  await page.getByRole('button', { name: '명령 하달' }).click();
+  await expect(page.getByRole('button', { name: '작전 수행 중' })).toBeDisabled();
+});
