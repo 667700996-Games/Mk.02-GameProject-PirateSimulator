@@ -20,6 +20,25 @@
   },
   "dependencies": {
     "idb": "^8.0.3",
-    "phaser": "^4.2.1"
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.1",
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.70.2",
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^10.8.0",
+    "eslint-plugin-svelte": "^3.22.0",
+    "globals": "^17.9.0",
+    "jsdom": "^29.1.1",
+    "prettier": "^3.9.6",
+    "prettier-plugin-svelte": "^4.1.1",
+    "svelte": "^5.56.8",
+    "svelte-check": "^4.7.4",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.66.0",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
   }
 }
