@@ -58,7 +58,7 @@ export async function writeSave(state: GameState, name = state.saveName): Promis
     state: structuredClone(normalizedState)
   };
   if (!hasIndexedDb()) memorySaves.set(record.id, record);
-  else (await database()).put('saves', record);
+  else await (await database()).put('saves', record);
   return record;
 }
 
