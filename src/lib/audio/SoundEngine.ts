@@ -1,22 +1,27 @@
 import type { GameSettings } from '$lib/domain/types';
 
 export type GameSound = 'cannon' | 'impact' | 'critical' | 'boarding' | 'coin' | 'ui';
+export type MusicMood = 'title' | 'haven' | 'freeport' | 'sea' | 'battle' | 'storm' | 'aftermath';
 
 class SoundEngine {
   private context?: AudioContext;
   private master?: GainNode;
   private effects?: GainNode;
   private ambience?: GainNode;
+  private music?: GainNode;
   private ambientSource?: AudioBufferSourceNode;
+  private musicNodes: AudioScheduledSourceNode[] = [];
+  private mood: MusicMood = 'title';
   private settings?: GameSettings;
 
   configure(settings: GameSettings): void {
     this.settings = settings;
-    if (!this.context || !this.master || !this.effects || !this.ambience) return;
+    if (!this.context || !this.master || !this.effects || !this.ambience || !this.music) return;
     const now = this.context.currentTime;
     this.master.gain.setTargetAtTime(settings.masterVolume, now, 0.05);
     this.effects.gain.setTargetAtTime(settings.effectsVolume, now, 0.05);
     this.ambience.gain.setTargetAtTime(settings.ambienceVolume * 0.22, now, 0.15);
+    this.music.gain.setTargetAtTime(settings.musicVolume * 0.16, now, 0.2);
   }
 
   async unlock(settings: GameSettings): Promise<void> {
@@ -24,6 +29,13 @@ class SoundEngine {
     if (!this.context) this.createContext();
     if (this.context?.state === 'suspended') await this.context.resume();
     if (!this.ambientSource) this.startOceanAmbience();
+    if (!this.musicNodes.length) this.startMusic();
+  }
+
+  setMood(mood: MusicMood): void {
+    if (this.mood === mood) return;
+    this.mood = mood;
+    if (this.context?.state === 'running') this.startMusic();
   }
 
   play(sound: GameSound): void {
@@ -39,8 +51,10 @@ class SoundEngine {
     this.master = this.context.createGain();
     this.effects = this.context.createGain();
     this.ambience = this.context.createGain();
+    this.music = this.context.createGain();
     this.effects.connect(this.master);
     this.ambience.connect(this.master);
+    this.music.connect(this.master);
     this.master.connect(this.context.destination);
     this.configure(this.settings ?? ({ masterVolume: .8, effectsVolume: .8, ambienceVolume: .7 } as GameSettings));
   }
@@ -72,6 +86,41 @@ class SoundEngine {
     source.connect(filter).connect(gain).connect(this.ambience!);
     source.start();
     this.ambientSource = source;
+  }
+
+  private startMusic(): void {
+    if (!this.context || !this.music) return;
+    for (const node of this.musicNodes) { try { node.stop(); } catch { /* already stopped */ } }
+    this.musicNodes = [];
+    const context = this.context;
+    const palettes: Record<MusicMood, { root: number; ratios: number[]; pulse: number; color: OscillatorType }> = {
+      title: { root: 55, ratios: [1, 1.5, 2], pulse: .055, color: 'triangle' },
+      haven: { root: 65.41, ratios: [1, 1.25, 1.5], pulse: .04, color: 'triangle' },
+      freeport: { root: 73.42, ratios: [1, 1.2, 1.5], pulse: .09, color: 'sawtooth' },
+      sea: { root: 61.74, ratios: [1, 1.333, 2], pulse: .045, color: 'sine' },
+      battle: { root: 55, ratios: [1, 1.189, 1.498], pulse: .16, color: 'sawtooth' },
+      storm: { root: 46.25, ratios: [1, 1.414, 2], pulse: .12, color: 'sawtooth' },
+      aftermath: { root: 58.27, ratios: [1, 1.25, 1.498], pulse: .035, color: 'triangle' }
+    };
+    const palette = palettes[this.mood];
+    palette.ratios.forEach((ratio, index) => {
+      const oscillator = context.createOscillator();
+      const voiceGain = context.createGain();
+      const filter = context.createBiquadFilter();
+      const lfo = context.createOscillator();
+      const lfoGain = context.createGain();
+      oscillator.type = index === 0 ? 'sine' : palette.color;
+      oscillator.frequency.value = palette.root * ratio;
+      voiceGain.gain.value = index === 0 ? .13 : .035;
+      filter.type = 'lowpass';
+      filter.frequency.value = this.mood === 'battle' ? 520 : 340;
+      lfo.frequency.value = palette.pulse * (1 + index * .17);
+      lfoGain.gain.value = index === 0 ? .025 : .012;
+      lfo.connect(lfoGain).connect(voiceGain.gain);
+      oscillator.connect(filter).connect(voiceGain).connect(this.music!);
+      oscillator.start(); lfo.start();
+      this.musicNodes.push(oscillator, lfo);
+    });
   }
 
   private cannon(): void {

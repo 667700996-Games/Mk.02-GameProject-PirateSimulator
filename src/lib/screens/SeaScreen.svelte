@@ -109,6 +109,10 @@
         </div>
       </div>
       {#if snapshot.canBoard}<div class="boarding-prompt"><strong>승선 거리 확보</strong><p class="muted">속도를 맞추고 갈고리를 던지십시오.</p><button class="btn primary" onclick={() => scene()?.attemptBoard()}>F · 승선 작전</button></div>{/if}
+      <div class="mobile-helm" aria-label="터치 항해 조작">
+        <div><button aria-label="좌현 조타" onpointerdown={() => scene()?.setHelm(-1)} onpointerup={() => scene()?.setHelm(0)} onpointercancel={() => scene()?.setHelm(0)} onpointerleave={() => scene()?.setHelm(0)}>◀</button><button aria-label="우현 조타" onpointerdown={() => scene()?.setHelm(1)} onpointerup={() => scene()?.setHelm(0)} onpointercancel={() => scene()?.setHelm(0)} onpointerleave={() => scene()?.setHelm(0)}>▶</button></div>
+        <div><button aria-label="돛 펼치기" onpointerdown={() => scene()?.setSailControl(1)} onpointerup={() => scene()?.setSailControl(0)} onpointercancel={() => scene()?.setSailControl(0)} onpointerleave={() => scene()?.setSailControl(0)}>▲</button><button aria-label="돛 접기" onpointerdown={() => scene()?.setSailControl(-1)} onpointerup={() => scene()?.setSailControl(0)} onpointercancel={() => scene()?.setSailControl(0)} onpointerleave={() => scene()?.setSailControl(0)}>▼</button></div>
+      </div>
     </div>
   {/if}
 

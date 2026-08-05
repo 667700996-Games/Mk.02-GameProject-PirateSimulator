@@ -59,6 +59,8 @@ export class SeaScene extends Phaser.Scene {
   private weather: GameState['voyage']['weather'] = 'clear';
   private wakeTimer = 0;
   private message = 'W/S로 돛을 펼치고 A/D로 조타하십시오.';
+  private touchSteer = 0;
+  private touchSail = 0;
 
   constructor() {
     super('sea');
@@ -97,7 +99,7 @@ export class SeaScene extends Phaser.Scene {
   }
 
   update(time: number, deltaMs: number): void {
-    if (this.ended) return;
+    if (this.ended || this.bridge.getState().paused) return;
     const dt = Math.min(deltaMs / 1000, 0.05);
     this.updateWater(time);
     this.updatePlayer(dt);
@@ -129,6 +131,14 @@ export class SeaScene extends Phaser.Scene {
 
   public attemptBoard(): void {
     this.requestBoard();
+  }
+
+  public setHelm(value: -1 | 0 | 1): void {
+    this.touchSteer = value;
+  }
+
+  public setSailControl(value: -1 | 0 | 1): void {
+    this.touchSail = value;
   }
 
   private createTextures(): void {
@@ -170,7 +180,10 @@ export class SeaScene extends Phaser.Scene {
   }
 
   private createDepthLayers(): void {
-    for (let index = 0; index < 24; index += 1) {
+    const quality = this.bridge.getSettings().quality;
+    const rockCount = quality === 'low' ? 10 : quality === 'medium' ? 17 : 24;
+    const swellCount = quality === 'low' ? 12 : quality === 'medium' ? 22 : 34;
+    for (let index = 0; index < rockCount; index += 1) {
       const x = 120 + ((index * 547) % 2980);
       const y = 100 + ((index * 313) % 2000);
       const radius = 24 + (index % 5) * 18;
@@ -179,7 +192,7 @@ export class SeaScene extends Phaser.Scene {
       shadow.setRotation(index * 0.41);
       rock.setRotation(index * 0.41);
     }
-    for (let index = 0; index < 34; index += 1) {
+    for (let index = 0; index < swellCount; index += 1) {
       this.add.ellipse((index * 307) % 3200, (index * 173) % 2200, 90 + (index % 4) * 40, 5, 0x9ec7bf, 0.045).setRotation(index * 0.37).setDepth(-12);
     }
   }
@@ -202,14 +215,16 @@ export class SeaScene extends Phaser.Scene {
   }
 
   private createWeather(): void {
+    const settings = this.bridge.getSettings();
+    const weatherDensity = settings.quality === 'low' ? .45 : settings.quality === 'medium' ? .72 : 1;
     if (this.weather === 'fog' || this.weather === 'storm') {
-      for (let index = 0; index < 18; index += 1) {
+      for (let index = 0; index < Math.ceil(18 * weatherDensity); index += 1) {
         this.add.ellipse((index * 247) % 3200, (index * 379) % 2200, 520, 190, 0xb5c2ba, this.weather === 'fog' ? 0.08 : 0.035).setDepth(18).setScrollFactor(0.88);
       }
     }
     if (this.weather === 'storm') {
       const rain = this.add.particles(0, 0, 'wake-dot', {
-        x: { min: 0, max: 3200 }, y: -40, lifespan: 1500, speedY: { min: 540, max: 760 }, speedX: -160, scaleX: 0.12, scaleY: 1.8, alpha: { start: 0.38, end: 0 }, quantity: 4, frequency: 20
+        x: { min: 0, max: 3200 }, y: -40, lifespan: 1500, speedY: { min: 540, max: 760 }, speedX: -160, scaleX: 0.12, scaleY: 1.8, alpha: { start: 0.38, end: 0 }, quantity: settings.quality === 'low' ? 1 : settings.quality === 'medium' ? 2 : 4, frequency: settings.reducedMotion ? 70 : 20
       });
       rain.setDepth(30);
     }
@@ -233,8 +248,8 @@ export class SeaScene extends Phaser.Scene {
   }
 
   private updatePlayer(dt: number): void {
-    const steer = (this.keys.left.isDown ? -1 : 0) + (this.keys.right.isDown ? 1 : 0);
-    const sailDelta = (this.keys.up.isDown ? 1 : 0) + (this.keys.down.isDown ? -1 : 0);
+    const steer = clamp((this.keys.left.isDown ? -1 : 0) + (this.keys.right.isDown ? 1 : 0) + this.touchSteer, -1, 1);
+    const sailDelta = clamp((this.keys.up.isDown ? 1 : 0) + (this.keys.down.isDown ? -1 : 0) + this.touchSail, -1, 1);
     const before = this.playerMotion;
     this.playerMotion = tickSailing(before, this.player, { steer, sailDelta, deltaSeconds: dt }, { windDirection: this.windDirection, windSpeed: this.windSpeed, waveDrag: this.weather === 'storm' ? 0.35 : 0.08 }, this.bridge.getState().captain.trait);
     const dx = (this.playerMotion.x - before.x) * 24;
@@ -292,7 +307,7 @@ export class SeaScene extends Phaser.Scene {
       if (!this.enemy) return;
       this.enemy = applyShot(this.enemy, result);
       this.bridge.onEnemyChanged(this.enemy);
-      this.message = result.hit ? `${result.critical ? '치명타! ' : ''}선체 ${result.hullDamage}, 돛 ${result.sailDamage} 피해` : '포탄이 파도 위로 빗나갔다.';
+      this.message = result.hit ? (this.bridge.getSettings().showDamageNumbers ? `${result.critical ? '치명타! ' : ''}선체 ${result.hullDamage}, 돛 ${result.sailDamage} 피해` : `${result.critical ? '치명타! ' : ''}포탄이 적선을 강타했다.`) : '포탄이 파도 위로 빗나갔다.';
       if (result.hit) { this.impactEffect(this.enemyMotion.x, this.enemyMotion.y, result.critical); this.bridge.onSound(result.critical ? 'critical' : 'impact'); }
     });
     this.bridge.onPlayerChanged(this.player);
@@ -312,10 +327,10 @@ export class SeaScene extends Phaser.Scene {
       this.player = applyShot(this.player, result);
       this.bridge.onPlayerChanged(this.player);
       if (result.hit) {
-        this.message = `피격! 선체 ${result.hullDamage}, 선원 ${result.crewCasualties}명 손실`;
+        this.message = this.bridge.getSettings().showDamageNumbers ? `피격! 선체 ${result.hullDamage}, 선원 ${result.crewCasualties}명 손실` : '적 포탄이 선체를 강타했다!';
         this.impactEffect(this.playerMotion.x, this.playerMotion.y, result.critical);
         this.bridge.onSound(result.critical ? 'critical' : 'impact');
-        this.cameras.main.shake(140, result.critical ? 0.009 : 0.004);
+        if (this.bridge.getSettings().screenShake && !this.bridge.getSettings().reducedMotion) this.cameras.main.shake(140, result.critical ? 0.009 : 0.004);
       }
     });
   }
@@ -342,7 +357,8 @@ export class SeaScene extends Phaser.Scene {
   private createWake(dt: number): void {
     this.wakeTimer -= dt;
     if (this.wakeTimer > 0 || this.playerMotion.speed < 0.6) return;
-    this.wakeTimer = 0.08;
+    const settings = this.bridge.getSettings();
+    this.wakeTimer = settings.reducedMotion ? 0.28 : settings.quality === 'low' ? 0.18 : settings.quality === 'medium' ? 0.12 : 0.08;
     const x = this.playerMotion.x - Math.cos(this.playerMotion.heading) * 42;
     const y = this.playerMotion.y - Math.sin(this.playerMotion.heading) * 42;
     const wake = this.add.image(x, y, 'wake-dot').setRotation(this.playerMotion.heading).setAlpha(0.48).setDepth(1).setScale(0.6 + this.playerMotion.speed * 0.04);

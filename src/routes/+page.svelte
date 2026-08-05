@@ -15,12 +15,20 @@
     void gameSession.initialize();
     const timer = window.setInterval(() => gameSession.tickPlayTime(1), 1000);
     const unlock = () => void soundEngine.unlock($gameSession.settings);
+    const uiClick = (event: MouseEvent) => { if ((event.target as HTMLElement)?.closest('button,select')) soundEngine.play('ui'); };
     window.addEventListener('pointerdown', unlock, { once: true });
     window.addEventListener('keydown', unlock, { once: true });
-    return () => { window.clearInterval(timer); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
+    window.addEventListener('click', uiClick);
+    return () => { window.clearInterval(timer); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); window.removeEventListener('click', uiClick); };
   });
 
-  $effect(() => soundEngine.configure($gameSession.settings));
+  $effect(() => {
+    soundEngine.configure($gameSession.settings);
+    const game = $gameSession.game;
+    const mood = !game ? 'title' : game.screen === 'sailing' ? (game.voyage.weather === 'storm' ? 'storm' : game.voyage.currentEncounter?.enemyShip ? 'battle' : 'sea') : game.screen === 'freeport' || game.screen === 'trade' ? 'freeport' : game.screen === 'boarding' || game.screen === 'raid' || game.screen === 'defense' ? 'battle' : game.screen === 'haven' ? 'haven' : 'aftermath';
+    soundEngine.setMood(mood);
+    document.documentElement.dataset.reducedMotion = String($gameSession.settings.reducedMotion);
+  });
 
   function create(options: NewGameOptions): void {
     gameSession.startNewGame(options);

@@ -20,7 +20,9 @@ describe('haven defense', () => {
   });
 
   it('can stop a weak fleet at sea and claim salvage', () => {
-    let game = launchDefense(beginDefensePreparation(attackedGame()));
+    let game = attackedGame();
+    game = { ...game, defense: { ...game.defense, attackStrength: 15, attackerRemaining: 15 } };
+    game = launchDefense(beginDefensePreparation(game));
     game = resolveNavalStage(game, 'fleet-charge', () => .9);
     expect(game.defense.stage).toBe('resolved');
     expect(game.defense.outcome).toBe('victory');
