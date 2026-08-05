@@ -15,10 +15,10 @@
   } from '$lib/domain/defense';
   import { fleetDefensePower } from '$lib/domain/fleet';
   import { gameSession } from '$lib/stores/gameStore';
-  import type { GameState, ResourceId } from '$lib/domain/types';
+  import type { FactionId, GameState, ResourceId } from '$lib/domain/types';
 
   let { game } = $props<{ game: GameState }>();
-  let attacker = $derived(FACTIONS[game.defense.attacker]);
+  let attacker = $derived(FACTIONS[game.defense.attacker as FactionId]);
   let fleetPower = $derived(fleetDefensePower(game));
   let remaining = $derived(game.defense.attackerRemaining ?? game.defense.attackStrength);
 

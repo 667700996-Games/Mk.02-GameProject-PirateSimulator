@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialGameState } from './initialState';
+import { createNewGame } from './initialState';
 import { declareFactionWar, formAlliance, notorietyActionQuotes, performNotorietyAction, sendFactionGift } from './factions';
 
 describe('faction diplomacy and notoriety', () => {
   it('quotes and applies a bribe using real resources', () => {
-    const state = createInitialGameState({ captainName: 'Anne', crewName: 'Tide', shipName: 'Gull', flagMark: 'skull', flagColor: '#fff', trait: 'negotiator', difficulty: 'captain' });
+    const state = createNewGame({ captainName: 'Anne', crewName: 'Tide', shipName: 'Gull', flagMark: 'skull', flagColor: '#fff', trait: 'negotiator', difficulty: 'captain' });
     state.bounty = 500;
     state.heat = 70;
     state.resources.gold = 1000;
@@ -16,7 +16,7 @@ describe('faction diplomacy and notoriety', () => {
   });
 
   it('requires real diplomatic standing and a council for an alliance', () => {
-    const state = createInitialGameState({ captainName: 'Anne', crewName: 'Tide', shipName: 'Gull', flagMark: 'skull', flagColor: '#fff', trait: 'negotiator', difficulty: 'captain' });
+    const state = createNewGame({ captainName: 'Anne', crewName: 'Tide', shipName: 'Gull', flagMark: 'skull', flagColor: '#fff', trait: 'negotiator', difficulty: 'captain' });
     state.haven.facilities['pirate-council'] = { id: 'pirate-council', level: 1, condition: 100, workers: 2 };
     state.factions['free-pirates'] = { ...state.factions['free-pirates'], favor: 60, respect: 40, hostility: 10 };
     const allied = formAlliance(state, 'free-pirates');
@@ -27,7 +27,7 @@ describe('faction diplomacy and notoriety', () => {
   });
 
   it('spends gold to improve an eligible relation', () => {
-    const state = createInitialGameState({ captainName: 'Anne', crewName: 'Tide', shipName: 'Gull', flagMark: 'skull', flagColor: '#fff', trait: 'negotiator', difficulty: 'captain' });
+    const state = createNewGame({ captainName: 'Anne', crewName: 'Tide', shipName: 'Gull', flagMark: 'skull', flagColor: '#fff', trait: 'negotiator', difficulty: 'captain' });
     state.resources.gold = 500;
     const next = sendFactionGift(state, 'isle-kin');
     expect(next.resources.gold).toBe(260);

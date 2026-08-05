@@ -78,7 +78,7 @@ export function notorietyActionQuotes(state: GameState): NotorietyActionQuote[] 
     { action: 'bribe', name: '관리 매수', description: '제국 세관의 최근 신고서를 밀봉합니다.', cost: { gold: bribeCost }, bountyReduction: Math.max(80, Math.round(state.bounty * .24)), heatReduction: 18, available: state.bounty > 0 && state.resources.gold >= bribeCost },
     { action: 'forge-identity', name: '위조 신분', description: '새 선적과 통관 증서를 만듭니다.', cost: { gold: 260, contraband: 3, cloth: 4 }, bountyReduction: Math.max(140, Math.round(state.bounty * .34)), heatReduction: 28, requirement: '정보상 거점 1레벨', available: intelLevel >= 1 && state.bounty > 0 && hasResources(state.resources, { gold: 260, contraband: 3, cloth: 4 }) },
     { action: 'destroy-records', name: '수배 기록 소각', description: '잠입조가 해군 문서고의 현상수배 장부를 없앩니다.', cost: { gold: 440, powder: 5, medicine: 2 }, bountyReduction: Math.max(260, Math.round(state.bounty * .48)), heatReduction: 14, requirement: '정보상 거점 2레벨', available: intelLevel >= 2 && state.bounty > 0 && hasResources(state.resources, { gold: 440, powder: 5, medicine: 2 }) },
-    { action: 'lay-low', name: '비밀 부두에서 은신', description: '함선을 숨기고 일주일 동안 출항을 중단합니다.', cost: { food: 18, rum: 6 }, bountyReduction: 35 + hiddenDockLevel * 30, heatReduction: 30 + hiddenDockLevel * 8, requirement: '은신 부두 1레벨', available: hiddenDockLevel >= 1 && !state.voyage.atSea && hasResources(state.resources, { food: 18, rum: 6 }) }
+    { action: 'lay-low', name: '비밀 부두에서 은신', description: '함선을 숨기고 일주일 동안 출항을 중단합니다.', cost: { food: 18, rum: 6 }, bountyReduction: 35 + hiddenDockLevel * 30, heatReduction: 30 + hiddenDockLevel * 8, requirement: '은신 부두 1레벨', available: hiddenDockLevel >= 1 && !state.voyage.active && hasResources(state.resources, { food: 18, rum: 6 }) }
   ];
 }
 
