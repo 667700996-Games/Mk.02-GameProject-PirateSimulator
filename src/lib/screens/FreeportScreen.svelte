@@ -2,11 +2,11 @@
   import { RESOURCE_META } from '$lib/domain/catalog';
   import { addCargo, cargoSpace, marketPrice } from '$lib/domain/economy';
   import { gameSession } from '$lib/stores/gameStore';
-  import type { GameState, ResourceId } from '$lib/domain/types';
+  import type { GameState, ResourceId, SettlementState, Ship } from '$lib/domain/types';
 
   let { game } = $props<{ game: GameState }>();
-  let port = $derived(game.world.settlements.find((item) => item.id === 'liberty-cove')!);
-  let ship = $derived(game.ships.find((item) => item.id === game.activeShipId) ?? game.ships[0]);
+  let port = $derived(game.world.settlements.find((item: SettlementState) => item.id === 'liberty-cove')!);
+  let ship = $derived(game.ships.find((item: Ship) => item.id === game.activeShipId) ?? game.ships[0]);
   const supplies: ResourceId[] = ['food', 'rum', 'medicine', 'timber', 'powder', 'cannonballs'];
 
   function buy(resource: ResourceId, amount: number): void {

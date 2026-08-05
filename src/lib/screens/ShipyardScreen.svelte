@@ -1,10 +1,10 @@
 <script lang="ts">
   import { SHIP_CLASSES } from '$lib/domain/catalog';
   import { gameSession } from '$lib/stores/gameStore';
-  import type { GameState, ShipUpgrades } from '$lib/domain/types';
+  import type { GameState, Ship, ShipUpgrades } from '$lib/domain/types';
 
   let { game } = $props<{ game: GameState }>();
-  let ship = $derived(game.ships.find((item) => item.id === game.activeShipId) ?? game.ships[0]);
+  let ship = $derived(game.ships.find((item: Ship) => item.id === game.activeShipId) ?? game.ships[0]);
   const upgrades: { id: keyof ShipUpgrades; name: string; detail: string; gold: number; timber: number; iron: number }[] = [
     { id: 'hull', name: '강화 선체', detail: '최대 선체 +12%', gold: 380, timber: 24, iron: 8 },
     { id: 'sails', name: '라틴 돛', detail: '최고 속도 +6%', gold: 340, timber: 8, iron: 0 },

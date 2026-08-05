@@ -55,9 +55,11 @@
 
   function resolveResult(): void {
     if (!outcome || !defeatedEnemy) return;
+    const finalOutcome = outcome;
+    const enemy = defeatedEnemy;
     gameSession.updateGame((state) => {
-      const next = finishEncounter(state, outcome, defeatedEnemy!, outcome === 'victory' ? { timber: 8, iron: 3 } : {});
-      return { ...next, screen: outcome === 'victory' ? 'world-map' : 'haven', voyage: { ...next.voyage, active: false } };
+      const next = finishEncounter(state, finalOutcome, enemy, finalOutcome === 'victory' ? { timber: 8, iron: 3 } : {});
+      return { ...next, screen: finalOutcome === 'victory' ? 'world-map' : 'haven', voyage: { ...next.voyage, active: false } };
     }, true);
   }
 </script>

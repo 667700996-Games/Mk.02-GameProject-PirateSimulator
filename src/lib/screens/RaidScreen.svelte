@@ -4,10 +4,10 @@
   import { applyNotoriety, NOTORIETY_EVENTS } from '$lib/domain/factions';
   import { RESOURCE_META } from '$lib/domain/catalog';
   import { gameSession } from '$lib/stores/gameStore';
-  import type { GameState, ResourceId } from '$lib/domain/types';
+  import type { GameState, ResourceId, SettlementState } from '$lib/domain/types';
 
   let { game } = $props<{ game: GameState }>();
-  let settlement = $derived(game.world.settlements.find((item) => item.id === game.raid.settlementId));
+  let settlement = $derived(game.world.settlements.find((item: SettlementState) => item.id === game.raid.settlementId));
 
   function loot(targetId: string): void {
     if (!settlement) return;
@@ -22,7 +22,7 @@
     gameSession.updateGame((state) => {
       let active = state.ships.find((ship) => ship.id === state.activeShipId) ?? state.ships[0];
       for (const [id, amount] of Object.entries(state.raid.recoveredLoot) as [ResourceId, number][]) active = addCargo(active, id, amount).ship;
-      let next = { ...state, ships: state.ships.map((ship) => ship.id === active.id ? active : ship), raid: { ...state.raid, active: false, phase: 'complete' as const }, screen: 'haven' as const, voyage: { ...state.voyage, active: false }, tutorialStep: Math.max(state.tutorialStep, 5), world: { ...state.world, settlements: state.world.settlements.map((item) => item.id === settlement?.id ? { ...item, alert: Math.min(100, item.alert + 24), attitude: Math.max(-100, item.attitude - 20) } : item) } };
+      let next: GameState = { ...state, ships: state.ships.map((ship) => ship.id === active.id ? active : ship), raid: { ...state.raid, active: false, phase: 'complete' as const }, screen: 'haven' as const, voyage: { ...state.voyage, active: false }, tutorialStep: Math.max(state.tutorialStep, 5), world: { ...state.world, settlements: state.world.settlements.map((item) => item.id === settlement?.id ? { ...item, alert: Math.min(100, item.alert + 24), attitude: Math.max(-100, item.attitude - 20) } : item) } };
       next = applyNotoriety(next, NOTORIETY_EVENTS.villageRaid);
       return next;
     }, true);

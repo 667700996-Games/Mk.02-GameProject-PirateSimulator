@@ -2,14 +2,14 @@
   import { FACILITIES, RESOURCE_META } from '$lib/domain/catalog';
   import { checkFacilityBuild, buildFacility, HAVEN_TIERS } from '$lib/domain/haven';
   import { gameSession } from '$lib/stores/gameStore';
-  import type { FacilityId, GameScreen, GameState, ResourceId } from '$lib/domain/types';
+  import type { FacilityId, GameScreen, GameState, ResourceId, Ship } from '$lib/domain/types';
 
   let { game, navigate } = $props<{ game: GameState; navigate: (screen: GameScreen) => void }>();
   let selectedFacility = $state<FacilityId>('shipyard');
   let tier = $derived(HAVEN_TIERS[game.haven.tier - 1]);
   let selectedDefinition = $derived(FACILITIES[selectedFacility]);
   let buildCheck = $derived(checkFacilityBuild(game, selectedFacility));
-  let ship = $derived(game.ships.find((item) => item.id === game.activeShipId) ?? game.ships[0]);
+  let ship = $derived(game.ships.find((item: Ship) => item.id === game.activeShipId) ?? game.ships[0]);
 
   function construct(): void {
     if (!buildCheck.allowed) return;

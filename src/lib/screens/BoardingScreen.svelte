@@ -7,7 +7,7 @@
 
   let { game } = $props<{ game: GameState }>();
   let boarding = $derived(game.boarding);
-  let player = $derived(game.ships.find((ship) => ship.id === game.activeShipId) ?? game.ships[0]);
+  let player = $derived(game.ships.find((ship: Ship) => ship.id === game.activeShipId) ?? game.ships[0]);
   const actions: { id: BoardingAction; name: string; detail: string }[] = [
     { id: 'charge', name: '정면 돌격', detail: '높은 피해와 높은 사상 위험' },
     { id: 'flank', name: '측면 침투', detail: '안전하게 전열을 무너뜨림' },

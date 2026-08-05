@@ -1,9 +1,9 @@
 <script lang="ts">
-  import type { GameState } from '$lib/domain/types';
+  import type { GameState, Ship } from '$lib/domain/types';
   import { pursuitTier } from '$lib/domain/factions';
 
   let { game, saving, onSave, onSettings } = $props<{ game: GameState; saving: boolean; onSave: () => void; onSettings: () => void }>();
-  let ship = $derived(game.ships.find((item) => item.id === game.activeShipId) ?? game.ships[0]);
+  let ship = $derived(game.ships.find((item: Ship) => item.id === game.activeShipId) ?? game.ships[0]);
   let pursuit = $derived(pursuitTier(game.bounty));
 </script>
 

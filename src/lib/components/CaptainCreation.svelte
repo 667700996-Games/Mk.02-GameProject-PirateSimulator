@@ -41,11 +41,11 @@
         <div class="field"><label for="ship-name">시작 함선 이름</label><input id="ship-name" maxlength="24" bind:value={shipName} /></div>
         <div class="field"><label for="haven-name">은신처 이름</label><input id="haven-name" maxlength="28" bind:value={havenName} /></div>
         <div class="field">
-          <label>해적기 문양</label>
+          <span class="eyebrow">해적기 문양</span>
           <div class="flag-palette">{#each marks as mark}<button class:selected={flagMark === mark} class="flag-option" onclick={() => (flagMark = mark)} aria-label={`문양 ${mark}`}>{mark}</button>{/each}</div>
         </div>
         <div class="field">
-          <label>깃발 색상</label>
+          <span class="eyebrow">깃발 색상</span>
           <div class="flag-palette">{#each colors as color}<button class:selected={flagColor === color} class="color-option" style={`--flag-color:${color}`} onclick={() => (flagColor = color)} aria-label={`색상 ${color}`}></button>{/each}</div>
         </div>
         <div class="field">

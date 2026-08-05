@@ -6,7 +6,7 @@
   import type { GameState, SettlementState, ZoneId } from '$lib/domain/types';
 
   let { game } = $props<{ game: GameState }>();
-  let selectedZone = $state<ZoneId>(game.voyage.zoneId ?? 'beginners-bay');
+  let selectedZone = $state<ZoneId>('beginners-bay');
   let selectedSettlement = $state<SettlementState | null>(null);
   let zone = $derived(ZONES[selectedZone]);
   const positions: Record<ZoneId, { x: number; y: number }> = {
@@ -37,7 +37,7 @@
         <b>{discovered ? item.name : '미지의 해역'}</b><small>{discovered ? `위험도 ${item.difficulty}` : '정보 필요'}</small>
       </button>
     {/each}
-    {#each game.world.settlements.filter((item) => item.discovered) as settlement}
+    {#each game.world.settlements.filter((item: SettlementState) => item.discovered) as settlement}
       <button class="settlement-dot" style={`left:${settlement.position.x}%;top:${settlement.position.y}%`} onclick={() => selectSettlement(settlement)} aria-label={settlement.name}></button>
       <span class="settlement-label" style={`left:${settlement.position.x}%;top:${settlement.position.y}%`}>{settlement.name}</span>
     {/each}
