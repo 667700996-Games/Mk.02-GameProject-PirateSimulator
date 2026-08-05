@@ -5,6 +5,8 @@
 
   let { game } = $props<{ game: GameState }>();
   let ship = $derived(game.ships.find((item: Ship) => item.id === game.activeShipId) ?? game.ships[0]);
+  const className = (vessel: Ship) => SHIP_CLASSES[vessel.class].name;
+  const classDescription = (vessel: Ship) => SHIP_CLASSES[vessel.class].description;
   const upgrades: { id: keyof ShipUpgrades; name: string; detail: string; gold: number; timber: number; iron: number }[] = [
     { id: 'hull', name: '강화 선체', detail: '최대 선체 +12%', gold: 380, timber: 24, iron: 8 },
     { id: 'sails', name: '라틴 돛', detail: '최고 속도 +6%', gold: 340, timber: 8, iron: 0 },
@@ -48,7 +50,7 @@
   <header class="management-header"><div><span class="eyebrow">SHIPWRIGHT'S LEDGER</span><h1>함선과 함대</h1><p class="muted">나포한 선체를 개조하고 기함을 다음 사냥에 맞추십시오.</p></div><span class="tag">보유 함선 {game.ships.length}</span></header>
   <div class="management-grid">
     <article class="panel span-5">
-      <span class="eyebrow">ACTIVE FLAGSHIP · {SHIP_CLASSES[ship.class].name}</span><h2 style="font-size:2.4rem">{ship.name}</h2><p class="muted">{SHIP_CLASSES[ship.class].description}</p>
+      <span class="eyebrow">ACTIVE FLAGSHIP · {className(ship)}</span><h2 style="font-size:2.4rem">{ship.name}</h2><p class="muted">{classDescription(ship)}</p>
       <div class="stat-grid">
         <div class="mini-stat"><small>선체</small><b>{Math.round(ship.hull)} / {ship.stats.hullMax}</b><div class="meter"><span style={`--value:${ship.hull / ship.stats.hullMax * 100}%`}></span></div></div>
         <div class="mini-stat"><small>돛</small><b>{Math.round(ship.sails)} / {ship.stats.sailMax}</b><div class="meter"><span style={`--value:${ship.sails / ship.stats.sailMax * 100}%;--meter-color:#b6a56d`}></span></div></div>
@@ -57,6 +59,6 @@
       <button class="btn primary wide" style="margin-top:1rem" onclick={repair} disabled={ship.hull === ship.stats.hullMax && ship.sails === ship.stats.sailMax}>전면 수리</button>
     </article>
     <article class="panel span-7"><div class="panel-title"><div><span class="eyebrow">REFIT OPTIONS</span><h2>기함 개조</h2></div><span class="tag">조선소 {game.haven.facilities.shipyard?.level ?? 0}단계</span></div><div class="resource-list">{#each upgrades as item}<div class="resource-row"><span><strong>{item.name} · {ship.upgrades[item.id]}단계</strong><small style="display:block">{item.detail}</small></span><div class="costs"><span class="cost">● {Math.ceil(item.gold * (1 + ship.upgrades[item.id] * .65))}</span><span class="cost">▰ {Math.ceil(item.timber * (1 + ship.upgrades[item.id] * .65))}</span><span class="cost">◆ {Math.ceil(item.iron * (1 + ship.upgrades[item.id] * .65))}</span></div><button class="btn small" onclick={() => upgrade(item.id)} disabled={ship.upgrades[item.id] >= 5}>개조</button></div>{/each}</div></article>
-    <article class="panel span-12"><div class="panel-title"><div><span class="eyebrow">FLEET</span><h2>정박 함선</h2></div></div><div class="resource-list">{#each game.ships as vessel}<div class="resource-row"><span><strong>{vessel.name}</strong><small> · {SHIP_CLASSES[vessel.class].name} · 선원 {vessel.crew}</small></span><span class="tag">{vessel.isFlagship ? '기함' : vessel.isCaptured ? '나포선' : '함대'}</span><button class="btn small" disabled={vessel.isFlagship} onclick={() => gameSession.updateGame((state) => ({ ...state, activeShipId: vessel.id, ships: state.ships.map((item) => ({ ...item, isFlagship: item.id === vessel.id })) }), true)}>기함 지정</button></div>{/each}</div></article>
+    <article class="panel span-12"><div class="panel-title"><div><span class="eyebrow">FLEET</span><h2>정박 함선</h2></div></div><div class="resource-list">{#each game.ships as vessel}<div class="resource-row"><span><strong>{vessel.name}</strong><small> · {className(vessel)} · 선원 {vessel.crew}</small></span><span class="tag">{vessel.isFlagship ? '기함' : vessel.isCaptured ? '나포선' : '함대'}</span><button class="btn small" disabled={vessel.isFlagship} onclick={() => gameSession.updateGame((state) => ({ ...state, activeShipId: vessel.id, ships: state.ships.map((item) => ({ ...item, isFlagship: item.id === vessel.id })) }), true)}>기함 지정</button></div>{/each}</div></article>
   </div>
 </section>
