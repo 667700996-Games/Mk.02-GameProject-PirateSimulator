@@ -30,6 +30,7 @@ export interface SeaSceneBridge {
   onCombatEnd: (outcome: 'victory' | 'defeat', player: Ship, enemy: Ship) => void;
   onBoard: (player: Ship, enemy: Ship) => void;
   onOpenMap: () => void;
+  onSound: (sound: 'cannon' | 'impact' | 'critical' | 'boarding') => void;
 }
 
 interface SceneData {
@@ -133,11 +134,12 @@ export class SeaScene extends Phaser.Scene {
     if (!this.textures.exists('ocean-tile')) {
       const canvas = this.textures.createCanvas('ocean-tile', 256, 256)!;
       const context = canvas.context;
-      const gradient = context.createLinearGradient(0, 0, 256, 256);
-      gradient.addColorStop(0, '#082b36');
-      gradient.addColorStop(0.5, '#0c3b46');
-      gradient.addColorStop(1, '#061e2b');
-      context.fillStyle = gradient;
+      context.fillStyle = '#082f3a';
+      context.fillRect(0, 0, 256, 256);
+      const glow = context.createRadialGradient(128, 128, 8, 128, 128, 180);
+      glow.addColorStop(0, 'rgba(34,91,101,.18)');
+      glow.addColorStop(1, 'rgba(3,20,29,.18)');
+      context.fillStyle = glow;
       context.fillRect(0, 0, 256, 256);
       for (let index = 0; index < 80; index += 1) {
         const x = (index * 73) % 256;
@@ -288,9 +290,10 @@ export class SeaScene extends Phaser.Scene {
       this.enemy = applyShot(this.enemy, result);
       this.bridge.onEnemyChanged(this.enemy);
       this.message = result.hit ? `${result.critical ? '치명타! ' : ''}선체 ${result.hullDamage}, 돛 ${result.sailDamage} 피해` : '포탄이 파도 위로 빗나갔다.';
-      if (result.hit) this.impactEffect(this.enemyMotion.x, this.enemyMotion.y, result.critical);
+      if (result.hit) { this.impactEffect(this.enemyMotion.x, this.enemyMotion.y, result.critical); this.bridge.onSound(result.critical ? 'critical' : 'impact'); }
     });
     this.bridge.onPlayerChanged(this.player);
+    this.bridge.onSound('cannon');
     this.message = `${AMMO[this.selectedAmmo].name} 발사!`;
   }
 
@@ -301,12 +304,14 @@ export class SeaScene extends Phaser.Scene {
     const result = resolveShot({ attacker: this.enemy, target: this.player, ammo: 'round-shot', distance, bearingToTarget: bearing, attackerHeading: this.enemyMotion.heading, attackerSpeed: this.enemyMotion.speed, targetSpeed: this.playerMotion.speed, broadside: side, difficulty: this.bridge.getState().captain.difficulty, captainIsGunner: false, random: Math.random });
     this.enemyReload = 5.5 + Math.random() * 2.5;
     if (!result.fired) return;
+    this.bridge.onSound('cannon');
     this.animateShot(this.enemyMotion, this.playerMotion, side, result.hit, () => {
       this.player = applyShot(this.player, result);
       this.bridge.onPlayerChanged(this.player);
       if (result.hit) {
         this.message = `피격! 선체 ${result.hullDamage}, 선원 ${result.crewCasualties}명 손실`;
         this.impactEffect(this.playerMotion.x, this.playerMotion.y, result.critical);
+        this.bridge.onSound(result.critical ? 'critical' : 'impact');
         this.cameras.main.shake(140, result.critical ? 0.009 : 0.004);
       }
     });
@@ -355,6 +360,7 @@ export class SeaScene extends Phaser.Scene {
       return;
     }
     this.ended = true;
+    this.bridge.onSound('boarding');
     this.bridge.onBoard(this.player, this.enemy);
   }
 

@@ -4,6 +4,7 @@
   import CaptainCreation from '$lib/components/CaptainCreation.svelte';
   import GameShell from '$lib/components/GameShell.svelte';
   import { gameSession } from '$lib/stores/gameStore';
+  import { soundEngine } from '$lib/audio/SoundEngine';
   import type { NewGameOptions } from '$lib/domain/types';
 
   let creating = $state(false);
@@ -13,8 +14,13 @@
   onMount(() => {
     void gameSession.initialize();
     const timer = window.setInterval(() => gameSession.tickPlayTime(1), 1000);
-    return () => window.clearInterval(timer);
+    const unlock = () => void soundEngine.unlock($gameSession.settings);
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => { window.clearInterval(timer); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
   });
+
+  $effect(() => soundEngine.configure($gameSession.settings));
 
   function create(options: NewGameOptions): void {
     gameSession.startNewGame(options);

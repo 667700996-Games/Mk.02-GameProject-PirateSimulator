@@ -1,6 +1,11 @@
 <script lang="ts">
   import type { ToastMessage } from '$lib/domain/types';
   let { toasts, onDismiss } = $props<{ toasts: ToastMessage[]; onDismiss: (id: string) => void }>();
+
+  $effect(() => {
+    const timers = toasts.map((toast) => window.setTimeout(() => onDismiss(toast.id), toast.kind === 'danger' ? 7000 : 4200));
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  });
 </script>
 
 <div class="toast-stack" aria-live="polite">

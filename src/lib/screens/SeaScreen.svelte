@@ -6,6 +6,7 @@
   import { finishEncounter } from '$lib/domain/voyage';
   import type { SeaHudSnapshot, SeaScene } from '$lib/game/SeaScene';
   import { gameSession } from '$lib/stores/gameStore';
+  import { soundEngine } from '$lib/audio/SoundEngine';
   import type { AmmoType, GameState, Ship } from '$lib/domain/types';
 
   let { game } = $props<{ game: GameState }>();
@@ -47,7 +48,8 @@
         onEnemyChanged: (enemy) => gameSession.updateGame((state) => ({ ...state, voyage: { ...state.voyage, currentEncounter: state.voyage.currentEncounter ? { ...state.voyage.currentEncounter, enemyShip: enemy } : undefined } })),
         onCombatEnd: (result, player, enemy) => { updateShip(player); outcome = result; defeatedEnemy = enemy; },
         onBoard: board,
-        onOpenMap: () => gameSession.setScreen('world-map')
+        onOpenMap: () => gameSession.setScreen('world-map'),
+        onSound: (sound) => soundEngine.play(sound)
       });
     });
     return () => { disposed = true; phaser?.destroy(true); phaser = null; };

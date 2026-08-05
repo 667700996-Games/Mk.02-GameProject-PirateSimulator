@@ -1,6 +1,6 @@
 <script lang="ts">
   import { RESOURCE_META } from '$lib/domain/catalog';
-  import { addCargo, cargoSpace, marketPrice } from '$lib/domain/economy';
+  import { addCargo, cargoSpace, cargoWeight, marketPrice } from '$lib/domain/economy';
   import { gameSession } from '$lib/stores/gameStore';
   import type { GameState, ResourceId, SettlementState, Ship } from '$lib/domain/types';
 
@@ -28,7 +28,7 @@
       if (amount <= 0) return state;
       const price = marketPrice(port, resource, 'sell', state.world.marketCycle, port.attitude, state.captain.trait);
       const cargo = { ...active.cargo, [resource]: 0 };
-      return { ...state, resources: { ...state.resources, gold: state.resources.gold + price * amount }, ships: state.ships.map((item) => item.id === active.id ? { ...active, cargo, cargoWeight: 0 } : item) };
+      return { ...state, resources: { ...state.resources, gold: state.resources.gold + price * amount }, ships: state.ships.map((item) => item.id === active.id ? { ...active, cargo, cargoWeight: cargoWeight(cargo) } : item) };
     }, true);
   }
 
