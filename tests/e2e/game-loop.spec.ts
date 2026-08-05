@@ -112,3 +112,20 @@ test('plays every stage of a haven defense and returns to the haven', async ({ p
   await page.getByRole('button', { name: '손상 점검 후 본거지로' }).click();
   await expect(page.getByRole('heading', { name: '검은물결 은신처' })).toBeVisible();
 });
+
+test('scouts, plans, loots, and withdraws from a coastal raid', async ({ page }) => {
+  await createCaptain(page);
+  await page.getByRole('button', { name: '⚓ 출항 준비', exact: true }).click();
+  await page.getByRole('button', { name: '소금바람 마을', exact: true }).click();
+  await page.getByRole('button', { name: '상륙 작전 계획' }).click();
+  await expect(page.getByRole('heading', { name: '소금바람 마을 정찰' })).toBeVisible();
+  await page.getByRole('button', { name: '상륙 계획 수립' }).click();
+  await expect(page.getByRole('heading', { name: '상륙대 편성' })).toBeVisible();
+  await page.getByRole('button', { name: /연막 폭탄/ }).click();
+  await page.getByRole('button', { name: /상륙 작전 개시/ }).click();
+  await page.getByRole('button', { name: /곡물 저장고/ }).click();
+  await expect(page.getByText(/RECOVERED LOOT/)).toBeVisible();
+  await page.getByRole('button', { name: '약탈를 마치고 철수' }).click();
+  await expect(page.getByRole('heading', { name: '검은물결 은신처' })).toBeVisible();
+  await expect(page.getByText('전리품이 함선 화물칸에 실렸습니다. 자유항이나 암시장에서 판매하십시오.')).toBeVisible();
+});

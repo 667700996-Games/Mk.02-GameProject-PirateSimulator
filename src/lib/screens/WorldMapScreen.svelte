@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ZONES } from '$lib/domain/catalog';
-  import { beginRaid } from '$lib/domain/raid';
+  import { beginRaidPlanning } from '$lib/domain/raid';
   import { departForZone } from '$lib/domain/voyage';
   import { gameSession } from '$lib/stores/gameStore';
   import type { GameState, SettlementState, ZoneId } from '$lib/domain/types';
@@ -24,7 +24,7 @@
 
   function raid(): void {
     if (!selectedSettlement) return;
-    gameSession.updateGame((state) => ({ ...state, screen: 'raid', previousScreen: 'world-map', raid: beginRaid(selectedSettlement!, Math.max(6, Math.min(18, state.ships.find((ship) => ship.id === state.activeShipId)?.crew ?? 8)), 'stealth', state.captain.trait) }));
+    gameSession.updateGame((state) => ({ ...state, screen: 'raid', previousScreen: 'world-map', raid: beginRaidPlanning(selectedSettlement!, state.ships.find((ship) => ship.id === state.activeShipId)?.crew ?? 8) }));
   }
 </script>
 

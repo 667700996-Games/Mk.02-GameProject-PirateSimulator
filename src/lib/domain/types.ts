@@ -420,6 +420,9 @@ export interface RaidState {
   selectedTargets: string[];
   recoveredLoot: Partial<ResourceStock>;
   casualties: number;
+  approach?: 'stealth' | 'assault';
+  landingPoint?: 'hidden-cove' | 'main-dock' | 'cliffs';
+  equipment?: 'grapples' | 'muskets' | 'smoke-bombs';
 }
 
 export interface DefenseState {

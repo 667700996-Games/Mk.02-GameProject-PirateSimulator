@@ -21,6 +21,63 @@ export const RAID_TARGETS: RaidTarget[] = [
   { id: 'shipyard', name: '조선소', time: 38, alarm: 22, lootMultiplier: 1.1, primaryResources: ['timber', 'iron', 'rope', 'blueprints'] }
 ];
 
+export function beginRaidPlanning(settlement: SettlementState, availableCrew: number): RaidState {
+  return {
+    active: true,
+    settlementId: settlement.id,
+    phase: 'scouting',
+    crewCommitted: Math.max(6, Math.min(12, availableCrew - 3)),
+    timeRemaining: 0,
+    alarm: Math.max(0, settlement.alert * .35),
+    selectedTargets: [],
+    recoveredLoot: {},
+    casualties: 0,
+    approach: 'stealth',
+    landingPoint: 'hidden-cove',
+    equipment: 'grapples'
+  };
+}
+
+export function completeRaidScouting(state: RaidState): RaidState {
+  if (!state.active || state.phase !== 'scouting') return state;
+  return { ...state, phase: 'planning' };
+}
+
+export function configureRaid(
+  state: RaidState,
+  options: { crewCommitted?: number; approach?: NonNullable<RaidState['approach']>; landingPoint?: NonNullable<RaidState['landingPoint']>; equipment?: NonNullable<RaidState['equipment']> },
+  availableCrew: number
+): RaidState {
+  if (state.phase !== 'planning') return state;
+  return {
+    ...state,
+    crewCommitted: clamp(options.crewCommitted ?? state.crewCommitted, 6, Math.max(6, availableCrew - 3)),
+    approach: options.approach ?? state.approach,
+    landingPoint: options.landingPoint ?? state.landingPoint,
+    equipment: options.equipment ?? state.equipment
+  };
+}
+
+export function launchPreparedRaid(state: RaidState, settlement: SettlementState, trait: CaptainTrait): RaidState {
+  if (state.phase !== 'planning') return state;
+  const started = beginRaid(settlement, state.crewCommitted, state.approach ?? 'stealth', trait);
+  const landingTime: Record<NonNullable<RaidState['landingPoint']>, number> = { 'hidden-cove': 18, 'main-dock': -12, cliffs: 28 };
+  const landingAlarm: Record<NonNullable<RaidState['landingPoint']>, number> = { 'hidden-cove': -10, 'main-dock': 14, cliffs: -4 };
+  const equipmentTime: Record<NonNullable<RaidState['equipment']>, number> = { grapples: 16, muskets: 0, 'smoke-bombs': 8 };
+  const equipmentAlarm: Record<NonNullable<RaidState['equipment']>, number> = { grapples: 0, muskets: 8, 'smoke-bombs': -12 };
+  const landingPoint = state.landingPoint ?? 'hidden-cove';
+  const equipment = state.equipment ?? 'grapples';
+  return {
+    ...started,
+    approach: state.approach,
+    landingPoint,
+    equipment,
+    timeRemaining: Math.max(70, started.timeRemaining + landingTime[landingPoint] + equipmentTime[equipment]),
+    alarm: clamp(started.alarm + landingAlarm[landingPoint] + equipmentAlarm[equipment], 0, 100),
+    casualties: started.casualties + (landingPoint === 'main-dock' && state.approach === 'assault' ? 1 : 0)
+  };
+}
+
 export function beginRaid(settlement: SettlementState, crewCommitted: number, approach: 'stealth' | 'assault', trait: CaptainTrait): RaidState {
   const scoutBonus = trait === 'raider' ? 18 : 0;
   const baseTime = 145 + crewCommitted * 1.2 + scoutBonus;
@@ -56,9 +113,13 @@ export function lootRaidTarget(
     recoveredLoot[resource] = (recoveredLoot[resource] ?? 0) + recovered;
   }
   const defensePressure = settlement.defense / Math.max(state.crewCommitted * 2.5, 1);
-  const casualties = Math.max(0, Math.floor(defensePressure * (0.4 + random()) + state.alarm / 80 - 0.5));
-  const timeRemaining = Math.max(0, state.timeRemaining - target.time);
-  const alarm = clamp(state.alarm + target.alarm, 0, 100);
+  const equipmentCasualtyBonus = state.equipment === 'muskets' ? -1 : 0;
+  const approachCasualtyBonus = state.approach === 'assault' ? 1 : 0;
+  const casualties = Math.max(0, Math.floor(defensePressure * (0.4 + random()) + state.alarm / 80 - 0.5 + equipmentCasualtyBonus + approachCasualtyBonus));
+  const timeCost = target.time * (state.equipment === 'grapples' ? .82 : 1) * (state.approach === 'assault' ? .88 : 1);
+  const timeRemaining = Math.max(0, state.timeRemaining - timeCost);
+  const alarmGain = target.alarm * (state.equipment === 'smoke-bombs' ? .62 : 1) * (state.approach === 'stealth' ? .88 : 1.18);
+  const alarm = clamp(state.alarm + alarmGain, 0, 100);
   return {
     ...state,
     timeRemaining,
