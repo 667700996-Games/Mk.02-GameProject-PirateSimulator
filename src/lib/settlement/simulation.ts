@@ -41,12 +41,13 @@ function consumeInputs(building: SettlementBuilding, inputs: Partial<Record<Sett
 
 function advanceConstruction(state: SettlementSimulationState, gameMinutes: number): void {
   const builders = state.residents.filter((resident) => resident.job === 'builder' && resident.health > 20);
+  const allocatedBuilders = new Set(state.buildings.filter((building) => building.state === 'CONSTRUCTING').flatMap((building) => building.workers));
   for (const building of state.buildings) {
     if (building.paused || ['ACTIVE', 'DESTROYED', 'BURNING'].includes(building.state)) continue;
     const definition = BUILDINGS[building.definitionId];
     if (!definition) continue;
     if (building.state === 'UPGRADING') continue;
-    if (!hasInputs(building, definition.constructionCost)) {
+    if (building.state !== 'CONSTRUCTING' && !hasInputs(building, definition.constructionCost)) {
       building.state = 'PLANNED';
       building.statusReason = '건설 자재 운송 대기';
       continue;
@@ -60,7 +61,16 @@ function advanceConstruction(state: SettlementSimulationState, gameMinutes: numb
       consumeInputs(building, definition.constructionCost);
       building.state = 'CONSTRUCTING';
     }
-    const assignedBuilders = builders.slice(0, Math.max(1, Math.min(4, building.constructionPriority)));
+    let assignedBuilders = building.workers.map((id) => builders.find((resident) => resident.id === id)).filter((resident): resident is Resident => !!resident);
+    if (assignedBuilders.length === 0) {
+      assignedBuilders = builders.filter((resident) => !allocatedBuilders.has(resident.id)).slice(0, Math.max(1, Math.min(4, building.constructionPriority)));
+      assignedBuilders.forEach((resident) => allocatedBuilders.add(resident.id));
+    }
+    if (assignedBuilders.length === 0) {
+      building.state = 'CONSTRUCTING';
+      building.statusReason = '다른 공사에 건설자가 투입됨';
+      continue;
+    }
     building.workers = assignedBuilders.map((resident) => resident.id);
     for (const resident of assignedBuilders) {
       resident.action = 'WORKING';

@@ -8,14 +8,15 @@ async function createCaptain(page: import('@playwright/test').Page): Promise<voi
   await page.locator('#ship-name').fill('테스트 슬루프');
   await page.getByRole('button', { name: /포술가/ }).click();
   await page.getByRole('button', { name: /검은 깃발을 올린다/ }).click();
-  await expect(page.getByRole('heading', { name: '검은물결 은신처' })).toBeVisible();
+  await expect(page.getByTestId('settlement-screen')).toBeVisible();
+  await expect(page.locator('.settlement-host canvas')).toBeVisible({ timeout: 15_000 });
 }
 
 test('creates a captain and reaches the live sea scene', async ({ page }, testInfo) => {
   await createCaptain(page);
   await page.screenshot({ path: testInfo.outputPath('haven.png'), fullPage: true });
 
-  await page.getByRole('button', { name: '⚓ 출항 준비', exact: true }).click();
+  await page.getByRole('button', { name: '✥ 군도 지도', exact: true }).click();
   await expect(page.getByRole('heading', { name: '검은 해도' })).toBeVisible();
   await page.getByRole('button', { name: '이 해역으로 출항' }).click();
 
@@ -34,7 +35,7 @@ test('persists and restores a save through IndexedDB', async ({ page }) => {
   await page.reload();
   await expect(page.getByRole('button', { name: /항해 계속하기 · 검은수염 테스트/ })).toBeVisible();
   await page.getByRole('button', { name: /항해 계속하기 · 검은수염 테스트/ }).click();
-  await expect(page.getByRole('heading', { name: '검은물결 은신처' })).toBeVisible();
+  await expect(page.getByTestId('settlement-screen')).toBeVisible();
 });
 
 test('accepts a live contract and opens fleet, faction, and pause commands', async ({ page }) => {
@@ -110,12 +111,12 @@ test('plays every stage of a haven defense and returns to the haven', async ({ p
   await page.getByRole('button', { name: /조직적 후퇴/ }).click();
   await expect(page.getByText('AFTER ACTION REPORT')).toBeVisible();
   await page.getByRole('button', { name: '손상 점검 후 본거지로' }).click();
-  await expect(page.getByRole('heading', { name: '검은물결 은신처' })).toBeVisible();
+  await expect(page.getByTestId('settlement-screen')).toBeVisible();
 });
 
 test('scouts, plans, loots, and withdraws from a coastal raid', async ({ page }) => {
   await createCaptain(page);
-  await page.getByRole('button', { name: '⚓ 출항 준비', exact: true }).click();
+  await page.getByRole('button', { name: '✥ 군도 지도', exact: true }).click();
   await page.getByRole('button', { name: '소금바람 마을', exact: true }).click();
   await page.getByRole('button', { name: '상륙 작전 계획' }).click();
   await expect(page.getByRole('heading', { name: '소금바람 마을 정찰' })).toBeVisible();
@@ -126,7 +127,7 @@ test('scouts, plans, loots, and withdraws from a coastal raid', async ({ page })
   await page.getByRole('button', { name: /곡물 저장고/ }).click();
   await expect(page.getByText(/RECOVERED LOOT/)).toBeVisible();
   await page.getByRole('button', { name: '약탈를 마치고 철수' }).click();
-  await expect(page.getByRole('heading', { name: '검은물결 은신처' })).toBeVisible();
+  await expect(page.getByTestId('settlement-screen')).toBeVisible();
   await expect(page.getByText('전리품이 함선 화물칸에 실렸습니다. 자유항이나 암시장에서 판매하십시오.')).toBeVisible();
 });
 
