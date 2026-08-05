@@ -46,7 +46,7 @@ function dismissToast(id: string): void {
 
 function scheduleAutoSave(delay = 900): void {
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(() => void saveCurrent('자동 저장됨'), delay);
+  autoSaveTimer = setTimeout(() => void saveCurrent('자동 저장됨', true), delay);
 }
 
 async function refreshSaves(): Promise<void> {
@@ -79,12 +79,12 @@ async function load(id: string): Promise<void> {
   }
 }
 
-async function saveCurrent(toastDetail = '항해 기록을 안전하게 보관했습니다.'): Promise<void> {
+async function saveCurrent(toastDetail = '항해 기록을 안전하게 보관했습니다.', silent = false): Promise<void> {
   const current = get(session);
   if (!current.game) return;
   if (current.saving) {
     await new Promise((resolve) => setTimeout(resolve, 80));
-    return saveCurrent(toastDetail);
+    return saveCurrent(toastDetail, silent);
   }
   session.update((value) => ({ ...value, saving: true }));
   try {
@@ -95,7 +95,7 @@ async function saveCurrent(toastDetail = '항해 기록을 안전하게 보관�
       game: value.game ? { ...value.game, lastSavedAt: record.updatedAt } : null,
       saves: [record, ...value.saves.filter((save) => save.id !== record.id)]
     }));
-    addToast('success', '항해일지', toastDetail);
+    if (!silent) addToast('success', '항해일지', toastDetail);
   } catch (error) {
     session.update((value) => ({ ...value, saving: false, error: error instanceof Error ? error.message : '저장에 실패했습니다.' }));
   }

@@ -34,7 +34,7 @@ button, input, select, textarea { font: inherit; }
 button { color: inherit; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--brass-light); outline-offset: 2px; }
 .skip-link { position: fixed; z-index: 1000; top: -80px; left: 1rem; padding: .7rem 1rem; color: var(--ink); background: #142e34; border: 1px solid var(--brass); }
-.skip-link:focus { top: 1rem; }
+.skip-link:focus-visible { top: 1rem; }
 
 body::before {
   content: '';

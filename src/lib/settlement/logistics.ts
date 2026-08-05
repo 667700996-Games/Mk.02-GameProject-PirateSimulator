@@ -1,5 +1,6 @@
 import { createId } from '$lib/domain/rng';
 import { BUILDINGS, RECIPES } from './catalog';
+import { SHIP_PLANS } from './shipbuilding';
 import { findPath, pathDistance } from './island';
 import type { PartialSettlementInventory, Resident, SettlementBuilding, SettlementResourceId, SettlementSimulationState, TransportJob } from './types';
 
@@ -71,6 +72,16 @@ export function scheduleLogistics(state: SettlementSimulationState): SettlementS
     if (building.definitionId === 'coastal-battery') {
       requestResource(next, building, 'cannonballs', Math.max(0, 20 - amount(building.inputInventory, 'cannonballs')), 95);
       requestResource(next, building, 'powder', Math.max(0, 10 - amount(building.inputInventory, 'powder')), 95);
+    }
+  }
+
+  for (const order of next.shipConstruction.filter((item) => !['COMPLETE', 'PAUSED'].includes(item.state))) {
+    const shipyard = next.buildings.find((building) => building.id === order.shipyardId);
+    const plan = SHIP_PLANS[order.shipClass];
+    if (!shipyard || !plan) continue;
+    for (const [resourceId, required] of Object.entries(plan.cost) as [SettlementResourceId, number][]) {
+      const missing = Math.max(0, required - amount(shipyard.inputInventory, resourceId));
+      if (missing > 0) requestResource(next, shipyard, resourceId, missing, 88);
     }
   }
 

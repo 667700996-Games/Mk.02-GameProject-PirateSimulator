@@ -6,6 +6,7 @@ import { expireAndRefreshMissions } from './missions';
 import type { GameState } from './types';
 import { advanceSettlement } from '$lib/settlement/simulation';
 import { settlementLegacyHaven, settlementLegacyResources } from '$lib/settlement/summary';
+import { advanceShipConstruction } from '$lib/settlement/shipbuilding';
 
 export function advanceSimulation(state: GameState, realSeconds: number, now = Date.now()): GameState {
   if (state.paused) return state;
@@ -14,13 +15,16 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
   const absoluteHours = (state.world.day - 1) * 24 + state.world.hour + elapsedGameHours;
   const day = Math.floor(absoluteHours / 24) + 1;
   const hour = absoluteHours % 24;
-  const settlement = advanceSettlement(state.settlement, realSeconds);
+  const advancedSettlement = advanceSettlement(state.settlement, realSeconds);
+  const shipbuilding = advanceShipConstruction(advancedSettlement, state.ships, realSeconds * advancedSettlement.speed);
+  const settlement = shipbuilding.settlement;
   let next: GameState = expireAndRefreshMissions(updateFleetAssignments({
     ...state,
     playTimeSeconds: state.playTimeSeconds + realSeconds,
     settlement,
     haven: settlementLegacyHaven(settlement, completeConstructions(state.haven, now)),
     resources: settlementLegacyResources(settlement, state.resources),
+    ships: shipbuilding.ships,
     world: { ...state.world, day, hour }
   }, now), now);
 
