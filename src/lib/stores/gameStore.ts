@@ -1,6 +1,7 @@
 import { derived, get, writable } from 'svelte/store';
 import { createNewGame, DEFAULT_SETTINGS } from '$lib/domain/initialState';
 import { createId } from '$lib/domain/rng';
+import { advanceSimulation } from '$lib/domain/simulation';
 import type { GameScreen, GameSettings, GameState, NewGameOptions, SaveRecord, ToastMessage } from '$lib/domain/types';
 import { listSaves, loadSettings, readSave, removeSave, writeSave, writeSettings } from '$lib/persistence/gameRepository';
 
@@ -118,7 +119,7 @@ function setPaused(paused: boolean): void {
 }
 
 function tickPlayTime(seconds: number): void {
-  updateGame((game) => ({ ...game, playTimeSeconds: game.playTimeSeconds + seconds }));
+  updateGame((game) => advanceSimulation(game, seconds));
 }
 
 function updateSettings(patch: Partial<GameSettings>): void {

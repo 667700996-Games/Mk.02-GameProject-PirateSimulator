@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { AMMO, applyShot, broadsideBearing, canBoard, resolveShot, tickDamage, type Broadside } from '$lib/domain/combat';
 import { removeCargo } from '$lib/domain/economy';
 import { clamp, normalizeAngle, tickSailing, type SailingState } from '$lib/domain/physics';
-import type { AmmoType, GameState, Ship } from '$lib/domain/types';
+import type { AmmoType, GameSettings, GameState, Ship } from '$lib/domain/types';
 
 export interface SeaHudSnapshot {
   speed: number;
@@ -24,6 +24,7 @@ export interface SeaHudSnapshot {
 
 export interface SeaSceneBridge {
   getState: () => GameState;
+  getSettings: () => GameSettings;
   onSnapshot: (snapshot: SeaHudSnapshot) => void;
   onPlayerChanged: (ship: Ship) => void;
   onEnemyChanged: (ship: Ship) => void;
@@ -216,7 +217,9 @@ export class SeaScene extends Phaser.Scene {
 
   private bindControls(): void {
     const keyboard = this.input.keyboard!;
-    this.keys = keyboard.addKeys({ up: 'W', down: 'S', left: 'A', right: 'D', port: 'Q', starboard: 'E', fire: 'SPACE', board: 'F', map: 'M', ammo1: 'ONE', ammo2: 'TWO', ammo3: 'THREE', ammo4: 'FOUR', ammo5: 'FIVE' }) as Record<string, Phaser.Input.Keyboard.Key>;
+    const bindings = this.bridge.getSettings().keyBindings;
+    const keyName = (code: string): string => code === 'Space' ? 'SPACE' : code === 'Tab' ? 'TAB' : code === 'Escape' ? 'ESC' : code.startsWith('Key') ? code.slice(3) : code.startsWith('Digit') ? code.slice(5) : code;
+    this.keys = keyboard.addKeys({ up: keyName(bindings.sailUp), down: keyName(bindings.sailDown), left: keyName(bindings.steerLeft), right: keyName(bindings.steerRight), port: keyName(bindings.aimPort), starboard: keyName(bindings.aimStarboard), fire: keyName(bindings.fire), board: 'F', map: keyName(bindings.map), ammo1: 'ONE', ammo2: 'TWO', ammo3: 'THREE', ammo4: 'FOUR', ammo5: 'FIVE' }) as Record<string, Phaser.Input.Keyboard.Key>;
     this.keys.port.on('down', () => { this.selectedSide = 'port'; this.message = '좌현 포대 선택'; });
     this.keys.starboard.on('down', () => { this.selectedSide = 'starboard'; this.message = '우현 포대 선택'; });
     this.keys.fire.on('down', () => this.firePlayer());

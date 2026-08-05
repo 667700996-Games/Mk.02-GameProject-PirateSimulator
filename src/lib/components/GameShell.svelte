@@ -29,7 +29,7 @@
   <main class="main-viewport">
     {#if game.screen === 'haven'}<HavenScreen {game} {navigate} />
     {:else if game.screen === 'world-map'}<WorldMapScreen {game} />
-    {:else if game.screen === 'sailing'}<SeaScreen {game} />
+    {:else if game.screen === 'sailing'}<SeaScreen {game} {settings} />
     {:else if game.screen === 'boarding'}<BoardingScreen {game} />
     {:else if game.screen === 'raid'}<RaidScreen {game} />
     {:else if game.screen === 'freeport' || game.screen === 'trade'}<FreeportScreen {game} />

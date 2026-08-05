@@ -3,8 +3,8 @@
   let { toasts, onDismiss } = $props<{ toasts: ToastMessage[]; onDismiss: (id: string) => void }>();
 
   $effect(() => {
-    const timers = toasts.map((toast) => window.setTimeout(() => onDismiss(toast.id), toast.kind === 'danger' ? 7000 : 4200));
-    return () => timers.forEach((timer) => window.clearTimeout(timer));
+    const timers: number[] = toasts.map((toast: ToastMessage) => window.setTimeout(() => onDismiss(toast.id), toast.kind === 'danger' ? 7000 : 4200));
+    return () => timers.forEach((timer: number) => window.clearTimeout(timer));
   });
 </script>
 

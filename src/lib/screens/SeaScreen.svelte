@@ -7,9 +7,9 @@
   import type { SeaHudSnapshot, SeaScene } from '$lib/game/SeaScene';
   import { gameSession } from '$lib/stores/gameStore';
   import { soundEngine } from '$lib/audio/SoundEngine';
-  import type { AmmoType, GameState, Ship } from '$lib/domain/types';
+  import type { AmmoType, GameSettings, GameState, Ship } from '$lib/domain/types';
 
-  let { game } = $props<{ game: GameState }>();
+  let { game, settings } = $props<{ game: GameState; settings: GameSettings }>();
   let host = $state<HTMLElement>();
   let phaser = $state<Phaser.Game | null>(null);
   let snapshot = $state<SeaHudSnapshot | null>(null);
@@ -43,6 +43,7 @@
       if (disposed || !host) return;
       phaser = createSeaGame(host, {
         getState: () => game,
+        getSettings: () => settings,
         onSnapshot: (value) => (snapshot = value),
         onPlayerChanged: updateShip,
         onEnemyChanged: (enemy) => gameSession.updateGame((state) => ({ ...state, voyage: { ...state.voyage, currentEncounter: state.voyage.currentEncounter ? { ...state.voyage.currentEncounter, enemyShip: enemy } : undefined } })),
