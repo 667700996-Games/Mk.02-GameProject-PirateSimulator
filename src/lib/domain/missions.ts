@@ -38,8 +38,11 @@ export function generateMissionBoard(state: GameState, count = 4, now = Date.now
   const random = mulberry32(state.world.seed + state.world.day * 7919 + state.world.marketCycle * 31);
   const discoveredZones = (Object.values(state.world.zones).filter((zone) => zone.discovered).map((zone) => zone.id) as ZoneId[]);
   const generated: Mission[] = [];
+  const signatures = new Set(existing.map((mission) => `${mission.zoneId}:${mission.title}`));
   const desired = Math.max(0, count - existing.filter((mission) => mission.status === 'available').length);
-  for (let index = 0; index < desired; index += 1) {
+  let attempts = 0;
+  while (generated.length < desired && attempts < Math.max(16, desired * 12)) {
+    attempts += 1;
     const zoneId = pickOne(random, discoveredZones);
     const danger = ZONES[zoneId].difficulty;
     const typePool = TYPES_BY_DANGER[Math.min(3, Math.floor((danger - 1) / 2))];
@@ -52,9 +55,13 @@ export function generateMissionBoard(state: GameState, count = 4, now = Date.now
     if (type === 'smuggling') reward.contraband = randomInt(random, 2, 4 + danger);
     if (type === 'fort-assault' || type === 'legendary-hunt') reward.blueprints = 1;
     if (type === 'treasure') reward.gems = randomInt(random, 3, 7 + danger);
+    const title = pickOne(random, MISSION_TITLES[type]);
+    const signature = `${zoneId}:${title}`;
+    if (signatures.has(signature)) continue;
+    signatures.add(signature);
     generated.push({
       id: createId('mission'),
-      title: pickOne(random, MISSION_TITLES[type]),
+      title,
       description: missionDescription(type, zoneId, target?.name),
       type,
       status: 'available',

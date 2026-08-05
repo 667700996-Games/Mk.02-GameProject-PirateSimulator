@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createNewGame } from './initialState';
-import { acceptMission, claimMissionReward, generateMissionBoard, progressMissions } from './missions';
+import { acceptMission, claimMissionReward, expireAndRefreshMissions, generateMissionBoard, progressMissions } from './missions';
 
 describe('mission system', () => {
   it('generates faction-backed procedural missions', () => {
@@ -19,5 +19,15 @@ describe('mission system', () => {
     const claimed = claimMissionReward(game, 'test');
     expect(claimed.resources.gold).toBe(game.resources.gold + 100);
     expect(claimMissionReward(claimed, 'test').resources.gold).toBe(claimed.resources.gold);
+  });
+
+  it('replenishes the board without duplicating a zone and title pair', () => {
+    let game = createNewGame({ captainName: '계약', crewName: '장부', shipName: '서명', flagMark: '▤', flagColor: '#222', trait: 'negotiator', difficulty: 'captain', seed: 8 }, 1000);
+    game = { ...game, missions: generateMissionBoard(game, 5, 2000) };
+    const available = game.missions.find((mission) => mission.status === 'available')!;
+    game = acceptMission(game, available.id);
+    game = expireAndRefreshMissions(game, 3000);
+    const signatures = game.missions.map((mission) => `${mission.zoneId}:${mission.title}`);
+    expect(new Set(signatures).size).toBe(signatures.length);
   });
 });

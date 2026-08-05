@@ -39,16 +39,16 @@ test('persists and restores a save through IndexedDB', async ({ page }) => {
 
 test('accepts a live contract and opens fleet, faction, and pause commands', async ({ page }) => {
   await createCaptain(page);
-  await page.getByRole('button', { name: /임무/ }).click();
+  await page.locator('.game-nav').getByRole('button', { name: '▤ 임무', exact: true }).click();
   await expect(page.getByRole('heading', { name: '임무와 소문' })).toBeVisible();
   const accept = page.getByRole('button', { name: '수락' }).first();
   await expect(accept).toBeEnabled();
   await accept.click();
-  await expect(page.getByText('활성 1 / 4')).toBeVisible();
+  await expect(page.getByText('활성 2 / 4')).toBeVisible();
 
-  await page.getByRole('button', { name: /함대/ }).click();
+  await page.locator('.game-nav').getByRole('button', { name: '♜ 함대', exact: true }).click();
   await expect(page.getByRole('heading', { name: '함대와 부하 선장' })).toBeVisible();
-  await page.getByRole('button', { name: /세력/ }).click();
+  await page.locator('.game-nav').getByRole('button', { name: '♛ 세력', exact: true }).click();
   await expect(page.getByRole('heading', { name: '세력과 현상금' })).toBeVisible();
 
   await page.keyboard.press('Escape');
