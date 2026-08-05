@@ -229,7 +229,7 @@ h1, h2, h3, p { margin-top: 0; }
 .ammo-button b { display: block; color: var(--brass-light); font-size: 1rem; }
 .ammo-button small { font-size: .55rem; }
 .ammo-button.selected { border-color: var(--brass-light); color: var(--ink); box-shadow: 0 0 18px rgba(194,154,85,.16); }
-.fire-controls { justify-self: end; pointer-events: auto; display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; width: 250px; }
+.fire-controls { justify-self: end; pointer-events: auto; display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; width: 310px; }
 .fire-controls .fire { grid-column: 1 / -1; min-height: 54px; }
 .reload-line { height: 3px; background: #10171a; margin-top: 4px; }
 .reload-line span { display: block; height: 100%; width: var(--reload); background: var(--brass); }

@@ -18,6 +18,8 @@ export interface SeaHudSnapshot {
   selectedAmmo: AmmoType;
   portReload: number;
   starboardReload: number;
+  bowReload: number;
+  sternReload: number;
   canBoard: boolean;
   message?: string;
 }
@@ -119,9 +121,10 @@ export class SeaScene extends Phaser.Scene {
     this.emitSnapshot();
   }
 
-  public selectBroadside(side: 'port' | 'starboard'): void {
+  public selectBroadside(side: Broadside): void {
     this.selectedSide = side;
-    this.message = side === 'port' ? '좌현 포대 선택' : '우현 포대 선택';
+    const labels: Record<Broadside, string> = { port: '좌현 포대', starboard: '우현 포대', bow: '선수포', stern: '선미포' };
+    this.message = `${labels[side]} 선택`;
     this.emitSnapshot();
   }
 
@@ -385,7 +388,7 @@ export class SeaScene extends Phaser.Scene {
 
   private emitSnapshot(): void {
     const distance = this.enemyMotion ? Phaser.Math.Distance.Between(this.playerMotion.x, this.playerMotion.y, this.enemyMotion.x, this.enemyMotion.y) : 9999;
-    this.bridge.onSnapshot({ speed: this.playerMotion.speed, maxSpeed: this.player.stats.speedMax, heading: this.playerMotion.heading, sailSetting: this.playerMotion.sailSetting, windDirection: this.windDirection, windSpeed: this.windSpeed, player: this.player, enemy: this.enemy, distance, selectedSide: this.selectedSide, selectedAmmo: this.selectedAmmo, portReload: this.reloads.port, starboardReload: this.reloads.starboard, canBoard: !!this.enemy && canBoard(this.player, this.enemy, distance, Math.abs(this.playerMotion.speed - (this.enemyMotion?.speed ?? 0))), message: this.message });
+    this.bridge.onSnapshot({ speed: this.playerMotion.speed, maxSpeed: this.player.stats.speedMax, heading: this.playerMotion.heading, sailSetting: this.playerMotion.sailSetting, windDirection: this.windDirection, windSpeed: this.windSpeed, player: this.player, enemy: this.enemy, distance, selectedSide: this.selectedSide, selectedAmmo: this.selectedAmmo, portReload: this.reloads.port, starboardReload: this.reloads.starboard, bowReload: this.reloads.bow, sternReload: this.reloads.stern, canBoard: !!this.enemy && canBoard(this.player, this.enemy, distance, Math.abs(this.playerMotion.speed - (this.enemyMotion?.speed ?? 0))), message: this.message });
   }
 
   private endCombat(outcome: 'victory' | 'defeat'): void {

@@ -105,6 +105,8 @@
         <div class="fire-controls">
           <button class:selected={snapshot.selectedSide === 'port'} class="btn small" onclick={() => scene()?.selectBroadside('port')}>Q · 좌현<div class="reload-line"><span style={`--reload:${Math.max(0, 100 - snapshot.portReload / 7 * 100)}%`}></span></div></button>
           <button class:selected={snapshot.selectedSide === 'starboard'} class="btn small" onclick={() => scene()?.selectBroadside('starboard')}>E · 우현<div class="reload-line"><span style={`--reload:${Math.max(0, 100 - snapshot.starboardReload / 7 * 100)}%`}></span></div></button>
+          <button class:selected={snapshot.selectedSide === 'bow'} class="btn small" onclick={() => scene()?.selectBroadside('bow')}>▲ · 선수포<div class="reload-line"><span style={`--reload:${Math.max(0, 100 - snapshot.bowReload / 7 * 100)}%`}></span></div></button>
+          <button class:selected={snapshot.selectedSide === 'stern'} class="btn small" onclick={() => scene()?.selectBroadside('stern')}>▼ · 선미포<div class="reload-line"><span style={`--reload:${Math.max(0, 100 - snapshot.sternReload / 7 * 100)}%`}></span></div></button>
           <button class="btn primary fire" onclick={() => scene()?.fireSelected()}>SPACE · 포격</button>
         </div>
       </div>

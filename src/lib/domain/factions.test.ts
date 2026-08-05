@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createNewGame } from './initialState';
 import { declareFactionWar, formAlliance, notorietyActionQuotes, performNotorietyAction, sendFactionGift } from './factions';
+import { departForZone } from './voyage';
 
 describe('faction diplomacy and notoriety', () => {
   it('quotes and applies a bribe using real resources', () => {
@@ -32,5 +33,13 @@ describe('faction diplomacy and notoriety', () => {
     const next = sendFactionGift(state, 'isle-kin');
     expect(next.resources.gold).toBe(260);
     expect(next.factions['isle-kin'].favor).toBeGreaterThan(state.factions['isle-kin'].favor);
+  });
+
+  it('turns a high bounty into active voyage pursuit pressure', () => {
+    const state = createNewGame({ captainName: 'Anne', crewName: 'Tide', shipName: 'Gull', flagMark: 'skull', flagColor: '#fff', trait: 'negotiator', difficulty: 'captain', seed: 4 });
+    state.bounty = 8_000;
+    const departed = departForZone(state, 'merchant-routes');
+    expect(departed.voyage.pursuit).toBe(42);
+    expect(departed.haven.raidThreat).toBe(state.haven.raidThreat);
   });
 });

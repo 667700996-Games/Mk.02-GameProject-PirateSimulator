@@ -97,9 +97,10 @@ export function updateFleetAssignments(state: GameState, now = Date.now()): Game
     const shipPower = ship.stats.cannonSlots * 1.5 + ship.crew + ship.stats.hullMax * .08;
     const captainPower = captain.skill * 1.3 + captain.loyalty * .25;
     const challenge = ZONES[assignment.zoneId].difficulty * 34 * assignment.risk / 32;
-    const successChance = clamp(.42 + (shipPower + captainPower - challenge) / 340 + formation, .12, .94);
+    const aggressiveAutonomy = state.fleet.autoEngage && (assignment.order === 'raid' || assignment.order === 'patrol');
+    const successChance = clamp(.42 + (shipPower + captainPower - challenge) / 340 + formation + (aggressiveAutonomy ? .06 : 0), .12, .94);
     const success = random() <= successChance;
-    const damage = Math.round((success ? assignment.risk * .28 : assignment.risk * .75) * (.7 + random() * .6));
+    const damage = Math.round((success ? assignment.risk * .28 : assignment.risk * .75) * (.7 + random() * .6) * (aggressiveAutonomy ? 1.18 : 1));
     ships = ships.map((vessel) => vessel.id === ship.id ? { ...vessel, hull: Math.max(1, vessel.hull - damage), morale: clamp(vessel.morale + (success ? 4 : -12), 0, 100) } : vessel);
     officers = officers.map((officer) => officer.id === captain.id ? { ...officer, loyalty: clamp(officer.loyalty + (success ? 2 : -5), 0, 100), morale: clamp(officer.morale + (success ? 5 : -9), 0, 100) } : officer);
     if (!success) return { ...assignment, status: 'failed', progress: 100, damage, log: [...assignment.log, '강한 적과 마주쳐 피해를 입고 빈손으로 귀환했다.'] };

@@ -1,6 +1,6 @@
 import { DIFFICULTIES, SHIP_CLASSES, ZONES } from './catalog';
 import { cargoWeight } from './economy';
-import { applyNotoriety, NOTORIETY_EVENTS } from './factions';
+import { applyNotoriety, NOTORIETY_EVENTS, pursuitTier } from './factions';
 import { clamp } from './physics';
 import { progressMissions } from './missions';
 import { createId, mulberry32, pickOne, randomBetween, randomInt } from './rng';
@@ -62,13 +62,20 @@ export function createEncounter(state: GameState, forcedType?: 'merchant' | 'nav
   const random = mulberry32(seed);
   const zone = ZONES[state.voyage.zoneId];
   const roll = random();
-  const type = forcedType ?? (roll < zone.merchantRate ? 'merchant' : roll < zone.merchantRate + zone.navyRate ? 'navy' : 'pirate');
+  const pursuit = pursuitTier(state.bounty);
+  const forgedModifier = state.flags.forgedIdentity ? .58 : 1;
+  const hunterChance = pursuit.hunterChance * forgedModifier;
+  const navyRate = clamp(zone.navyRate * pursuit.patrolMultiplier * (state.flags['war:imperial-navy'] ? 1.2 : 1), 0, .88);
+  const merchantRate = clamp(zone.merchantRate / Math.max(1, pursuit.patrolMultiplier * .7), .08, .78);
+  const hunterEncounter = !forcedType && roll < hunterChance;
+  const adjustedRoll = hunterEncounter ? 1 : (roll - hunterChance) / Math.max(.01, 1 - hunterChance);
+  const type = forcedType ?? (hunterEncounter ? 'navy' : adjustedRoll < navyRate ? 'navy' : adjustedRoll < navyRate + merchantRate ? 'merchant' : 'pirate');
   const enemyShip = createEnemyShip(state.voyage.zoneId, type, seed);
   return {
     id: createId('encounter'),
     type,
-    title: type === 'merchant' ? `${enemyShip.name} — 상선` : type === 'navy' ? `${enemyShip.name} — 제국 순찰함` : `${enemyShip.name} — 정체불명의 해적선`,
-    description: type === 'merchant' ? '화물로 낮게 가라앉은 선체. 호위함은 보이지 않는다.' : type === 'navy' ? '대포문이 열리고 제국기가 바람을 받는다.' : '검은 깃발 아래 선원들이 무기를 들고 있다.',
+    title: hunterEncounter ? `${enemyShip.name} — 현상금 추격함` : type === 'merchant' ? `${enemyShip.name} — 상선` : type === 'navy' ? `${enemyShip.name} — 제국 순찰함` : `${enemyShip.name} — 정체불명의 해적선`,
+    description: hunterEncounter ? `당신의 ${Math.round(state.bounty)} 금화 현상금을 노린 추격함이 포문을 열었다.` : type === 'merchant' ? '화물로 낮게 가라앉은 선체. 호위함은 보이지 않는다.' : type === 'navy' ? '대포문이 열리고 제국기가 바람을 받는다.' : '검은 깃발 아래 선원들이 무기를 들고 있다.',
     threat: zone.difficulty * (type === 'navy' ? 1.3 : type === 'merchant' ? 0.75 : 1),
     enemyShip,
     distance: 680,
@@ -91,6 +98,7 @@ export function departForZone(state: GameState, zoneId: ZoneId): GameState {
       sailSetting: 0.25,
       weather: zoneId === 'storm-reach' ? 'storm' : zoneId === 'mist-archipelago' ? 'fog' : 'clear',
       windSpeed: (ZONES[zoneId].wind[0] + ZONES[zoneId].wind[1]) / 2,
+      pursuit: Math.round(pursuitTier(state.bounty).hunterChance * 100),
       currentEncounter: createEncounter({ ...state, voyage: { ...state.voyage, zoneId } }, firstTutorial ? 'merchant' : undefined)
     },
     combat: { ...state.combat, active: true, enemyShipId: undefined, lastResult: undefined }
