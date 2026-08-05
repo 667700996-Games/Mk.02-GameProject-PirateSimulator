@@ -1,7 +1,7 @@
 import { ZONES } from './catalog';
 import { clamp } from './physics';
 import { createId, hashString, mulberry32, randomInt } from './rng';
-import type { FleetAssignment, FleetFormation, FleetOrderType, GameState, Officer, OfficerRole, ResourceStock, Ship, ZoneId } from './types';
+import type { FleetAssignment, FleetFormation, FleetOrderType, GameState, Officer, OfficerRole, ResourceStock, ZoneId } from './types';
 
 const CAPTAIN_NAMES = ['이사벨 로크', '토마스 케인', '누라 알사바', '가브리엘 문', '산티아고 렌', '아니카 볼프', '조나스 핀'];
 const CAPTAIN_TRAITS = ['신중한 추격자', '대담한 약탈자', '항로 계산가', '선원들의 친구', '야심 찬 결투가', '폭풍을 읽는 자'];

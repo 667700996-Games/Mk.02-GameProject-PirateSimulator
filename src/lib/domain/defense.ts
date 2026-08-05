@@ -2,7 +2,7 @@ import { FACTIONS } from './catalog';
 import { fleetDefensePower } from './fleet';
 import { progressMissions } from './missions';
 import { clamp } from './physics';
-import type { DefenseState, FacilityId, GameState, ResourceId, ResourceStock } from './types';
+import type { FacilityId, GameState, ResourceId, ResourceStock } from './types';
 
 export type PreparationAction = 'muster' | 'powder' | 'barricades' | 'evacuate';
 export type NavalAction = 'crossfire' | 'fleet-charge' | 'fire-ships';

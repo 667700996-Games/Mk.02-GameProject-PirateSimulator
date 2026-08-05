@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { beginDefensePreparation, claimDefenseResult, launchDefense, prepareDefense, resolveNavalStage } from './defense';
 import { createNewGame } from './initialState';
+import type { GameState } from './types';
 
-function attackedGame() {
+function attackedGame(): GameState {
   const game = createNewGame({ captainName: '성벽', crewName: '수비대', shipName: '포대', flagMark: '♜', flagColor: '#333', trait: 'admiral', difficulty: 'captain', seed: 1 }, 1000);
   return { ...game, defense: { ...game.defense, active: true, stage: 'warning' as const, attackStrength: 35, defenseStrength: 0, attackerRemaining: 35 } };
 }
