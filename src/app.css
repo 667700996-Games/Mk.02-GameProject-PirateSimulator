@@ -304,7 +304,7 @@ h1, h2, h3, p { margin-top: 0; }
   .game-header { height: 58px; padding: 0 .7rem; }
   .captain-id { min-width: 0; flex: 1; }
   .captain-id small, .header-resources { display: none; }
-  .header-actions .btn:not(:last-child) { display: none; }
+  .header-actions .save-pulse, .header-actions .tag { display: none; }
   .game-nav { overflow-x: auto; justify-content: flex-start; }
   .nav-item { min-width: 78px; font-size: .65rem; }
   .haven-screen { min-height: 780px; }
