@@ -27,6 +27,30 @@ export function migrateGameState(input: unknown): GameState {
       playTimeSeconds: migrated.playTimeSeconds ?? 0
     };
   }
+  if ((migrated.version ?? 0) === 1) {
+    migrated = {
+      ...migrated,
+      version: 2,
+      fleet: migrated.fleet ?? {
+        formation: 'line-ahead',
+        autoEngage: false,
+        retreatHullPercent: 28,
+        assignments: [],
+        victories: 0,
+        shipsLost: 0
+      },
+      officers: migrated.officers?.map((officer) => ({ ...officer, isCaptain: officer.isCaptain ?? false })),
+      missions: migrated.missions?.map((mission) => ({ ...mission, difficulty: mission.difficulty ?? 1, claimed: mission.claimed ?? mission.status === 'complete' })),
+      defense: migrated.defense ? {
+        ...migrated.defense,
+        attackerRemaining: migrated.defense.attackerRemaining ?? migrated.defense.attackStrength,
+        preparation: migrated.defense.preparation ?? 0,
+        civilianRisk: migrated.defense.civilianRisk ?? 0,
+        selectedActions: migrated.defense.selectedActions ?? [],
+        log: migrated.defense.log ?? []
+      } : migrated.defense
+    };
+  }
   validateRequiredFields(migrated);
   return migrated as GameState;
 }

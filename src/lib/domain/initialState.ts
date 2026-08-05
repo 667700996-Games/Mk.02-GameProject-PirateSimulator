@@ -209,6 +209,14 @@ export function createNewGame(options: NewGameOptions, now = Date.now()): GameSt
     ],
     ships: [ship],
     activeShipId: ship.id,
+    fleet: {
+      formation: 'line-ahead',
+      autoEngage: false,
+      retreatHullPercent: 28,
+      assignments: [],
+      victories: 0,
+      shipsLost: 0
+    },
     haven: {
       name: options.havenName?.trim() || '검은물결 은신처',
       tier: 1,
@@ -255,7 +263,7 @@ export function createNewGame(options: NewGameOptions, now = Date.now()): GameSt
     combat: { active: false, selectedAmmo: 'round-shot', portReload: 0, starboardReload: 0, bowReload: 0, sternReload: 0 },
     boarding: { active: false, committedCrew: 0, playerStrength: 0, enemyStrength: 0, round: 0, log: [] },
     raid: { active: false, phase: 'scouting', crewCommitted: 0, timeRemaining: 0, alarm: 0, selectedTargets: [], recoveredLoot: {}, casualties: 0 },
-    defense: { active: false, attacker: 'red-tide', stage: 'warning', attackStrength: 0, defenseStrength: 0, timeToAttack: 0 },
+    defense: { active: false, attacker: 'red-tide', stage: 'warning', attackStrength: 0, defenseStrength: 0, timeToAttack: 0, attackerRemaining: 0, preparation: 0, civilianRisk: 0, selectedActions: [], log: [] },
     world: {
       day: 1,
       hour: 7.5,

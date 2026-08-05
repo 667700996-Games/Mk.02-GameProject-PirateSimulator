@@ -1,4 +1,4 @@
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export type GameScreen =
   | 'title'
@@ -11,6 +11,7 @@ export type GameScreen =
   | 'raid'
   | 'defense'
   | 'shipyard'
+  | 'fleet'
   | 'crew'
   | 'trade'
   | 'missions'
@@ -168,6 +169,36 @@ export interface Officer {
   wounded: boolean;
   wage: number;
   ambition: number;
+  isCaptain?: boolean;
+  assignedShipId?: string;
+}
+
+export type FleetFormation = 'line-ahead' | 'line-abreast' | 'crescent' | 'wolf-pack' | 'scatter';
+export type FleetOrderType = 'patrol' | 'raid' | 'escort' | 'smuggle' | 'scout' | 'defend';
+
+export interface FleetAssignment {
+  id: string;
+  shipId: string;
+  captainId: string;
+  order: FleetOrderType;
+  zoneId: ZoneId;
+  status: 'preparing' | 'underway' | 'returning' | 'complete' | 'failed' | 'deserted';
+  issuedAt: number;
+  resolvesAt: number;
+  progress: number;
+  risk: number;
+  log: string[];
+  reward: Partial<ResourceStock>;
+  damage: number;
+}
+
+export interface FleetState {
+  formation: FleetFormation;
+  autoEngage: boolean;
+  retreatHullPercent: number;
+  assignments: FleetAssignment[];
+  victories: number;
+  shipsLost: number;
 }
 
 export type FacilityId =
@@ -310,6 +341,9 @@ export interface Mission {
   progress: number;
   goal: number;
   story: boolean;
+  issuerFactionId?: FactionId;
+  difficulty?: number;
+  claimed?: boolean;
 }
 
 export interface VoyageState {
@@ -397,6 +431,12 @@ export interface DefenseState {
   timeToAttack: number;
   outcome?: 'victory' | 'defeat';
   damage?: string[];
+  attackerRemaining?: number;
+  preparation?: number;
+  civilianRisk?: number;
+  selectedActions?: string[];
+  log?: string[];
+  reward?: Partial<ResourceStock>;
 }
 
 export interface WorldState {
@@ -460,6 +500,7 @@ export interface GameState {
   officers: Officer[];
   ships: Ship[];
   activeShipId: string;
+  fleet: FleetState;
   haven: HavenState;
   factions: Record<FactionId, FactionRelation>;
   bounty: number;

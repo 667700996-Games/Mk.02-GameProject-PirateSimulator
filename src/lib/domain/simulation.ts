@@ -1,6 +1,7 @@
 import { calculateHavenDefense, calculateHavenTier, completeConstructions, facilityEfficiency, tickHavenDay } from './haven';
 import { clamp } from './physics';
 import { createId } from './rng';
+import { updateFleetAssignments } from './fleet';
 import type { GameState } from './types';
 
 export function advanceSimulation(state: GameState, realSeconds: number, now = Date.now()): GameState {
@@ -10,12 +11,12 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
   const absoluteHours = (state.world.day - 1) * 24 + state.world.hour + elapsedGameHours;
   const day = Math.floor(absoluteHours / 24) + 1;
   const hour = absoluteHours % 24;
-  let next: GameState = {
+  let next: GameState = updateFleetAssignments({
     ...state,
     playTimeSeconds: state.playTimeSeconds + realSeconds,
     haven: completeConstructions(state.haven, now),
     world: { ...state.world, day, hour }
-  };
+  }, now);
 
   if (day > previousDay) {
     for (let elapsedDay = previousDay; elapsedDay < day; elapsedDay += 1) next = advanceDay(next);
