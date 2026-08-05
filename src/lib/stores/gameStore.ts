@@ -80,7 +80,11 @@ async function load(id: string): Promise<void> {
 
 async function saveCurrent(toastDetail = '항해 기록을 안전하게 보관했습니다.'): Promise<void> {
   const current = get(session);
-  if (!current.game || current.saving) return;
+  if (!current.game) return;
+  if (current.saving) {
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    return saveCurrent(toastDetail);
+  }
   session.update((value) => ({ ...value, saving: true }));
   try {
     const record = await writeSave(current.game);
