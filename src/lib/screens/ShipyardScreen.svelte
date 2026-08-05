@@ -5,6 +5,9 @@
 
   let { game } = $props<{ game: GameState }>();
   let ship = $derived(game.ships.find((item: Ship) => item.id === game.activeShipId) ?? game.ships[0]);
+  let shipyardLevel = $derived(game.haven.facilities.shipyard?.level ?? 0);
+  let repairGold = $derived(Math.ceil((ship.stats.hullMax - ship.hull) * 1.4 + (ship.stats.sailMax - ship.sails) * .8));
+  let repairTimber = $derived(Math.ceil((ship.stats.hullMax - ship.hull) / 18));
   const className = (vessel: Ship) => SHIP_CLASSES[vessel.class].name;
   const classDescription = (vessel: Ship) => SHIP_CLASSES[vessel.class].description;
   const upgrades: { id: keyof ShipUpgrades; name: string; detail: string; gold: number; timber: number; iron: number }[] = [
@@ -15,6 +18,16 @@
     { id: 'hold', name: '확장 화물칸', detail: '적재량 +18%', gold: 290, timber: 28, iron: 5 },
     { id: 'quarters', name: '해먹 갑판', detail: '선원 정원 +10%', gold: 270, timber: 18, iron: 2 }
   ];
+
+  function upgradeCost(item: (typeof upgrades)[number]): { gold: number; timber: number; iron: number } {
+    const scale = 1 + ship.upgrades[item.id] * .65;
+    return { gold: Math.ceil(item.gold * scale), timber: Math.ceil(item.timber * scale), iron: Math.ceil(item.iron * scale) };
+  }
+
+  function canUpgrade(item: (typeof upgrades)[number]): boolean {
+    const cost = upgradeCost(item);
+    return shipyardLevel > 0 && ship.upgrades[item.id] < Math.min(5, shipyardLevel) && game.resources.gold >= cost.gold && game.resources.timber >= cost.timber && game.resources.iron >= cost.iron;
+  }
 
   function repair(): void {
     gameSession.updateGame((state) => {
@@ -33,7 +46,8 @@
       const level = active.upgrades[id];
       const scale = 1 + level * .65;
       const cost = { gold: Math.ceil(definition.gold * scale), timber: Math.ceil(definition.timber * scale), iron: Math.ceil(definition.iron * scale) };
-      if (state.resources.gold < cost.gold || state.resources.timber < cost.timber || state.resources.iron < cost.iron || level >= 5) return state;
+      const yardLevel = state.haven.facilities.shipyard?.level ?? 0;
+      if (yardLevel < 1 || state.resources.gold < cost.gold || state.resources.timber < cost.timber || state.resources.iron < cost.iron || level >= Math.min(5, yardLevel)) return state;
       const stats = { ...active.stats };
       if (id === 'hull') stats.hullMax = Math.round(stats.hullMax * 1.12);
       if (id === 'sails') stats.speedMax *= 1.06;
@@ -56,9 +70,9 @@
         <div class="mini-stat"><small>돛</small><b>{Math.round(ship.sails)} / {ship.stats.sailMax}</b><div class="meter"><span style={`--value:${ship.sails / ship.stats.sailMax * 100}%;--meter-color:#b6a56d`}></span></div></div>
         <div class="mini-stat"><small>속력</small><b>{ship.stats.speedMax.toFixed(1)} kn</b></div><div class="mini-stat"><small>대포</small><b>{ship.stats.cannonSlots}문</b></div><div class="mini-stat"><small>적재</small><b>{Math.round(ship.cargoWeight)} / {ship.stats.cargoMax}</b></div><div class="mini-stat"><small>선원</small><b>{ship.crew} / {ship.stats.crewMax}</b></div>
       </div>
-      <button class="btn primary wide" style="margin-top:1rem" onclick={repair} disabled={ship.hull === ship.stats.hullMax && ship.sails === ship.stats.sailMax}>전면 수리</button>
+      <button class="btn primary wide" style="margin-top:1rem" onclick={repair} disabled={(ship.hull === ship.stats.hullMax && ship.sails === ship.stats.sailMax) || game.resources.gold < repairGold || game.resources.timber < repairTimber}>전면 수리 · {repairGold} 금화 · 목재 {repairTimber}</button>
     </article>
-    <article class="panel span-7"><div class="panel-title"><div><span class="eyebrow">REFIT OPTIONS</span><h2>기함 개조</h2></div><span class="tag">조선소 {game.haven.facilities.shipyard?.level ?? 0}단계</span></div><div class="resource-list">{#each upgrades as item}<div class="resource-row"><span><strong>{item.name} · {ship.upgrades[item.id]}단계</strong><small style="display:block">{item.detail}</small></span><div class="costs"><span class="cost">● {Math.ceil(item.gold * (1 + ship.upgrades[item.id] * .65))}</span><span class="cost">▰ {Math.ceil(item.timber * (1 + ship.upgrades[item.id] * .65))}</span><span class="cost">◆ {Math.ceil(item.iron * (1 + ship.upgrades[item.id] * .65))}</span></div><button class="btn small" onclick={() => upgrade(item.id)} disabled={ship.upgrades[item.id] >= 5}>개조</button></div>{/each}</div></article>
+    <article class="panel span-7"><div class="panel-title"><div><span class="eyebrow">REFIT OPTIONS</span><h2>기함 개조</h2></div><span class="tag">조선소 {shipyardLevel}단계</span></div>{#if shipyardLevel === 0}<p class="muted" style="padding:.8rem;border-left:2px solid var(--brass)">본거지에 조선소를 건설해야 함선 개조를 시작할 수 있습니다.</p>{/if}<div class="resource-list">{#each upgrades as item}{@const cost = upgradeCost(item)}<div class="resource-row"><span><strong>{item.name} · {ship.upgrades[item.id]}단계</strong><small style="display:block">{item.detail} · 조선소 {Math.min(5, ship.upgrades[item.id] + 1)}단계 필요</small></span><div class="costs"><span class="cost">● {cost.gold}</span><span class="cost">▰ {cost.timber}</span><span class="cost">◆ {cost.iron}</span></div><button class="btn small" onclick={() => upgrade(item.id)} disabled={!canUpgrade(item)}>개조</button></div>{/each}</div></article>
     <article class="panel span-12"><div class="panel-title"><div><span class="eyebrow">FLEET</span><h2>정박 함선</h2></div></div><div class="resource-list">{#each game.ships as vessel}<div class="resource-row"><span><strong>{vessel.name}</strong><small> · {className(vessel)} · 선원 {vessel.crew}</small></span><span class="tag">{vessel.isFlagship ? '기함' : vessel.isCaptured ? '나포선' : '함대'}</span><button class="btn small" disabled={vessel.isFlagship} onclick={() => gameSession.updateGame((state) => ({ ...state, activeShipId: vessel.id, ships: state.ships.map((item) => ({ ...item, isFlagship: item.id === vessel.id })) }), true)}>기함 지정</button></div>{/each}</div></article>
   </div>
 </section>
