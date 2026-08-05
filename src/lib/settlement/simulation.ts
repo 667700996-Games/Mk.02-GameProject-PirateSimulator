@@ -85,6 +85,10 @@ function advanceConstruction(state: SettlementSimulationState, gameMinutes: numb
       building.statusReason = undefined;
       building.workers = [];
       state.statistics.completedBuildings += 1;
+      if (definition.category === 'gathering' || definition.category === 'processing' || definition.category === 'logistics') state.progression.points.prosperity += 2;
+      if (definition.category === 'housing' || definition.category === 'welfare' || definition.category === 'administration') state.progression.points.federation += 2;
+      if (definition.category === 'fleet' || definition.category === 'infrastructure') state.progression.points.seamanship += 2;
+      if (definition.category === 'military') state.progression.points.infamy += 2;
       for (const resident of assignedBuilders) {
         resident.workplaceId = undefined;
         resident.action = 'IDLE';
@@ -114,7 +118,9 @@ function advanceProduction(state: SettlementSimulationState, gameMinutes: number
       building.statusReason = '출력 보관 공간 포화';
       continue;
     }
-    const workerEfficiency = healthyWorkers.reduce((sum, worker) => sum + POPULATION_TIERS[worker.tier].productivity * (0.55 + worker.morale / 220) * (1 - worker.fatigue / 180), 0) / Math.max(1, needed);
+    const laborPolicy = state.policies.active.labor;
+    const policyFactor = laborPolicy === 'forced-quota' ? 1.18 : laborPolicy === 'merit-pay' ? 1.12 : 1;
+    const workerEfficiency = healthyWorkers.reduce((sum, worker) => sum + POPULATION_TIERS[worker.tier].productivity * (0.55 + worker.morale / 220) * (1 - worker.fatigue / 180), 0) / Math.max(1, needed) * policyFactor;
     building.recipeProgress += gameMinutes * Math.max(0.25, workerEfficiency) / recipe.durationMinutes;
     building.statusReason = `생산 ${Math.floor(Math.min(1, building.recipeProgress) * 100)}%`;
     if (building.recipeProgress < 1) continue;
@@ -154,7 +160,9 @@ function consumeAtHome(state: SettlementSimulationState): void {
     } else resident.needs.food = Math.max(0, resident.needs.food - 8);
     resident.needs.housing = Math.min(100, resident.needs.housing + 2);
     const averageNeeds = Object.values(resident.needs).reduce((sum, value) => sum + value, 0) / Object.values(resident.needs).length;
-    resident.morale = Math.max(0, Math.min(100, resident.morale + (averageNeeds - 55) * 0.02));
+    const policyMorale = state.policies.active.labor === 'forced-quota' ? -0.8 : state.policies.active.loot === 'equal-shares' ? 0.35 : 0;
+    const rationMorale = state.policies.active.food === 'reserve-rations' ? -0.4 : 0;
+    resident.morale = Math.max(0, Math.min(100, resident.morale + (averageNeeds - 55) * 0.02 + policyMorale + rationMorale));
     resident.loyalty = Math.max(0, Math.min(100, resident.loyalty + (resident.morale - 50) * 0.006));
     resident.fatigue = Math.max(0, resident.fatigue - 2);
   }

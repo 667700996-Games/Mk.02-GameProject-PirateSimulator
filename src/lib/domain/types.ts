@@ -18,6 +18,7 @@ export type GameScreen =
   | 'trade'
   | 'missions'
   | 'factions'
+  | 'progression'
   | 'settings';
 
 export type Difficulty = 'story' | 'corsair' | 'captain' | 'black-flag';

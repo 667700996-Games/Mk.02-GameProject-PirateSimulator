@@ -16,6 +16,7 @@
   import FactionsScreen from '$lib/screens/FactionsScreen.svelte';
   import SettingsScreen from '$lib/screens/SettingsScreen.svelte';
   import DefenseScreen from '$lib/screens/DefenseScreen.svelte';
+  import ProgressionScreen from '$lib/screens/ProgressionScreen.svelte';
   import { gameSession } from '$lib/stores/gameStore';
   import type { GameScreen, GameSettings, GameState, SaveRecord } from '$lib/domain/types';
 
@@ -55,6 +56,7 @@
     {:else if game.screen === 'crew'}<CrewScreen {game} />
     {:else if game.screen === 'missions'}<MissionsScreen {game} />
     {:else if game.screen === 'factions'}<FactionsScreen {game} />
+    {:else if game.screen === 'progression'}<ProgressionScreen {game} />
     {:else if game.screen === 'settings'}<SettingsScreen {settings} {saves} onUpdate={gameSession.updateSettings} onLoad={gameSession.load} onDelete={gameSession.deleteSave} onBack={backFromSettings} onTitle={title} />
     {:else if game.screen === 'defense'}<DefenseScreen {game} />
     {:else}<HavenScreen {game} {navigate} />{/if}

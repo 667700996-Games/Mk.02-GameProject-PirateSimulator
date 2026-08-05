@@ -9,6 +9,7 @@
     { screen: 'fleet', icon: '♜', label: '함대' },
     { screen: 'crew', icon: '♞', label: '선원단' },
     { screen: 'missions', icon: '▤', label: '임무' },
+    { screen: 'progression', icon: '✣', label: '발전' },
     { screen: 'factions', icon: '♛', label: '세력' }
   ];
 </script>

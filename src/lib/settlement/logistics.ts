@@ -85,6 +85,16 @@ export function scheduleLogistics(state: SettlementSimulationState): SettlementS
     }
   }
 
+  const expeditionOffice = next.buildings.find((building) => building.definitionId === 'expedition-office' && building.state === 'ACTIVE');
+  if (expeditionOffice) {
+    for (const expedition of next.expeditions.filter((item) => item.state === 'PREPARING')) {
+      for (const [resourceId, required] of Object.entries(expedition.supplies) as [SettlementResourceId, number][]) {
+        const missing = Math.max(0, required - amount(expeditionOffice.inputInventory, resourceId));
+        if (missing > 0) requestResource(next, expeditionOffice, resourceId, missing, 92);
+      }
+    }
+  }
+
   const warehouses = next.buildings.filter((building) => building.state === 'ACTIVE' && ['warehouse', 'local-storage', 'dock-warehouse', 'distribution-depot'].includes(building.definitionId));
   if (warehouses.length > 0) {
     for (const source of next.buildings) {

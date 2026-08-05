@@ -123,7 +123,7 @@ export function createInitialSettlement(seed: number, now = Date.now()): Settlem
     looseInventory: { gold: 180 },
     shipConstruction: [],
     expeditions: [],
-    progression: { points: { infamy: 0, prosperity: 0, seamanship: 0, federation: 0 }, unlocked: [] },
+    progression: { points: { infamy: 0, prosperity: 0, seamanship: 6, federation: 3 }, unlocked: ['seamanship-docks', 'federation-housing'] },
     policies: { active: { loot: 'equal-shares', labor: 'free-labor', food: 'equal-rations', prisoners: 'ransom', diplomacy: 'smuggler-favor' } },
     threat: { active: false, source: 'red-tide', discovered: false, strength: 0, etaHours: 0, fleetDescription: '' },
     warnings: [],
