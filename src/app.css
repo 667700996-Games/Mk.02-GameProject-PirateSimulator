@@ -315,6 +315,7 @@ h1, h2, h3, p { margin-top: 0; }
   .header-actions .save-pulse, .header-actions .tag { display: none; }
   .game-nav { overflow-x: auto; justify-content: flex-start; }
   .nav-item { min-width: 78px; font-size: .65rem; }
+  .toast { pointer-events: none; }
   .haven-screen { min-height: 780px; }
   .haven-tier-banner { left: 1rem; top: 1rem; }
   .haven-dashboard { grid-template-columns: 1fr; padding: .75rem; }

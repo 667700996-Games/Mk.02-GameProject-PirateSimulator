@@ -1,7 +1,7 @@
 import { createId } from '$lib/domain/rng';
 import { BUILDINGS } from './catalog';
 import { validatePlacement } from './island';
-import type { PartialSettlementInventory, SettlementBuilding, SettlementBuildingId, SettlementResourceId, SettlementSimulationState } from './types';
+import type { BuildingState, PartialSettlementInventory, SettlementBuilding, SettlementBuildingId, SettlementResourceId, SettlementSimulationState } from './types';
 
 export interface BuildCommandResult {
   state: SettlementSimulationState;
@@ -23,6 +23,19 @@ export function aggregateInventory(state: SettlementSimulationState): PartialSet
 export function hasSettlementResources(state: SettlementSimulationState, cost: PartialSettlementInventory): boolean {
   const total = aggregateInventory(state);
   return (Object.entries(cost) as [SettlementResourceId, number][]).every(([id, amount]) => (total[id] ?? 0) >= amount);
+}
+
+export function buildingUpgradeCost(definitionId: SettlementBuildingId, currentLevel: number): PartialSettlementInventory {
+  const definition = BUILDINGS[definitionId];
+  if (!definition) return {};
+  const factor = 0.45 + currentLevel * 0.2;
+  return Object.fromEntries(
+    (Object.entries(definition.constructionCost) as [SettlementResourceId, number][]).map(([resource, value]) => [resource, Math.max(1, Math.ceil(value * factor))])
+  ) as PartialSettlementInventory;
+}
+
+export function buildingMaxLevel(definitionId: SettlementBuildingId): number {
+  return ['shipyard', 'dry-dock', 'coastal-battery', 'captains-lodge', 'pirate-council'].includes(definitionId) ? 7 : 3;
 }
 
 export function spendSettlementResources(state: SettlementSimulationState, cost: PartialSettlementInventory): SettlementSimulationState | undefined {
@@ -65,7 +78,7 @@ export function placeBuilding(
   const newBuilding: SettlementBuilding = {
     id: createId('building'), definitionId, x, y, rotation, level: 1, state: 'PLANNED', constructionProgress: 0, constructionPriority: 3,
     workers: [], inputInventory: {}, outputInventory: {}, reservedInventory: {}, recipeId: definition.recipes[0], recipeProgress: 0,
-    condition: 100, fire: 0, paused: false, createdAt: now, statusReason: '건설 자재 운송 대기'
+    condition: 100, fire: 0, paused: false, constructionMaterialsCommitted: false, createdAt: now, statusReason: '건설 자재 운송 대기'
   };
   return { state: { ...state, buildings: [...state.buildings, newBuilding] }, ok: true, buildingId: newBuilding.id };
 }
@@ -93,9 +106,83 @@ export function toggleBuildingPause(state: SettlementSimulationState, id: string
   return {
     ...state,
     buildings: state.buildings.map((building) => building.id === id
-      ? { ...building, paused: !building.paused, state: !building.paused ? 'PAUSED' : building.constructionProgress >= 1 ? 'ACTIVE' : 'PLANNED', statusReason: !building.paused ? '선장 명령으로 일시정지' : undefined }
+      ? building.paused
+        ? { ...building, paused: false, state: building.pausedFrom ?? (building.constructionProgress >= 1 ? 'ACTIVE' : 'PLANNED'), pausedFrom: undefined, statusReason: undefined }
+        : { ...building, paused: true, pausedFrom: building.state, state: 'PAUSED', statusReason: '선장 명령으로 일시정지' }
       : building)
   };
+}
+
+export function setBuildingPriority(state: SettlementSimulationState, id: string, priority: 1 | 2 | 3 | 4 | 5): SettlementSimulationState {
+  return { ...state, buildings: state.buildings.map((building) => building.id === id ? { ...building, constructionPriority: priority } : building) };
+}
+
+export function setBuildingRecipe(state: SettlementSimulationState, id: string, recipeId?: string): SettlementSimulationState {
+  const building = state.buildings.find((item) => item.id === id);
+  const definition = building ? BUILDINGS[building.definitionId] : undefined;
+  if (!building || (recipeId && !definition?.recipes.includes(recipeId))) return state;
+  return { ...state, buildings: state.buildings.map((item) => item.id === id ? { ...item, recipeId, recipeProgress: 0, statusReason: recipeId ? '새 생산법 준비' : '생산 중단' } : item) };
+}
+
+export function beginBuildingUpgrade(state: SettlementSimulationState, id: string): BuildCommandResult {
+  const next = structuredClone(state);
+  const building = next.buildings.find((item) => item.id === id);
+  if (!building) return { state, ok: false, reason: '건물을 찾을 수 없습니다.' };
+  if (building.definitionId === 'wreckage' || building.level >= buildingMaxLevel(building.definitionId)) return { state, ok: false, reason: '더 이상 확장할 수 없는 시설입니다.' };
+  if (building.state !== 'ACTIVE' || building.paused) return { state, ok: false, reason: '정상 가동 중인 시설만 업그레이드할 수 있습니다.' };
+  for (const residentId of building.workers) {
+    const resident = next.residents.find((person) => person.id === residentId);
+    if (resident) { resident.workplaceId = undefined; resident.action = 'IDLE'; }
+  }
+  building.workers = [];
+  building.state = 'UPGRADING';
+  building.constructionProgress = 0;
+  building.upgradeMaterialsCommitted = false;
+  building.statusReason = `${building.level + 1}단계 확장 자재 운송 대기`;
+  return { state: next, ok: true, buildingId: id };
+}
+
+function releaseTransportReservations(state: SettlementSimulationState, buildingId: string): void {
+  for (const job of state.transports.filter((item) => item.targetBuildingId === buildingId && !['COMPLETED', 'CANCELLED'].includes(item.state))) {
+    const source = state.buildings.find((item) => item.id === job.sourceBuildingId);
+    if (source) source.reservedInventory[job.resourceId] = Math.max(0, (source.reservedInventory[job.resourceId] ?? 0) - job.amount);
+    const hauler = state.residents.find((resident) => resident.id === job.haulerId);
+    if (hauler) { hauler.action = 'IDLE'; hauler.path = []; hauler.pathProgress = 0; }
+    job.state = 'CANCELLED';
+  }
+}
+
+export function cancelBuildingWork(state: SettlementSimulationState, id: string): BuildCommandResult {
+  const building = state.buildings.find((item) => item.id === id);
+  if (!building || building.definitionId === 'wreckage') return { state, ok: false, reason: '취소할 공사를 찾을 수 없습니다.' };
+  const effectiveState: BuildingState | undefined = building.state === 'PAUSED'
+    ? building.pausedFrom
+    : building.state === 'BLOCKED' && building.upgradeMaterialsCommitted ? 'UPGRADING'
+    : building.state;
+  if (!effectiveState || !['PLANNED', 'CONSTRUCTING', 'UPGRADING', 'BLOCKED'].includes(effectiveState)) return { state, ok: false, reason: '진행 중인 공사가 아닙니다.' };
+  const next = structuredClone(state);
+  const target = next.buildings.find((item) => item.id === id)!;
+  releaseTransportReservations(next, id);
+  for (const [resource, value] of Object.entries(target.inputInventory) as [SettlementResourceId, number][]) next.looseInventory[resource] = (next.looseInventory[resource] ?? 0) + value;
+  if (effectiveState === 'UPGRADING') {
+    if (target.upgradeMaterialsCommitted) {
+      for (const [resource, value] of Object.entries(buildingUpgradeCost(target.definitionId, target.level)) as [SettlementResourceId, number][]) next.looseInventory[resource] = (next.looseInventory[resource] ?? 0) + Math.floor(value * 0.6);
+    }
+    target.inputInventory = {};
+    target.state = 'ACTIVE';
+    target.paused = false;
+    target.pausedFrom = undefined;
+    target.constructionProgress = 1;
+    target.upgradeMaterialsCommitted = false;
+    target.statusReason = undefined;
+  } else {
+    if (effectiveState === 'CONSTRUCTING') {
+      const definition = BUILDINGS[target.definitionId];
+      if (definition) for (const [resource, value] of Object.entries(definition.constructionCost) as [SettlementResourceId, number][]) next.looseInventory[resource] = (next.looseInventory[resource] ?? 0) + Math.floor(value * 0.6);
+    }
+    next.buildings = next.buildings.filter((item) => item.id !== id);
+  }
+  return { state: next, ok: true, buildingId: id };
 }
 
 export function demolishBuilding(state: SettlementSimulationState, id: string): SettlementSimulationState {

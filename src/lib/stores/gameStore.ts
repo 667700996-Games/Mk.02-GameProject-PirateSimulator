@@ -24,6 +24,7 @@ const initial: SessionState = {
 
 const session = writable<SessionState>(initial);
 let autoSaveTimer: ReturnType<typeof setTimeout> | undefined;
+let periodicAutoSaveSeconds = 0;
 
 function updateGame(mutator: (state: GameState) => GameState, autosave = false): void {
   session.update((current) => {
@@ -66,6 +67,7 @@ async function initialize(): Promise<void> {
 function startNewGame(options: NewGameOptions): void {
   const game = createNewGame(options);
   session.update((current) => ({ ...current, game, error: undefined }));
+  periodicAutoSaveSeconds = 0;
   scheduleAutoSave(200);
 }
 
@@ -74,6 +76,7 @@ async function load(id: string): Promise<void> {
     const game = await readSave(id);
     if (!game) throw new Error('저장 슬롯을 찾을 수 없습니다.');
     session.update((current) => ({ ...current, game, error: undefined }));
+    periodicAutoSaveSeconds = 0;
   } catch (error) {
     session.update((current) => ({ ...current, error: error instanceof Error ? error.message : '불러오기에 실패했습니다.' }));
   }
@@ -111,6 +114,7 @@ function setScreen(screen: GameScreen): void {
 }
 
 function returnToTitle(): void {
+  periodicAutoSaveSeconds = 0;
   session.update((current) => ({ ...current, game: null }));
 }
 
@@ -120,6 +124,12 @@ function setPaused(paused: boolean): void {
 
 function tickPlayTime(seconds: number): void {
   updateGame((game) => advanceSimulation(game, seconds));
+  if (!get(session).game) return;
+  periodicAutoSaveSeconds += seconds;
+  if (periodicAutoSaveSeconds >= 300) {
+    periodicAutoSaveSeconds = 0;
+    scheduleAutoSave(0);
+  }
 }
 
 function updateSettings(patch: Partial<GameSettings>): void {

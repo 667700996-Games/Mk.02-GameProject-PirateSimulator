@@ -2,11 +2,15 @@
   import { ZONES } from '$lib/domain/catalog';
   import { gameSession } from '$lib/stores/gameStore';
   import type { GameState, SettlementState, ZoneId } from '$lib/domain/types';
+  import type { StrategicExpedition } from '$lib/settlement/types';
 
   let { game } = $props<{ game: GameState }>();
   let selectedZone = $state<ZoneId>('beginners-bay');
   let selectedSettlement = $state<SettlementState | null>(null);
   let zone = $derived(ZONES[selectedZone]);
+  let activeExpeditions: StrategicExpedition[] = $derived(
+    game.settlement.expeditions.filter((expedition: StrategicExpedition) => !['COMPLETED', 'LOST'].includes(expedition.state))
+  );
   const positions: Record<ZoneId, { x: number; y: number }> = {
     'beginners-bay': { x: 18, y: 73 }, 'merchant-routes': { x: 35, y: 49 }, 'mist-archipelago': { x: 52, y: 34 }, 'naval-patrol': { x: 68, y: 27 }, 'storm-reach': { x: 73, y: 61 }, 'freeport-waters': { x: 48, y: 62 }, 'imperial-heartway': { x: 84, y: 19 }, 'legend-sea': { x: 91, y: 8 }
   };
@@ -35,8 +39,8 @@
       <button class="settlement-dot" style={`left:${settlement.position.x}%;top:${settlement.position.y}%`} onclick={() => selectSettlement(settlement)} aria-label={settlement.name}></button>
       <span class="settlement-label" style={`left:${settlement.position.x}%;top:${settlement.position.y}%`}>{settlement.name}</span>
     {/each}
-    {#each game.settlement.expeditions.filter((expedition) => !['COMPLETED','LOST'].includes(expedition.state)) as expedition}
-      {@const destination = positions[expedition.zoneId]}
+    {#each activeExpeditions as expedition}
+      {@const destination = positions[expedition.zoneId as ZoneId]}
       {@const progress = expedition.state === 'RETURNING' ? 1 - expedition.routeProgress : expedition.routeProgress}
       <span class="expedition-marker" style={`left:${18 + (destination.x - 18) * progress}%;top:${73 + (destination.y - 73) * progress}%`} title={expedition.name}>◢</span>
     {/each}

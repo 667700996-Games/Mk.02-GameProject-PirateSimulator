@@ -1,11 +1,19 @@
 import { createId } from '$lib/domain/rng';
 import { BUILDINGS, RECIPES } from './catalog';
+import { buildingUpgradeCost } from './construction';
 import { SHIP_PLANS } from './shipbuilding';
-import { findPath, pathDistance } from './island';
+import { findCachedPath, pathDistance } from './island';
 import type { PartialSettlementInventory, Resident, SettlementBuilding, SettlementResourceId, SettlementSimulationState, TransportJob } from './types';
 
 function amount(inventory: PartialSettlementInventory, resource: SettlementResourceId): number {
   return inventory[resource] ?? 0;
+}
+
+function route(state: SettlementSimulationState, start: { x: number; y: number }, goal: { x: number; y: number }): { x: number; y: number }[] {
+  const result = findCachedPath(state.island, start, goal, state.buildings);
+  if (result.hit) state.statistics.cacheHits += 1;
+  else state.statistics.cacheMisses += 1;
+  return result.path;
 }
 
 function incomingAmount(state: SettlementSimulationState, targetId: string, resourceId: SettlementResourceId): number {
@@ -16,7 +24,7 @@ function incomingAmount(state: SettlementSimulationState, targetId: string, reso
 
 function findSource(state: SettlementSimulationState, resourceId: SettlementResourceId, target: SettlementBuilding): { source: SettlementBuilding; available: number } | undefined {
   return state.buildings
-    .filter((building) => building.id !== target.id && building.state !== 'DESTROYED')
+    .filter((building) => building.state !== 'DESTROYED')
     .map((source) => ({ source, available: amount(source.outputInventory, resourceId) - amount(source.reservedInventory, resourceId) }))
     .filter((candidate) => candidate.available > 0)
     .sort((a, b) => Math.hypot(a.source.x - target.x, a.source.y - target.y) - Math.hypot(b.source.x - target.x, b.source.y - target.y))[0];
@@ -28,7 +36,7 @@ function requestResource(state: SettlementSimulationState, target: SettlementBui
     const candidate = findSource(state, resourceId, target);
     if (!candidate) break;
     const transfer = Math.min(6, remaining, candidate.available);
-    const path = findPath(state.island, { x: candidate.source.x, y: candidate.source.y }, { x: target.x, y: target.y });
+    const path = route(state, { x: candidate.source.x, y: candidate.source.y }, { x: target.x, y: target.y });
     if (path.length === 0) break;
     candidate.source.reservedInventory[resourceId] = amount(candidate.source.reservedInventory, resourceId) + transfer;
     state.transports.push({
@@ -46,7 +54,11 @@ export function scheduleLogistics(state: SettlementSimulationState): SettlementS
     const definition = BUILDINGS[building.definitionId];
     if (!definition || building.paused || building.state === 'DESTROYED') continue;
     if (!['ACTIVE', 'DAMAGED', 'BURNING'].includes(building.state)) {
-      for (const [resourceId, required] of Object.entries(definition.constructionCost) as [SettlementResourceId, number][]) {
+      if (building.constructionMaterialsCommitted || building.upgradeMaterialsCommitted) continue;
+      const constructionCost = building.state === 'UPGRADING' || building.pausedFrom === 'UPGRADING'
+        ? buildingUpgradeCost(building.definitionId, building.level)
+        : definition.constructionCost;
+      for (const [resourceId, required] of Object.entries(constructionCost) as [SettlementResourceId, number][]) {
         const missing = Math.max(0, required - amount(building.inputInventory, resourceId));
         if (missing > 0) requestResource(next, building, resourceId, missing, 80 + building.constructionPriority * 4);
       }
@@ -122,7 +134,7 @@ function assignWaitingHaulers(state: SettlementSimulationState): SettlementSimul
     if (!hauler) break;
     job.haulerId = hauler.id;
     job.state = 'PICKING_UP';
-    job.path = findPath(state.island, hauler.position, { x: source.x, y: source.y });
+    job.path = route(state, hauler.position, { x: source.x, y: source.y });
     job.progress = 0;
     hauler.action = 'HAULING';
     hauler.path = job.path;
@@ -181,7 +193,7 @@ export function advanceTransports(state: SettlementSimulationState, gameMinutes:
       source.reservedInventory[job.resourceId] = Math.max(0, amount(source.reservedInventory, job.resourceId) - job.amount);
       job.state = 'DELIVERING';
       job.progress = 0;
-      job.path = findPath(next.island, { x: source.x, y: source.y }, { x: target.x, y: target.y });
+      job.path = route(next, { x: source.x, y: source.y }, { x: target.x, y: target.y });
       resident.path = job.path;
     } else {
       const targetDefinition = BUILDINGS[target.definitionId];

@@ -76,7 +76,18 @@ function movementCost(tile: IslandTile): number {
   return 1;
 }
 
-export function findPath(island: IslandMapState, start: GridPoint, goal: GridPoint): GridPoint[] {
+const PATH_INFRASTRUCTURE: SettlementBuildingId[] = ['bridge', 'stairs', 'ramp', 'cargo-lift', 'cliff-platform'];
+const pathCache = new Map<string, GridPoint[]>();
+
+function infrastructureAt(buildings: SettlementBuilding[], x: number, y: number): SettlementBuilding | undefined {
+  return buildings.find((building) => building.state === 'ACTIVE' && PATH_INFRASTRUCTURE.includes(building.definitionId) && buildingCells(building).some((cell) => cell.x === x && cell.y === y));
+}
+
+function infrastructureSignature(buildings: SettlementBuilding[]): string {
+  return buildings.filter((building) => building.state === 'ACTIVE' && PATH_INFRASTRUCTURE.includes(building.definitionId)).map((building) => `${building.definitionId}:${building.x}:${building.y}:${building.rotation}`).sort().join('|');
+}
+
+export function findPath(island: IslandMapState, start: GridPoint, goal: GridPoint, buildings: SettlementBuilding[] = []): GridPoint[] {
   const startX = Math.round(start.x);
   const startY = Math.round(start.y);
   const goalX = Math.round(goal.x);
@@ -99,11 +110,14 @@ export function findPath(island: IslandMapState, start: GridPoint, goal: GridPoi
       const ny = current.y + dy;
       const tile = tileAt(island, nx, ny);
       if (!tile) continue;
+      const infrastructure = infrastructureAt(buildings, nx, ny);
       let step = movementCost(tile);
-      if (!Number.isFinite(step) && !(nx === goalX && ny === goalY)) continue;
+      if (!Number.isFinite(step) && !infrastructure && !(nx === goalX && ny === goalY)) continue;
       if (!Number.isFinite(step)) step = 2;
+      if (infrastructure) step = infrastructure.definitionId === 'cargo-lift' ? 0.45 : infrastructure.definitionId === 'bridge' ? 0.65 : 0.8;
       const currentTile = tileAt(island, current.x, current.y);
-      step += Math.abs(tile.elevation - (currentTile?.elevation ?? tile.elevation)) * 0.7;
+      const elevationPenalty = infrastructure && ['stairs', 'ramp', 'cargo-lift'].includes(infrastructure.definitionId) ? 0.12 : 0.7;
+      step += Math.abs(tile.elevation - (currentTile?.elevation ?? tile.elevation)) * elevationPenalty;
       const nextCost = (costs.get(key(current.x, current.y)) ?? 0) + step;
       const nextKey = key(nx, ny);
       if (nextCost >= (costs.get(nextKey) ?? Infinity)) continue;
@@ -127,6 +141,20 @@ export function findPath(island: IslandMapState, start: GridPoint, goal: GridPoi
   }
   path.push({ x: startX, y: startY });
   return path.reverse();
+}
+
+export function findCachedPath(island: IslandMapState, start: GridPoint, goal: GridPoint, buildings: SettlementBuilding[] = []): { path: GridPoint[]; hit: boolean } {
+  const key = `${island.seed}:${Math.round(start.x)},${Math.round(start.y)}>${Math.round(goal.x)},${Math.round(goal.y)}:${infrastructureSignature(buildings)}`;
+  const cached = pathCache.get(key);
+  if (cached) {
+    pathCache.delete(key);
+    pathCache.set(key, cached);
+    return { path: cached.map((point) => ({ ...point })), hit: true };
+  }
+  const path = findPath(island, start, goal, buildings);
+  if (pathCache.size >= 500) pathCache.delete(pathCache.keys().next().value ?? '');
+  pathCache.set(key, path.map((point) => ({ ...point })));
+  return { path, hit: false };
 }
 
 export function pathDistance(path: GridPoint[]): number {

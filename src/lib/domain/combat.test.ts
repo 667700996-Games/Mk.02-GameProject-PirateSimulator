@@ -26,8 +26,9 @@ describe('naval combat', () => {
 
   it('allows boarding only after the target is weakened and close', () => {
     const game = createNewGame(options, 1000);
-    const target = { ...game.ships[0], hull: 50 };
-    expect(canBoard(game.ships[0], target, 50, 0.4)).toBe(true);
-    expect(canBoard(game.ships[0], target, 120, 0.4)).toBe(false);
+    const attacker = { ...game.ships[0], hull: game.ships[0].stats.hullMax, sails: game.ships[0].stats.sailMax, crew: 14, morale: 72 };
+    const target = { ...attacker, hull: 50, crew: 3, morale: 18 };
+    expect(canBoard(attacker, target, 50, 0.4)).toBe(true);
+    expect(canBoard(attacker, target, 120, 0.4)).toBe(false);
   });
 });

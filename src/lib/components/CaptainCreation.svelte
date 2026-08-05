@@ -38,7 +38,7 @@
         <div class="panel-title"><div><span class="eyebrow">01 · IDENTITY</span><h2>선장과 깃발</h2></div></div>
         <div class="field"><label for="captain-name">선장 이름</label><input id="captain-name" maxlength="24" bind:value={captainName} /></div>
         <div class="field"><label for="crew-name">해적단 이름</label><input id="crew-name" maxlength="28" bind:value={crewName} /></div>
-        <div class="field"><label for="ship-name">시작 함선 이름</label><input id="ship-name" maxlength="24" bind:value={shipName} /></div>
+        <div class="field"><label for="ship-name">난파된 함선 이름</label><input id="ship-name" maxlength="24" bind:value={shipName} /></div>
         <div class="field"><label for="haven-name">은신처 이름</label><input id="haven-name" maxlength="28" bind:value={havenName} /></div>
         <div class="field">
           <span class="eyebrow">해적기 문양</span>

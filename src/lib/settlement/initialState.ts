@@ -103,7 +103,7 @@ function workforceRules(): WorkforceRule[] {
 
 export function createInitialSettlement(seed: number, now = Date.now()): SettlementSimulationState {
   const wreckage = building('wreckage', 11, 14, now);
-  wreckage.outputInventory = { gold: 180, logs: 24, stone: 12, fiber: 18, water: 20, hardtack: 16, tools: 6, rope: 5, cloth: 4 };
+  wreckage.outputInventory = { gold: 180, logs: 24, stone: 12, fiber: 18, water: 20, hardtack: 16, tools: 6, rope: 5, cloth: 4, medicine: 1, cannonballs: 4, powder: 2 };
   const campfire = building('campfire', 10, 12, now);
   const tents = [building('tent', 8, 12, now), building('tent', 9, 12, now), building('tent', 8, 13, now), building('tent', 9, 13, now)];
   const residents = Array.from({ length: 16 }, (_, index) => resident(index, seed, now, { x: 10, y: 12 }, index < 12 ? 'castaway' : 'laborer'));

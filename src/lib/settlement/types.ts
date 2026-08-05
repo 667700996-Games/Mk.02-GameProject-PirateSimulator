@@ -65,6 +65,9 @@ export interface SettlementBuilding {
   condition: number;
   fire: number;
   paused: boolean;
+  pausedFrom?: BuildingState;
+  constructionMaterialsCommitted?: boolean;
+  upgradeMaterialsCommitted?: boolean;
   createdAt: number;
   statusReason?: string;
 }
@@ -163,6 +166,21 @@ export interface ShipConstructionOrder {
 
 export type ExpeditionState = 'PREPARING' | 'DEPARTING' | 'TRAVELING' | 'EVENT' | 'COMBAT' | 'RETURNING' | 'COMPLETED' | 'LOST';
 
+export interface ExpeditionNavalCombat {
+  turn: number;
+  playerHull: number;
+  playerHullMax: number;
+  enemyHull: number;
+  enemyHullMax: number;
+  enemySails: number;
+  enemyMorale: number;
+  ammo: number;
+  windAngle: number;
+  range: 'far' | 'broadside' | 'boarding';
+  repairCharges: number;
+  log: string[];
+}
+
 export interface StrategicExpedition {
   id: string;
   name: string;
@@ -178,6 +196,7 @@ export interface StrategicExpedition {
   risk: number;
   morale: number;
   currentEventId?: string;
+  combat?: ExpeditionNavalCombat;
   log: string[];
   departedAt?: number;
   returnsAt?: number;

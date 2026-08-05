@@ -2,10 +2,11 @@ import { createId, hashString, mulberry32 } from '$lib/domain/rng';
 import { ZONES } from '$lib/domain/catalog';
 import type { Officer, Ship, ZoneId } from '$lib/domain/types';
 import { aggregateInventory } from './construction';
-import type { PartialSettlementInventory, Resident, SettlementResourceId, SettlementSimulationState, StrategicExpedition } from './types';
+import type { PartialSettlementInventory, SettlementResourceId, SettlementSimulationState, StrategicExpedition } from './types';
 
 export type ExpeditionPurpose = 'explore' | 'raid' | 'trade' | 'rescue';
 export type ExpeditionChoice = 'cautious' | 'bold' | 'parley';
+export type ExpeditionCombatCommand = 'maneuver' | 'round-shot' | 'chain-shot' | 'grape-shot' | 'repair' | 'board' | 'retreat';
 
 export interface ExpeditionEstimate {
   durationHours: number;
@@ -185,5 +186,151 @@ export function resolveExpeditionEvent(
   }
   expedition.currentEventId = undefined;
   expedition.state = 'TRAVELING';
+  return { settlement, ships: nextShips };
+}
+
+export function beginExpeditionCombat(
+  input: SettlementSimulationState,
+  ships: Ship[],
+  expeditionId: string
+): { settlement: SettlementSimulationState; ships: Ship[]; ok: boolean; reason?: string } {
+  const settlement = structuredClone(input);
+  const nextShips = structuredClone(ships);
+  const expedition = settlement.expeditions.find((item) => item.id === expeditionId);
+  if (!expedition || expedition.state !== 'EVENT' || !['naval-patrol', 'merchant-sails'].includes(expedition.currentEventId ?? '')) {
+    return { settlement: input, ships, ok: false, reason: '전술 해전을 시작할 수 있는 조우가 아닙니다.' };
+  }
+  const fleet = nextShips.filter((ship) => expedition.shipIds.includes(ship.id));
+  const playerHull = fleet.reduce((sum, ship) => sum + ship.hull, 0);
+  const playerHullMax = fleet.reduce((sum, ship) => sum + ship.stats.hullMax, 0);
+  const enemyHullMax = Math.round(72 + expedition.risk * 1.7 + ZONES[expedition.zoneId].difficulty * 12);
+  expedition.combat = {
+    turn: 1, playerHull, playerHullMax, enemyHull: enemyHullMax, enemyHullMax, enemySails: 100, enemyMorale: 82,
+    ammo: Math.max(4, expedition.supplies.cannonballs ?? 4), windAngle: Math.round((hashString(expedition.id) % 150) - 75),
+    range: 'far', repairCharges: Math.max(1, Math.floor(fleet.length + expedition.crewIds.length / 18)),
+    log: ['전투 깃발을 올리고 함포를 준비한다. 풍향과 거리를 읽어 첫 명령을 내리라.']
+  };
+  expedition.state = 'COMBAT';
+  expedition.log.push('전술 해전 개시 · 왕실 함대가 포문을 열었다.');
+  return { settlement, ships: nextShips, ok: true };
+}
+
+function distributeFleetDamage(ships: Ship[], shipIds: string[], damage: number): void {
+  const fleet = ships.filter((ship) => shipIds.includes(ship.id) && ship.hull > 0);
+  if (fleet.length === 0) return;
+  let remaining = damage;
+  for (let index = 0; index < fleet.length && remaining > 0; index += 1) {
+    const share = index === fleet.length - 1 ? remaining : Math.ceil(damage / fleet.length);
+    const applied = Math.min(Math.max(0, fleet[index].hull - 1), share);
+    fleet[index].hull -= applied;
+    remaining -= applied;
+  }
+}
+
+function repairFleet(ships: Ship[], shipIds: string[], amount: number): void {
+  const fleet = ships.filter((ship) => shipIds.includes(ship.id));
+  let remaining = amount;
+  for (const ship of fleet.sort((a, b) => a.hull / a.stats.hullMax - b.hull / b.stats.hullMax)) {
+    const repaired = Math.min(remaining, ship.stats.hullMax - ship.hull);
+    ship.hull += repaired;
+    remaining -= repaired;
+    if (remaining <= 0) break;
+  }
+}
+
+export function resolveExpeditionCombatTurn(
+  input: SettlementSimulationState,
+  ships: Ship[],
+  expeditionId: string,
+  command: ExpeditionCombatCommand
+): { settlement: SettlementSimulationState; ships: Ship[]; outcome?: 'victory' | 'retreat' | 'defeat'; reason?: string } {
+  const settlement = structuredClone(input);
+  const nextShips = structuredClone(ships);
+  const expedition = settlement.expeditions.find((item) => item.id === expeditionId);
+  const combat = expedition?.combat;
+  if (!expedition || expedition.state !== 'COMBAT' || !combat) return { settlement: input, ships, reason: '진행 중인 해전이 없습니다.' };
+  const fleet = nextShips.filter((ship) => expedition.shipIds.includes(ship.id));
+  const firepower = fleet.reduce((sum, ship) => sum + ship.stats.cannonSlots * (ship.cannonCondition / 100), 0);
+  const rng = mulberry32(hashString(`${expedition.id}:${combat.turn}:${command}`));
+  const rangeFactor = combat.range === 'broadside' ? 1.25 : combat.range === 'far' ? 0.68 : 0.48;
+  let maneuverEvasion = 1;
+  if (command === 'retreat') {
+    distributeFleetDamage(nextShips, expedition.shipIds, Math.ceil(4 + expedition.risk * 0.08));
+    expedition.state = 'RETURNING'; expedition.routeProgress = 0; expedition.currentEventId = undefined; expedition.combat = undefined;
+    expedition.log.push('연막과 사슬탄을 뿌리며 귀환 항로로 이탈했다.');
+    return { settlement, ships: nextShips, outcome: 'retreat' };
+  }
+  if (command === 'maneuver') {
+    combat.range = combat.range === 'far' ? 'broadside' : combat.range === 'broadside' ? 'boarding' : 'far';
+    combat.windAngle = Math.max(-90, Math.min(90, combat.windAngle + Math.round((rng() - 0.42) * 38)));
+    maneuverEvasion = 0.42;
+    combat.log.push(`제${combat.turn}턴 · 바람을 타고 ${combat.range === 'far' ? '장거리' : combat.range === 'broadside' ? '현측 포격' : '승선'} 거리로 기동했다.`);
+  } else if (command === 'repair') {
+    if (combat.repairCharges <= 0) return { settlement: input, ships, reason: '응급 수리 자재가 남지 않았습니다.' };
+    const repaired = Math.ceil(combat.playerHullMax * 0.09);
+    combat.repairCharges -= 1;
+    combat.playerHull = Math.min(combat.playerHullMax, combat.playerHull + repaired);
+    repairFleet(nextShips, expedition.shipIds, repaired);
+    combat.log.push(`제${combat.turn}턴 · 목수들이 포화 속에서 선체 ${repaired}을 복구했다.`);
+  } else if (command === 'board') {
+    const vulnerable = combat.range === 'boarding' && (combat.enemyHull / combat.enemyHullMax < 0.66 || combat.enemyMorale < 48 || combat.enemySails < 35);
+    if (!vulnerable) return { settlement: input, ships, reason: '승선 거리와 적의 손상·사기 조건이 충족되지 않았습니다.' };
+    const boardingPower = expedition.crewIds.length * (expedition.morale / 100) * (0.75 + rng() * 0.55);
+    const resistance = (10 + expedition.risk * 0.16) * (combat.enemyMorale / 100);
+    if (boardingPower >= resistance) {
+      combat.enemyMorale = 0;
+      combat.log.push(`제${combat.turn}턴 · 갈고리를 걸고 적 갑판을 장악했다.`);
+    } else {
+      expedition.morale = Math.max(0, expedition.morale - 10);
+      combat.playerHull = Math.max(1, combat.playerHull - 10);
+      distributeFleetDamage(nextShips, expedition.shipIds, 10);
+      combat.log.push(`제${combat.turn}턴 · 승선대가 밀려나 사상자가 발생했다.`);
+    }
+  } else {
+    const ammoCost = command === 'round-shot' ? 4 : 3;
+    if (combat.ammo < ammoCost) return { settlement: input, ships, reason: '전술 사격에 필요한 대포알이 부족합니다.' };
+    combat.ammo -= ammoCost;
+    const baseDamage = (20 + firepower * 1.45) * rangeFactor * (0.82 + rng() * 0.34) * (1 - Math.abs(combat.windAngle) / 420);
+    if (command === 'round-shot') {
+      const damage = Math.max(5, Math.round(baseDamage));
+      combat.enemyHull = Math.max(0, combat.enemyHull - damage);
+      combat.enemyMorale = Math.max(0, combat.enemyMorale - Math.ceil(damage * 0.12));
+      combat.log.push(`제${combat.turn}턴 · 일반탄 현측 사격, 적 선체 ${damage} 피해.`);
+    } else if (command === 'chain-shot') {
+      const damage = Math.max(8, Math.round(baseDamage * 1.35));
+      combat.enemySails = Math.max(0, combat.enemySails - damage);
+      combat.enemyMorale = Math.max(0, combat.enemyMorale - Math.ceil(damage * 0.1));
+      combat.log.push(`제${combat.turn}턴 · 사슬탄이 돛과 삭구를 찢어 ${damage} 손상.`);
+    } else {
+      const shock = Math.max(10, Math.round(baseDamage * 1.1));
+      combat.enemyMorale = Math.max(0, combat.enemyMorale - shock);
+      combat.log.push(`제${combat.turn}턴 · 산탄이 갑판을 휩쓸어 적 사기 ${shock} 감소.`);
+    }
+  }
+  if (combat.enemyHull <= 0 || combat.enemyMorale <= 0) {
+    const eventNumber = expedition.routeProgress < 0.6 ? 1 : 2;
+    expedition.cargo['royal-coins'] = (expedition.cargo['royal-coins'] ?? 0) + Math.ceil(28 + expedition.risk * 1.4);
+    expedition.cargo['military-maps'] = (expedition.cargo['military-maps'] ?? 0) + 1;
+    expedition.log.push(`사건 ${eventNumber} 해결 · 전술 해전 승리, 왕실 금화와 군사 지도를 확보했다.`);
+    expedition.state = 'TRAVELING'; expedition.currentEventId = undefined; expedition.combat = undefined;
+    settlement.progression.points.infamy += 4;
+    return { settlement, ships: nextShips, outcome: 'victory' };
+  }
+  const enemyDamage = Math.max(3, Math.round((5 + expedition.risk * 0.11 + rng() * 7) * maneuverEvasion * (combat.enemySails < 35 ? 0.68 : 1)));
+  combat.playerHull = Math.max(0, combat.playerHull - enemyDamage);
+  distributeFleetDamage(nextShips, expedition.shipIds, enemyDamage);
+  combat.log.push(`적의 응사로 함대 선체 ${enemyDamage} 피해.`);
+  combat.turn += 1;
+  if (combat.playerHull <= combat.playerHullMax * 0.12) {
+    expedition.state = 'RETURNING'; expedition.routeProgress = 0; expedition.currentEventId = undefined; expedition.combat = undefined;
+    expedition.morale = Math.max(0, expedition.morale - 18);
+    expedition.log.push('함대가 붕괴 직전에서 전장을 이탈했다.');
+    return { settlement, ships: nextShips, outcome: 'defeat' };
+  }
+  if (combat.turn > 14) {
+    const eventNumber = expedition.routeProgress < 0.6 ? 1 : 2;
+    expedition.state = 'TRAVELING'; expedition.currentEventId = undefined; expedition.combat = undefined;
+    expedition.log.push(`사건 ${eventNumber} 해결 · 양측이 탄약을 소모한 뒤 전장을 이탈했다.`);
+  }
   return { settlement, ships: nextShips };
 }

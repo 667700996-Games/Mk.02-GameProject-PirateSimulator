@@ -15,6 +15,7 @@ async function createSettlement(page: import('@playwright/test').Page): Promise<
 test('places a terrain-bound building and runs its physical construction flow', async ({ page }, testInfo) => {
   await createSettlement(page);
   await page.getByTestId('build-water-collector').click();
+  await page.locator('.collapse-button').click();
   const canvas = page.locator('.settlement-host canvas');
   const box = await canvas.boundingBox();
   expect(box).not.toBeNull();

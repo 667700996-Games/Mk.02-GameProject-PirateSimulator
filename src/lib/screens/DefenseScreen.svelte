@@ -104,7 +104,7 @@
       <div class="stage-copy"><span class="eyebrow">THE BAY BURNS</span><h2>해상 방어전</h2><p>적 함대가 포연 사이로 전진합니다. 화력과 함선 손실, 항구 피해 사이에서 선택하십시오.</p></div>
       <div class="action-grid defense-actions">{#each navalActions as action}<button class="btn tactical" onclick={() => update((state) => resolveNavalStage(state, action.id), true)}><strong>{action.name}</strong><small>{action.detail}</small></button>{/each}</div>
     {:else if game.defense.stage === 'landing'}
-      <div class="stage-copy"><span class="eyebrow">BOOTS ON THE SHORE</span><h2>상륙대 저지</h2><p>살아남은 적이 해변에 다당했습니다. 수비대의 사상자와 민간 위험을 감수하고 저지선을 고르십시오.</p></div>
+      <div class="stage-copy"><span class="eyebrow">BOOTS ON THE SHORE</span><h2>상륙대 저지</h2><p>살아남은 적이 해변에 다다랐습니다. 수비대의 사상자와 민간 위험을 감수하고 저지선을 고르십시오.</p></div>
       <div class="action-grid defense-actions">{#each landingActions as action}<button class="btn tactical" onclick={() => update((state) => resolveLandingStage(state, action.id), true)}><strong>{action.name}</strong><small>{action.detail}</small></button>{/each}</div>
     {:else if game.defense.stage === 'interior'}
       <div class="stage-copy"><span class="eyebrow danger">THE WALL IS BREACHED</span><h2>본거지 내부 전투</h2><p>부두와 목책이 뚫겼습니다. 자원과 시설, 주민 중 무엇을 지킬지 최종 명령을 내리십시오.</p></div>

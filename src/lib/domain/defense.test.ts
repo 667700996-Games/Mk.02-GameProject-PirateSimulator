@@ -5,6 +5,9 @@ import type { GameState } from './types';
 
 function attackedGame(): GameState {
   const game = createNewGame({ captainName: '성벽', crewName: '수비대', shipName: '포대', flagMark: '♜', flagColor: '#333', trait: 'admiral', difficulty: 'captain', seed: 1 }, 1000);
+  game.ships[0].hull = game.ships[0].stats.hullMax;
+  game.ships[0].sails = game.ships[0].stats.sailMax;
+  game.ships[0].crew = 14;
   const wreckage = game.settlement.buildings.find((building) => building.definitionId === 'wreckage')!;
   wreckage.outputInventory.rum = 8;
   return { ...game, defense: { ...game.defense, active: true, stage: 'warning' as const, attackStrength: 35, defenseStrength: 0, attackerRemaining: 35 } };

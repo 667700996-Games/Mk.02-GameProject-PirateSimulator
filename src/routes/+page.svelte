@@ -16,10 +16,12 @@
     const timer = window.setInterval(() => gameSession.tickPlayTime(1), 1000);
     const unlock = () => void soundEngine.unlock($gameSession.settings);
     const uiClick = (event: MouseEvent) => { if ((event.target as HTMLElement)?.closest('button,select')) soundEngine.play('ui'); };
+    const saveWhenHidden = () => { if (document.visibilityState === 'hidden' && $gameSession.game) gameSession.scheduleAutoSave(0); };
     window.addEventListener('pointerdown', unlock, { once: true });
     window.addEventListener('keydown', unlock, { once: true });
     window.addEventListener('click', uiClick);
-    return () => { window.clearInterval(timer); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); window.removeEventListener('click', uiClick); };
+    document.addEventListener('visibilitychange', saveWhenHidden);
+    return () => { window.clearInterval(timer); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); window.removeEventListener('click', uiClick); document.removeEventListener('visibilitychange', saveWhenHidden); };
   });
 
   $effect(() => {

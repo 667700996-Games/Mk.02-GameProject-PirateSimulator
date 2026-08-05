@@ -6,6 +6,7 @@ import type { SettlementBuilding, SettlementBuildingId, SettlementOverlay, Settl
 export interface SettlementSceneBridge {
   getState: () => SettlementSimulationState;
   onPlace: (definitionId: SettlementBuildingId, x: number, y: number, rotation: 0 | 1 | 2 | 3) => void;
+  onMoveBuilding: (buildingId: string, x: number, y: number) => void;
   onSelectBuilding: (id?: string) => void;
   onHoverTile: (x?: number, y?: number) => void;
   onCancelTool: () => void;
@@ -41,6 +42,7 @@ export class SettlementScene extends Phaser.Scene {
   private weatherLayer!: Phaser.GameObjects.Container;
   private preview!: Phaser.GameObjects.Graphics;
   private buildTool?: SettlementBuildingId;
+  private movingBuildingId?: string;
   private rotation: 0 | 1 | 2 | 3 = 0;
   private selectedBuildingId?: string;
   private dragging = false;
@@ -48,6 +50,8 @@ export class SettlementScene extends Phaser.Scene {
   private dragStart = { x: 0, y: 0, scrollX: 0, scrollY: 0 };
   private hoverTile?: { x: number; y: number };
   private waveSprites: Phaser.GameObjects.Ellipse[] = [];
+  private dynamicTweenTargets: Phaser.GameObjects.GameObject[] = [];
+  private weatherSignature = '';
 
   constructor() { super('settlement'); }
 
@@ -81,7 +85,14 @@ export class SettlementScene extends Phaser.Scene {
 
   public setBuildTool(definitionId?: SettlementBuildingId): void {
     this.buildTool = definitionId;
+    this.movingBuildingId = undefined;
     this.rotation = 0;
+    this.drawPreview();
+  }
+
+  public setMoveTool(buildingId?: string): void {
+    this.buildTool = undefined;
+    this.movingBuildingId = buildingId;
     this.drawPreview();
   }
 
@@ -157,6 +168,8 @@ export class SettlementScene extends Phaser.Scene {
   }
 
   private drawDynamicLayers(): void {
+    if (this.dynamicTweenTargets.length > 0) this.tweens.killTweensOf(this.dynamicTweenTargets);
+    this.dynamicTweenTargets = [];
     this.buildingLayer.removeAll(true);
     this.residentLayer.removeAll(true);
     this.overlayLayer.removeAll(true);
@@ -205,11 +218,13 @@ export class SettlementScene extends Phaser.Scene {
     if (definition.category === 'processing' && building.state === 'ACTIVE' && !building.statusReason) {
       const smoke = this.add.circle(8, -wallHeight - 17, 5, 0xb8b4a9, 0.22);
       container.add(smoke);
+      this.dynamicTweenTargets.push(smoke);
       this.tweens.add({ targets: smoke, y: smoke.y - 22, x: smoke.x + 7, alpha: 0, scale: 1.8, duration: 2400, repeat: -1 });
     }
     if (building.state === 'BURNING') {
       const fire = this.add.triangle(0, -wallHeight - 10, -9, 10, 0, -13, 9, 10, 0xef6b2e, 0.95);
       container.add(fire);
+      this.dynamicTweenTargets.push(fire);
       this.tweens.add({ targets: fire, scaleX: { from: 0.8, to: 1.25 }, alpha: { from: 0.7, to: 1 }, duration: 230, yoyo: true, repeat: -1 });
     }
     const icon = this.add.text(0, -wallHeight + 2, definition.icon, { fontFamily: 'serif', fontSize: `${Math.round(14 * scale)}px`, color: '#f2d291', stroke: '#101816', strokeThickness: 3 }).setOrigin(0.5);
@@ -244,9 +259,18 @@ export class SettlementScene extends Phaser.Scene {
 
   private drawOverlay(overlay: SettlementOverlay): void {
     if (overlay === 'none') return;
+    const trafficCounts = new Map<string, number>();
+    if (overlay === 'traffic') for (const job of this.snapshot.transports.filter((item) => !['COMPLETED', 'CANCELLED'].includes(item.state))) {
+      for (const cell of job.path) {
+        const key = `${cell.x}:${cell.y}`;
+        trafficCounts.set(key, (trafficCounts.get(key) ?? 0) + 1);
+      }
+    }
     if (overlay === 'logistics' || overlay === 'traffic') {
       for (const job of this.snapshot.transports.filter((item) => !['COMPLETED', 'CANCELLED'].includes(item.state))) {
-        const line = this.add.graphics().lineStyle(3 + Math.min(4, job.amount / 3), job.state === 'WAITING' ? 0xd26a4c : 0xe9c56f, job.state === 'WAITING' ? 0.5 : 0.8);
+        const congestion = job.path.reduce((peak, cell) => Math.max(peak, trafficCounts.get(`${cell.x}:${cell.y}`) ?? 0), 0);
+        const routeColor = overlay === 'traffic' ? (congestion > 5 ? 0xdb5947 : congestion > 2 ? 0xd8a957 : 0x62ad87) : job.state === 'WAITING' ? 0xd26a4c : 0xe9c56f;
+        const line = this.add.graphics().lineStyle(3 + Math.min(4, job.amount / 3), routeColor, job.state === 'WAITING' ? 0.5 : 0.8);
         const points = job.path.map((point) => {
           const tile = tileAt(this.snapshot.island, point.x, point.y);
           return this.iso(point.x, point.y, tile?.elevation ?? 0);
@@ -271,7 +295,7 @@ export class SettlementScene extends Phaser.Scene {
           color = building.workers.length < definition.workerSlots / 2 ? 0xd45d4b : 0x69ad8b;
           alpha = 0.22;
         }
-      } else if (overlay === 'defense' && ['coastal-battery', 'watchtower'].includes(building.definitionId)) {
+      } else if ((overlay === 'defense' || overlay === 'military') && ['coastal-battery', 'watchtower', 'guard-post', 'signal-tower'].includes(building.definitionId)) {
         color = 0xb25747;
         alpha = 0.17;
         const radius = (BUILDINGS[building.definitionId]?.range ?? 5) * TILE_W * 0.55;
@@ -281,14 +305,38 @@ export class SettlementScene extends Phaser.Scene {
         const hazardous = ['powder-workshop', 'powder-magazine', 'distillery', 'smelter'].includes(building.definitionId);
         color = hazardous ? 0xe26945 : 0x63a889;
         alpha = 0.18;
+      } else if (overlay === 'construction' && !['ACTIVE', 'DAMAGED'].includes(building.state)) {
+        color = building.state === 'BLOCKED' ? 0xdc5d49 : building.state === 'UPGRADING' ? 0x70a8c2 : 0xd9b15e;
+        alpha = 0.28;
+      } else if (overlay === 'food') {
+        const definition = BUILDINGS[building.definitionId];
+        if (definition?.housing) {
+          const food = (building.inputInventory.hardtack ?? 0) + (building.inputInventory['fish-stew'] ?? 0) + (building.inputInventory['meat-dish'] ?? 0);
+          color = food < 1 ? 0xd85847 : food < 4 ? 0xd4a34f : 0x65af85;
+          alpha = 0.25;
+        } else if (['fisher-hut', 'farm', 'bakery', 'cookhouse'].includes(building.definitionId)) { color = 0x69b987; alpha = 0.18; }
+      } else if ((overlay === 'needs' || overlay === 'housing' || overlay === 'consumer') && BUILDINGS[building.definitionId]?.housing) {
+        const residents = this.snapshot.residents.filter((resident) => resident.homeId === building.id);
+        const satisfaction = residents.length === 0 ? 100 : residents.reduce((sum, resident) => sum + Object.values(resident.needs).reduce((total, value) => total + value, 0) / Object.values(resident.needs).length, 0) / residents.length;
+        color = satisfaction < 38 ? 0xd85646 : satisfaction < 62 ? 0xd5a64e : 0x62ad83;
+        alpha = 0.25;
+      } else if (overlay === 'ship-supply' && ['small-dock', 'shipyard', 'dock-warehouse', 'supply-depot'].includes(building.definitionId)) {
+        const supplies = (building.inputInventory.hardtack ?? 0) + (building.inputInventory.water ?? 0) + (building.inputInventory.cannonballs ?? 0) + (building.inputInventory.powder ?? 0);
+        color = supplies < 8 ? 0xd95847 : supplies < 25 ? 0xd2a24e : 0x61ad87;
+        alpha = 0.25;
       }
       if (alpha > 0) this.overlayLayer.add(this.add.polygon(point.x, point.y, this.diamond(new Phaser.Math.Vector2(0, 0)), color, alpha).setStrokeStyle(2, color, 0.7));
     }
   }
 
   private drawWeather(): void {
-    this.weatherLayer.removeAll(true);
     const hour = (this.snapshot.simulationMinutes / 60) % 24;
+    const signature = `${this.snapshot.weather}-${Math.floor(hour)}`;
+    if (signature === this.weatherSignature) return;
+    this.weatherSignature = signature;
+    const oldWeather = this.weatherLayer.getAll();
+    if (oldWeather.length > 0) this.tweens.killTweensOf(oldWeather);
+    this.weatherLayer.removeAll(true);
     const night = hour < 6 || hour > 19 ? 0.34 : hour < 8 || hour > 17 ? 0.14 : 0;
     if (night > 0) this.weatherLayer.add(this.add.rectangle(1100, 725, 2200, 1450, 0x071026, night).setScrollFactor(0));
     if (this.snapshot.weather === 'rain' || this.snapshot.weather === 'storm') {
@@ -318,7 +366,7 @@ export class SettlementScene extends Phaser.Scene {
       const dx = pointer.x - this.dragStart.x;
       const dy = pointer.y - this.dragStart.y;
       this.dragDistance = Math.max(this.dragDistance, Math.hypot(dx, dy));
-      if (this.dragDistance > 5 && !this.buildTool) this.cameras.main.setScroll(this.dragStart.scrollX - dx / this.cameras.main.zoom, this.dragStart.scrollY - dy / this.cameras.main.zoom);
+      if (this.dragDistance > 5 && !this.buildTool && !this.movingBuildingId) this.cameras.main.setScroll(this.dragStart.scrollX - dx / this.cameras.main.zoom, this.dragStart.scrollY - dy / this.cameras.main.zoom);
     });
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
       this.dragging = false;
@@ -333,6 +381,18 @@ export class SettlementScene extends Phaser.Scene {
         } else this.bridge.onSound('critical');
         return;
       }
+      if (this.movingBuildingId) {
+        const building = this.snapshot.buildings.find((item) => item.id === this.movingBuildingId);
+        if (!building) return;
+        const validation = validatePlacement(this.snapshot.island, this.snapshot.buildings, building.definitionId, tile.x, tile.y, building.rotation, building.id);
+        if (validation.valid) {
+          this.bridge.onMoveBuilding(building.id, tile.x, tile.y);
+          this.bridge.onSound('impact');
+          this.movingBuildingId = undefined;
+          this.bridge.onCancelTool();
+        } else this.bridge.onSound('critical');
+        return;
+      }
       const building = [...this.snapshot.buildings].reverse().find((item) => buildingCells(item).some((cell) => cell.x === tile.x && cell.y === tile.y));
       this.selectedBuildingId = building?.id;
       this.bridge.onSelectBuilding(building?.id);
@@ -343,8 +403,9 @@ export class SettlementScene extends Phaser.Scene {
     });
     this.input.keyboard?.on('keydown-R', () => this.rotateBuildTool());
     this.input.keyboard?.on('keydown-ESC', () => {
-      if (!this.buildTool) return;
+      if (!this.buildTool && !this.movingBuildingId) return;
       this.buildTool = undefined;
+      this.movingBuildingId = undefined;
       this.preview.clear();
       this.bridge.onCancelTool();
     });
@@ -363,8 +424,11 @@ export class SettlementScene extends Phaser.Scene {
 
   private drawPreview(): void {
     this.preview?.clear();
-    if (!this.buildTool || !this.hoverTile || !this.preview) return;
-    const validation = validatePlacement(this.snapshot.island, this.snapshot.buildings, this.buildTool, this.hoverTile.x, this.hoverTile.y, this.rotation);
+    if ((!this.buildTool && !this.movingBuildingId) || !this.hoverTile || !this.preview) return;
+    const moving = this.movingBuildingId ? this.snapshot.buildings.find((item) => item.id === this.movingBuildingId) : undefined;
+    const definitionId = this.buildTool ?? moving?.definitionId;
+    if (!definitionId) return;
+    const validation = validatePlacement(this.snapshot.island, this.snapshot.buildings, definitionId, this.hoverTile.x, this.hoverTile.y, moving?.rotation ?? this.rotation, moving?.id);
     const color = validation.valid ? 0x62d39d : 0xe45549;
     this.preview.lineStyle(3, color, 0.95).fillStyle(color, 0.18);
     for (const cell of validation.cells) {
