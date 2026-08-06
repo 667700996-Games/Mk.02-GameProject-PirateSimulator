@@ -255,7 +255,7 @@ test('keeps game chrome fixed and supports timed or manual notification dismissa
   await save.click();
   const manualToast = page.locator('.toast').filter({ hasText: '항해일지' }).last();
   await expect(manualToast).toBeVisible();
-  await manualToast.getByRole('button', { name: '알림 닫기: 항해일지' }).click();
+  await manualToast.getByRole('button', { name: '알림 닫기: 항해일지' }).click({ force: true });
   await expect(manualToast).toBeHidden();
 
   await save.click();

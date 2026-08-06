@@ -5,7 +5,9 @@ export default defineConfig({
   fullyParallel: false,
   timeout: 60_000,
   expect: { timeout: 10_000 },
-  workers: process.env.CI ? 2 : 3,
+  // Each context initializes several multi-megabyte Phaser atlases and a WebGL renderer.
+  // Serial browser projects keep the full matrix deterministic on constrained CI runners.
+  workers: 1,
   retries: process.env.CI ? 2 : 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
