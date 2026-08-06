@@ -59,7 +59,11 @@ async function restoreFlagshipForNavalTest(page: import('@playwright/test').Page
 test('creates a pirate settlement and opens every core management surface', async ({
   page
 }, testInfo) => {
+  const terrainAtlasResponse = page.waitForResponse((response) => response.url().endsWith('/art/settlement/terrain-surfaces-atlas-v2.png'));
   await createCaptain(page);
+  const terrainAtlas = await terrainAtlasResponse;
+  expect(terrainAtlas.ok()).toBe(true);
+  expect(terrainAtlas.headers()['content-type']).toContain('image/png');
   if (!(await page.getByRole('heading', { name: '도시 건설' }).isVisible())) {
     await page.getByRole('button', { name: '건설 메뉴 열기' }).click();
   }

@@ -226,7 +226,7 @@ export class SettlementScene extends Phaser.Scene {
       for (const tile of sortedTiles) {
         if (!tile.discovered) continue;
         const point = this.iso(tile.x, tile.y, tile.elevation);
-        grid.lineStyle(1, tile.terrain === 'deep-water' ? 0x87b5b8 : 0x101d19, tile.terrain === 'deep-water' ? 0.08 : 0.18)
+        grid.lineStyle(1, tile.terrain === 'deep-water' ? 0x87b5b8 : 0x101d19, tile.terrain === 'deep-water' ? 0.04 : 0.08)
           .strokePoints(this.diamond(point), true);
       }
       this.terrainLayer.add(grid);
