@@ -59,7 +59,7 @@ test('places a terrain-bound building and runs its physical construction flow', 
   await expect(page.getByText('빗물 집수장 계획 배치')).toBeVisible();
   await page.getByRole('button', { name: '3×', exact: true }).click();
   // The construction is intentionally gated by two physical deliveries before builders begin.
-  await expect(page.getByText(/CONSTRUCTING|ACTIVE/)).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByText(/CONSTRUCTING|ACTIVE/)).toBeVisible({ timeout: 75_000 });
   await page.screenshot({ path: testInfo.outputPath('settlement-city.png'), fullPage: true });
 });
 

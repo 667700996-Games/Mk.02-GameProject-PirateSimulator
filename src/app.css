@@ -1587,7 +1587,7 @@ p {
 }
 .toast {
   position: relative;
-  pointer-events: auto;
+  pointer-events: none;
   padding: 0.8rem 2.7rem 0.8rem 1rem;
   background: rgba(6, 19, 22, 0.96);
   border: 1px solid var(--line);
@@ -1625,6 +1625,7 @@ p {
 }
 .toast-dismiss {
   position: absolute;
+  pointer-events: auto;
   top: 50%;
   right: 0.65rem;
   width: 30px;
