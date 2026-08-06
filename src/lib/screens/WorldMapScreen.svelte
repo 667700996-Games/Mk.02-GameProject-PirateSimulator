@@ -1,7 +1,8 @@
 <script lang="ts">
   import { ZONES } from '$lib/domain/catalog';
+  import { departForZone } from '$lib/domain/voyage';
   import { gameSession } from '$lib/stores/gameStore';
-  import type { GameState, SettlementState, ZoneId } from '$lib/domain/types';
+  import type { GameState, SettlementState, Ship, ZoneId } from '$lib/domain/types';
   import type { StrategicExpedition } from '$lib/settlement/types';
 
   let { game } = $props<{ game: GameState }>();
@@ -10,6 +11,10 @@
   let zone = $derived(ZONES[selectedZone]);
   let activeExpeditions: StrategicExpedition[] = $derived(
     game.settlement.expeditions.filter((expedition: StrategicExpedition) => !['COMPLETED', 'LOST'].includes(expedition.state))
+  );
+  let activeShip = $derived(game.ships.find((ship: Ship) => ship.id === game.activeShipId) ?? game.ships[0]);
+  let canDirectSortie = $derived(
+    !!activeShip && activeShip.hull >= activeShip.stats.hullMax * .35 && activeShip.sails >= activeShip.stats.sailMax * .35 && activeShip.crew >= 4
   );
   const positions: Record<ZoneId, { x: number; y: number }> = {
     'beginners-bay': { x: 17, y: 70 }, 'merchant-routes': { x: 31, y: 43 }, 'mist-archipelago': { x: 48, y: 21 }, 'naval-patrol': { x: 73, y: 19 }, 'storm-reach': { x: 12, y: 17 }, 'freeport-waters': { x: 81, y: 46 }, 'imperial-heartway': { x: 52, y: 79 }, 'legend-sea': { x: 83, y: 76 }
@@ -22,6 +27,11 @@
 
   function planExpedition(): void {
     gameSession.updateGame((state) => ({ ...state, screen: 'fleet', previousScreen: 'world-map', voyage: { ...state.voyage, zoneId: selectedZone, destinationId: selectedSettlement?.id } }));
+  }
+
+  function directSortie(): void {
+    if (!canDirectSortie) return;
+    gameSession.updateGame((state) => departForZone(state, selectedZone), true);
   }
 
 </script>
@@ -61,6 +71,7 @@
       </div>
       {#if ['coastal-village', 'fishing-village', 'trade-city', 'military-port'].includes(selectedSettlement.type)}
         <button class="btn danger-button wide" onclick={planExpedition}>이 거점 약탈 원정 편성</button>
+        <button class="btn ghost wide direct-sortie" onclick={directSortie} disabled={!canDirectSortie}>기함으로 전술 출격</button>
       {:else if selectedSettlement.type === 'freeport'}
         <button class="btn primary wide" onclick={() => gameSession.setScreen('freeport')}>자유항 입항</button>
       {:else if selectedSettlement.type === 'player-haven'}
@@ -81,10 +92,17 @@
       </div>
       <p class="faint" style="font-size:.72rem">희귀 자원: {zone.rareResources.join(' · ')}</p>
       <button class="btn primary wide" onclick={planExpedition}>이 해역 원정 편성</button>
+      <button class="btn ghost wide direct-sortie" onclick={directSortie} disabled={!canDirectSortie}>기함으로 전술 출격</button>
+      <p class:danger={!canDirectSortie} class="sortie-requirement">
+        {canDirectSortie
+          ? `${activeShip.name} · 실시간 포격과 승선 지휘`
+          : '선체·돛 35% 이상, 선원 4명 이상의 기함이 필요합니다.'}
+      </p>
     {/if}
   </aside>
 </section>
 
 <style>
   .expedition-marker{position:absolute;z-index:8;transform:translate(-50%,-50%);display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#172c2c;border:1px solid #e2bd6d;color:#f0ce82;box-shadow:0 0 20px #df9e4d88;animation:map-fleet-pulse 1.6s infinite alternate}@keyframes map-fleet-pulse{to{transform:translate(-50%,-50%) scale(1.14);box-shadow:0 0 32px #df9e4daa}}
+  .direct-sortie{margin-top:.5rem}.sortie-requirement{margin:.55rem 0 0;font-size:.66rem;line-height:1.5;color:#9fb0aa}.sortie-requirement.danger{color:#c98c7f}
 </style>

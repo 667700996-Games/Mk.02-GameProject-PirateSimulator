@@ -12,6 +12,50 @@ async function createCaptain(page: import('@playwright/test').Page): Promise<voi
   await expect(page.locator('.settlement-host canvas')).toBeVisible({ timeout: 15_000 });
 }
 
+async function restoreFlagshipForNavalTest(page: import('@playwright/test').Page): Promise<void> {
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.getByText('항해 기록을 안전하게 보관했습니다.')).toBeVisible();
+  await page.evaluate(
+    async () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('blackwake-pirate-simulator');
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const database = request.result;
+          const read = database.transaction('saves', 'readonly').objectStore('saves').getAll();
+          read.onerror = () => reject(read.error);
+          read.onsuccess = () => {
+            const record = read.result[0];
+            const state = record.state;
+            const flagship = state.ships.find((ship: { id: string }) => ship.id === state.activeShipId) ?? state.ships[0];
+            flagship.hull = flagship.stats.hullMax;
+            flagship.sails = flagship.stats.sailMax;
+            flagship.crew = Math.max(8, Math.min(flagship.stats.crewMax, 12));
+            flagship.cargo.cannonballs = 80;
+            flagship.cargo.powder = 80;
+            const serialized = JSON.stringify(state);
+            let hash = 2166136261;
+            for (let index = 0; index < serialized.length; index += 1) {
+              hash ^= serialized.charCodeAt(index);
+              hash = Math.imul(hash, 16777619);
+            }
+            record.integrity = `fnv1a-${(hash >>> 0).toString(16).padStart(8, '0')}`;
+            const write = database.transaction('saves', 'readwrite');
+            write.objectStore('saves').put(record);
+            write.onerror = () => reject(write.error);
+            write.oncomplete = () => {
+              database.close();
+              resolve();
+            };
+          };
+        };
+      })
+  );
+  await page.reload();
+  await page.getByRole('button', { name: /항해 계속하기 · 검은수염 테스트/ }).click();
+  await expect(page.getByTestId('settlement-screen')).toBeVisible();
+}
+
 test('creates a pirate settlement and opens every core management surface', async ({
   page
 }, testInfo) => {
@@ -45,6 +89,35 @@ test('creates a pirate settlement and opens every core management surface', asyn
   await expect(page.getByRole('heading', { name: '일시정지' })).toBeVisible();
   await page.getByRole('button', { name: /항해 계속/ }).click();
   await expect(page.getByRole('heading', { name: '함대와 전략 원정' })).toBeVisible();
+});
+
+test('launches the restored flagship into the class-specific real-time naval theatre', async ({
+  page
+}, testInfo) => {
+  test.slow();
+  await createCaptain(page);
+  await restoreFlagshipForNavalTest(page);
+  await page.locator('.game-nav').getByRole('button', { name: '해도', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '검은 해도' })).toBeVisible();
+
+  const sortie = page.getByRole('button', { name: '기함으로 전술 출격' });
+  await expect(sortie).toBeEnabled();
+  const atlasResponse = page.waitForResponse((response) => response.url().endsWith('/art/naval/fleet-classes-atlas.png'));
+  await sortie.click();
+  const atlas = await atlasResponse;
+  expect(atlas.ok()).toBe(true);
+  expect(atlas.headers()['content-type']).toContain('image/png');
+
+  await expect(page.getByTestId('sea-screen')).toBeVisible();
+  await expect(page.locator('[data-testid="naval-canvas-host"] canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText('전투 태세 정상').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /1번 일반 포탄/ })).toBeEnabled();
+  await expect(page.getByRole('button', { name: /Q · 좌현/ })).toBeVisible();
+  await page.keyboard.down('w');
+  await page.waitForTimeout(700);
+  await page.keyboard.up('w');
+  await expect(page.locator('.speed-readout b')).not.toHaveText('0.0');
+  await page.screenshot({ path: testInfo.outputPath('real-time-naval-theatre.png'), fullPage: true });
 });
 
 test('persists and restores the complete settlement state through IndexedDB', async ({ page }) => {

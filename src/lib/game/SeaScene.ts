@@ -3,6 +3,13 @@ import { AMMO, applyShot, broadsideBearing, canBoard, resolveShot, tickDamage, t
 import { removeCargo } from '$lib/domain/economy';
 import { clamp, normalizeAngle, tickSailing, type SailingState } from '$lib/domain/physics';
 import type { AmmoType, GameSettings, GameState, Ship } from '$lib/domain/types';
+import {
+  NAVAL_ATLAS_DATA,
+  NAVAL_ATLAS_IMAGE,
+  NAVAL_ATLAS_KEY,
+  SHIP_ART,
+  shipDamageStage
+} from './navalArt';
 
 export interface SeaHudSnapshot {
   speed: number;
@@ -40,14 +47,26 @@ interface SceneData {
   bridge: SeaSceneBridge;
 }
 
+interface ShipVisual {
+  container: Phaser.GameObjects.Container;
+  sprite: Phaser.GameObjects.Image;
+  floodRing: Phaser.GameObjects.Ellipse;
+  scorchPort: Phaser.GameObjects.Ellipse;
+  scorchStarboard: Phaser.GameObjects.Ellipse;
+  fireGlow: Phaser.GameObjects.Ellipse;
+  flamePort: Phaser.GameObjects.Triangle;
+  flameStarboard: Phaser.GameObjects.Triangle;
+  smoke: Phaser.GameObjects.Ellipse;
+}
+
 export class SeaScene extends Phaser.Scene {
   private bridge!: SeaSceneBridge;
   private player!: Ship;
   private enemy?: Ship;
   private playerMotion!: SailingState;
   private enemyMotion!: SailingState;
-  private playerVisual!: Phaser.GameObjects.Container;
-  private enemyVisual?: Phaser.GameObjects.Container;
+  private playerVisual!: ShipVisual;
+  private enemyVisual?: ShipVisual;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private selectedSide: Broadside = 'starboard';
   private selectedAmmo: AmmoType = 'round-shot';
@@ -79,6 +98,12 @@ export class SeaScene extends Phaser.Scene {
     this.selectedAmmo = state.combat.selectedAmmo;
   }
 
+  preload(): void {
+    if (!this.textures.exists(NAVAL_ATLAS_KEY)) {
+      this.load.atlas(NAVAL_ATLAS_KEY, NAVAL_ATLAS_IMAGE, NAVAL_ATLAS_DATA);
+    }
+  }
+
   create(): void {
     this.createTextures();
     this.cameras.main.setBackgroundColor('#061b24');
@@ -91,7 +116,7 @@ export class SeaScene extends Phaser.Scene {
       this.enemyMotion = { x: 1880, y: 920, heading: 2.7, speed: this.enemy.stats.speedMax * 0.52, sailSetting: 0.86 };
       this.enemyVisual = this.createShipVisual(this.enemy, this.enemyMotion.x, this.enemyMotion.y, true);
     }
-    this.cameras.main.startFollow(this.playerVisual, true, 0.07, 0.07);
+    this.cameras.main.startFollow(this.playerVisual.container, true, 0.07, 0.07);
     this.cameras.main.setZoom(0.92);
     this.createWeather();
     this.bindControls();
@@ -108,6 +133,8 @@ export class SeaScene extends Phaser.Scene {
     this.updateEnemy(dt);
     this.updateReloads(dt);
     this.updateDamage(dt);
+    this.updateShipDamageVisual(this.playerVisual, this.player, time);
+    if (this.enemy && this.enemyVisual) this.updateShipDamageVisual(this.enemyVisual, this.enemy, time);
     this.createWake(dt);
     if (time - this.lastSnapshot > 90) {
       this.lastSnapshot = time;
@@ -200,21 +227,76 @@ export class SeaScene extends Phaser.Scene {
     }
   }
 
-  private createShipVisual(ship: Ship, x: number, y: number, enemy: boolean): Phaser.GameObjects.Container {
-    const scale = 0.74 + Math.min(0.55, ship.stats.crewMax / 400);
-    const container = this.add.container(x, y).setDepth(5).setScale(scale);
-    const shadow = this.add.ellipse(8, 10, 98, 29, 0x001016, 0.48);
-    const hull = this.add.polygon(0, 0, [-52, 0, -34, -18, 25, -15, 55, 0, 27, 17, -35, 19], enemy ? 0x432b26 : 0x4b3529, 1).setStrokeStyle(2, enemy ? 0xa94334 : 0xb38a52, 0.9);
-    const deck = this.add.polygon(0, 1, [-38, 0, -24, -10, 30, -8, 44, 0, 29, 9, -26, 10], 0x7a5537, 1);
-    const mast = this.add.rectangle(-2, 0, 4, 79, 0x33251d).setOrigin(0.5);
-    const sailColor = enemy ? 0x6e302c : 0xc6b58d;
-    const mainSail = this.add.triangle(0, -2, -2, 0, -2, -35, 36, -2, sailColor, 0.94).setStrokeStyle(1, 0x2b211b, 0.8);
-    const foreSail = this.add.triangle(-23, 0, 0, 0, 0, -24, -25, -1, sailColor, 0.83);
-    const flag = this.add.triangle(0, -42, 0, 0, 26, 7, 0, 13, enemy ? 0x9e3028 : parseInt(this.bridge.getState().captain.flagColor.slice(1), 16), 1);
-    const lantern = this.add.circle(-35, 0, 3, 0xf0a84c, 1).setBlendMode(Phaser.BlendModes.ADD);
-    container.add([shadow, hull, deck, mast, mainSail, foreSail, flag, lantern]);
+  private createShipVisual(ship: Ship, x: number, y: number, enemy: boolean): ShipVisual {
+    const art = SHIP_ART[ship.class];
+    const container = this.add.container(x, y).setDepth(5);
+    const targetRing = this.add.ellipse(0, 8, art.shadowWidth * 1.08, art.shadowWidth * 0.44, enemy ? 0xa53f35 : 0xd5b66d, enemy ? 0.09 : 0.045)
+      .setStrokeStyle(enemy ? 2 : 1, enemy ? 0xcc5c4d : 0xd4b36b, enemy ? 0.44 : 0.2);
+    const shadow = this.add.ellipse(5, 14, art.shadowWidth, Math.max(22, art.shadowWidth * 0.28), 0x001016, 0.55);
+    const floodRing = this.add.ellipse(0, 12, art.shadowWidth * 1.04, Math.max(24, art.shadowWidth * 0.34), 0x8fc8c5, 0)
+      .setStrokeStyle(3, 0xc8efeb, 0).setVisible(false);
+    const sprite = this.add.image(0, 0, NAVAL_ATLAS_KEY, art.frame)
+      .setDisplaySize(art.displaySize, art.displaySize)
+      .setOrigin(0.5);
+    const scorchPort = this.add.ellipse(-art.displaySize * 0.08, -8, art.displaySize * 0.18, art.displaySize * 0.075, 0x160f0d, 0.72)
+      .setRotation(-0.2).setVisible(false);
+    const scorchStarboard = this.add.ellipse(art.displaySize * 0.12, 10, art.displaySize * 0.2, art.displaySize * 0.08, 0x130d0c, 0.8)
+      .setRotation(0.18).setVisible(false);
+    const fireGlow = this.add.ellipse(0, -3, art.displaySize * 0.3, art.displaySize * 0.18, 0xf07b32, 0)
+      .setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
+    const flamePort = this.add.triangle(-art.displaySize * 0.08, -12, -7, 9, 0, -14, 7, 9, 0xf28535, 0.95).setVisible(false);
+    const flameStarboard = this.add.triangle(art.displaySize * 0.09, -7, -6, 8, 0, -12, 6, 8, 0xffba48, 0.94).setVisible(false);
+    const smoke = this.add.ellipse(0, -24, art.displaySize * 0.22, art.displaySize * 0.13, 0x252627, 0).setVisible(false);
+    const flagColor = enemy ? 0xa33c32 : parseInt(this.bridge.getState().captain.flagColor.slice(1), 16);
+    const flagPole = this.add.rectangle(-art.displaySize * 0.25, -art.displaySize * 0.15, 2, art.displaySize * 0.22, 0x2e211a, 0.92);
+    const flag = this.add.triangle(-art.displaySize * 0.18, -art.displaySize * 0.23, 0, 0, art.displaySize * 0.14, art.displaySize * 0.04, 0, art.displaySize * 0.08, flagColor, 0.96);
+    const lantern = this.add.circle(-art.displaySize * 0.28, 3, 3.2, 0xf0a84c, 0.9).setBlendMode(Phaser.BlendModes.ADD);
+    container.add([
+      targetRing,
+      shadow,
+      floodRing,
+      sprite,
+      scorchPort,
+      scorchStarboard,
+      flagPole,
+      flag,
+      lantern,
+      fireGlow,
+      smoke,
+      flamePort,
+      flameStarboard
+    ]);
     container.setRotation(enemy ? this.enemyMotion?.heading ?? 2.7 : this.playerMotion?.heading ?? -0.18);
-    return container;
+    const visual = { container, sprite, floodRing, scorchPort, scorchStarboard, fireGlow, flamePort, flameStarboard, smoke };
+    this.updateShipDamageVisual(visual, ship, 0);
+    return visual;
+  }
+
+  private updateShipDamageVisual(visual: ShipVisual, ship: Ship, time: number): void {
+    const stage = shipDamageStage(ship.hull, ship.stats.hullMax);
+    const sailRatio = ship.sails / Math.max(1, ship.stats.sailMax);
+    visual.sprite.clearTint();
+    if (stage === 1 || sailRatio < 0.72) visual.sprite.setTint(0xe0d5c0);
+    if (stage === 2 || sailRatio < 0.48) visual.sprite.setTint(0xc4a78f);
+    if (stage === 3 || sailRatio < 0.24) visual.sprite.setTint(0x9f735d);
+    visual.scorchPort.setVisible(stage >= 1).setAlpha(stage >= 2 ? 0.82 : 0.52);
+    visual.scorchStarboard.setVisible(stage >= 2).setAlpha(stage >= 3 ? 0.9 : 0.62);
+
+    const flooding = ship.flooding > 1;
+    visual.floodRing.setVisible(flooding).setFillStyle(0x8fc8c5, flooding ? 0.05 + ship.flooding / 900 : 0)
+      .setStrokeStyle(3, 0xc8efeb, flooding ? 0.25 + ship.flooding / 180 : 0);
+    if (flooding && !this.bridge.getSettings().reducedMotion) {
+      const pulse = 1 + Math.sin(time * 0.006) * 0.08;
+      visual.floodRing.setScale(pulse, pulse);
+    } else visual.floodRing.setScale(1);
+
+    const burning = ship.fire > 1;
+    const fireStrength = clamp(ship.fire / 100, 0.18, 1);
+    const flicker = this.bridge.getSettings().reducedMotion ? 1 : 0.86 + Math.sin(time * 0.019) * 0.14;
+    visual.fireGlow.setVisible(burning).setAlpha(burning ? 0.12 + fireStrength * 0.34 : 0).setScale(flicker);
+    visual.flamePort.setVisible(burning).setAlpha(burning ? 0.72 + fireStrength * 0.28 : 0).setScale(0.75 + fireStrength * flicker);
+    visual.flameStarboard.setVisible(ship.fire > 20).setAlpha(ship.fire > 20 ? 0.7 + fireStrength * 0.3 : 0).setScale(0.65 + fireStrength * (2 - flicker));
+    visual.smoke.setVisible(burning).setAlpha(burning ? 0.18 + fireStrength * 0.42 : 0);
   }
 
   private createWeather(): void {
@@ -259,7 +341,7 @@ export class SeaScene extends Phaser.Scene {
     const dy = (this.playerMotion.y - before.y) * 24;
     this.playerMotion.x = clamp(before.x + dx, 80, 3120);
     this.playerMotion.y = clamp(before.y + dy, 80, 2120);
-    this.playerVisual.setPosition(this.playerMotion.x, this.playerMotion.y).setRotation(this.playerMotion.heading);
+    this.playerVisual.container.setPosition(this.playerMotion.x, this.playerMotion.y).setRotation(this.playerMotion.heading);
   }
 
   private updateEnemy(dt: number): void {
@@ -275,7 +357,7 @@ export class SeaScene extends Phaser.Scene {
     const dy = (this.enemyMotion.y - before.y) * 22;
     this.enemyMotion.x = clamp(before.x + dx, 80, 3120);
     this.enemyMotion.y = clamp(before.y + dy, 80, 2120);
-    this.enemyVisual.setPosition(this.enemyMotion.x, this.enemyMotion.y).setRotation(this.enemyMotion.heading);
+    this.enemyVisual.container.setPosition(this.enemyMotion.x, this.enemyMotion.y).setRotation(this.enemyMotion.heading);
     this.enemyReload -= dt;
     if (this.enemyReload <= 0 && distance < AMMO['round-shot'].range) this.fireEnemy(targetBearing, distance);
   }
@@ -311,7 +393,13 @@ export class SeaScene extends Phaser.Scene {
       this.enemy = applyShot(this.enemy, result);
       this.bridge.onEnemyChanged(this.enemy);
       this.message = result.hit ? (this.bridge.getSettings().showDamageNumbers ? `${result.critical ? '치명타! ' : ''}선체 ${result.hullDamage}, 돛 ${result.sailDamage} 피해` : `${result.critical ? '치명타! ' : ''}포탄이 적선을 강타했다.`) : '포탄이 파도 위로 빗나갔다.';
-      if (result.hit) { this.impactEffect(this.enemyMotion.x, this.enemyMotion.y, result.critical); this.bridge.onSound(result.critical ? 'critical' : 'impact'); }
+      if (result.hit) {
+        this.impactEffect(this.enemyMotion.x, this.enemyMotion.y, result.critical);
+        if (this.bridge.getSettings().showDamageNumbers) {
+          this.damageNumber(this.enemyMotion.x, this.enemyMotion.y, result.hullDamage, result.critical, false);
+        }
+        this.bridge.onSound(result.critical ? 'critical' : 'impact');
+      }
     });
     this.bridge.onPlayerChanged(this.player);
     this.bridge.onSound('cannon');
@@ -332,6 +420,9 @@ export class SeaScene extends Phaser.Scene {
       if (result.hit) {
         this.message = this.bridge.getSettings().showDamageNumbers ? `피격! 선체 ${result.hullDamage}, 선원 ${result.crewCasualties}명 손실` : '적 포탄이 선체를 강타했다!';
         this.impactEffect(this.playerMotion.x, this.playerMotion.y, result.critical);
+        if (this.bridge.getSettings().showDamageNumbers) {
+          this.damageNumber(this.playerMotion.x, this.playerMotion.y, result.hullDamage, result.critical, true);
+        }
         this.bridge.onSound(result.critical ? 'critical' : 'impact');
         if (this.bridge.getSettings().screenShake && !this.bridge.getSettings().reducedMotion) this.cameras.main.shake(140, result.critical ? 0.009 : 0.004);
       }
@@ -340,21 +431,95 @@ export class SeaScene extends Phaser.Scene {
 
   private animateShot(from: SailingState, to: SailingState, side: Broadside, hit: boolean, complete: () => void): void {
     const originAngle = broadsideBearing(from.heading, side);
-    const startX = from.x + Math.cos(originAngle) * 35;
-    const startY = from.y + Math.sin(originAngle) * 35;
-    const flash = this.add.circle(startX, startY, 16, 0xffb24c, 0.85).setDepth(12).setBlendMode(Phaser.BlendModes.ADD);
-    this.tweens.add({ targets: flash, alpha: 0, scale: 2.4, duration: 170, onComplete: () => flash.destroy() });
-    const ball = this.add.image(startX, startY, 'cannonball').setDepth(13);
-    const targetX = hit ? to.x : to.x + (Math.random() - 0.5) * 160;
-    const targetY = hit ? to.y : to.y + (Math.random() - 0.5) * 160;
-    const distance = Phaser.Math.Distance.Between(startX, startY, targetX, targetY);
-    this.tweens.add({ targets: ball, x: targetX, y: targetY, scale: { from: 1.2, to: 0.65 }, duration: clamp(distance * 1.4, 260, 1100), ease: 'Sine.easeIn', onComplete: () => { ball.destroy(); complete(); } });
+    const isBroadside = side === 'port' || side === 'starboard';
+    const shotCount = this.bridge.getSettings().reducedMotion ? (isBroadside ? 2 : 1) : (isBroadside ? 5 : 2);
+    const alongAngle = from.heading;
+    const missX = to.x + (Math.random() - 0.5) * 190;
+    const missY = to.y + (Math.random() - 0.5) * 190;
+
+    for (let index = 0; index < shotCount; index += 1) {
+      const alongOffset = isBroadside ? (index - (shotCount - 1) / 2) * 13 : (index - 0.5) * 8;
+      const startX = from.x + Math.cos(originAngle) * 39 + Math.cos(alongAngle) * alongOffset;
+      const startY = from.y + Math.sin(originAngle) * 39 + Math.sin(alongAngle) * alongOffset;
+      this.time.delayedCall(index * 44, () => {
+        const flash = this.add.circle(startX, startY, 11 + (index % 2) * 3, 0xffb24c, 0.92)
+          .setDepth(12)
+          .setBlendMode(Phaser.BlendModes.ADD);
+        const smoke = this.add.ellipse(startX, startY, 25, 13, 0xd8d2c4, 0.48)
+          .setDepth(11)
+          .setRotation(originAngle);
+        this.tweens.add({ targets: flash, alpha: 0, scale: 2.7, duration: 170, onComplete: () => flash.destroy() });
+        this.tweens.add({
+          targets: smoke,
+          x: startX + Math.cos(originAngle) * 24,
+          y: startY + Math.sin(originAngle) * 24,
+          alpha: 0,
+          scaleX: 2.2,
+          scaleY: 1.4,
+          duration: 520,
+          onComplete: () => smoke.destroy()
+        });
+
+        const ball = this.add.image(startX, startY, 'cannonball').setDepth(13);
+        const spread = hit ? 26 : 52;
+        const targetX = (hit ? to.x : missX) + (Math.random() - 0.5) * spread;
+        const targetY = (hit ? to.y : missY) + (Math.random() - 0.5) * spread;
+        const distance = Phaser.Math.Distance.Between(startX, startY, targetX, targetY);
+        this.tweens.add({
+          targets: ball,
+          x: targetX,
+          y: targetY,
+          scale: { from: 1.25, to: 0.62 },
+          duration: clamp(distance * 1.4, 260, 1100),
+          ease: 'Sine.easeIn',
+          onComplete: () => {
+            ball.destroy();
+            if (!hit) this.waterSplash(targetX, targetY, index === shotCount - 1);
+            if (index === shotCount - 1) complete();
+          }
+        });
+      });
+    }
   }
 
   private impactEffect(x: number, y: number, critical: boolean): void {
     const burst = this.add.particles(x, y, 'wake-dot', { lifespan: 550, speed: { min: 45, max: critical ? 190 : 120 }, angle: { min: 0, max: 360 }, scale: { start: 0.9, end: 0 }, tint: [0xf0c37b, 0x6b4b32, 0xe5ded0], quantity: critical ? 20 : 11, emitting: false }).setDepth(14);
     burst.explode(critical ? 20 : 11);
+    const ring = this.add.ellipse(x, y, 38, 18, 0x000000, 0)
+      .setStrokeStyle(critical ? 4 : 2, critical ? 0xffd07a : 0xd7b77d, 0.88)
+      .setDepth(13);
+    this.tweens.add({ targets: ring, alpha: 0, scaleX: critical ? 3.8 : 2.8, scaleY: 2.2, duration: 420, onComplete: () => ring.destroy() });
     this.time.delayedCall(700, () => burst.destroy());
+  }
+
+  private waterSplash(x: number, y: number, prominent: boolean): void {
+    const scale = prominent ? 1 : 0.66;
+    const column = this.add.ellipse(x, y - 7, 8 * scale, 28 * scale, 0xd7eeea, 0.82).setDepth(12);
+    const ring = this.add.ellipse(x, y, 20 * scale, 8 * scale, 0x000000, 0)
+      .setStrokeStyle(2, 0xc7e2df, 0.74)
+      .setDepth(11);
+    this.tweens.add({ targets: column, y: y + 4, alpha: 0, scaleY: 0.3, duration: 430, onComplete: () => column.destroy() });
+    this.tweens.add({ targets: ring, alpha: 0, scaleX: 3.2, scaleY: 2.1, duration: 700, onComplete: () => ring.destroy() });
+  }
+
+  private damageNumber(x: number, y: number, damage: number, critical: boolean, playerHit: boolean): void {
+    const label = this.add.text(x, y - 42, `${critical ? '✶ ' : ''}-${damage}`, {
+      color: critical ? '#ffd27b' : playerHit ? '#ff8a73' : '#f2e1b7',
+      fontFamily: 'Gowun Batang, serif',
+      fontSize: critical ? '26px' : '20px',
+      fontStyle: 'bold',
+      stroke: '#120b08',
+      strokeThickness: 5
+    }).setOrigin(0.5).setDepth(40);
+    this.tweens.add({
+      targets: label,
+      y: y - (critical ? 106 : 88),
+      alpha: 0,
+      scale: critical ? 1.28 : 1.08,
+      duration: critical ? 1050 : 820,
+      ease: 'Cubic.easeOut',
+      onComplete: () => label.destroy()
+    });
   }
 
   private createWake(dt: number): void {
@@ -362,8 +527,9 @@ export class SeaScene extends Phaser.Scene {
     if (this.wakeTimer > 0 || this.playerMotion.speed < 0.6) return;
     const settings = this.bridge.getSettings();
     this.wakeTimer = settings.reducedMotion ? 0.28 : settings.quality === 'low' ? 0.18 : settings.quality === 'medium' ? 0.12 : 0.08;
-    const x = this.playerMotion.x - Math.cos(this.playerMotion.heading) * 42;
-    const y = this.playerMotion.y - Math.sin(this.playerMotion.heading) * 42;
+    const wakeOffset = SHIP_ART[this.player.class].wakeOffset;
+    const x = this.playerMotion.x - Math.cos(this.playerMotion.heading) * wakeOffset;
+    const y = this.playerMotion.y - Math.sin(this.playerMotion.heading) * wakeOffset;
     const wake = this.add.image(x, y, 'wake-dot').setRotation(this.playerMotion.heading).setAlpha(0.48).setDepth(1).setScale(0.6 + this.playerMotion.speed * 0.04);
     this.tweens.add({ targets: wake, alpha: 0, scaleX: 2.8, scaleY: 0.3, duration: 1600, onComplete: () => wake.destroy() });
   }
@@ -394,6 +560,38 @@ export class SeaScene extends Phaser.Scene {
   private endCombat(outcome: 'victory' | 'defeat'): void {
     if (this.ended || !this.enemy) return;
     this.ended = true;
-    this.time.delayedCall(500, () => this.bridge.onCombatEnd(outcome, this.player, this.enemy!));
+    const defeated = outcome === 'victory' ? this.enemyVisual : this.playerVisual;
+    if (defeated) this.sinkingEffect(defeated);
+    this.time.delayedCall(1150, () => this.bridge.onCombatEnd(outcome, this.player, this.enemy!));
+  }
+
+  private sinkingEffect(visual: ShipVisual): void {
+    const { x, y } = visual.container;
+    const ring = this.add.ellipse(x, y + 8, 70, 26, 0x000000, 0)
+      .setStrokeStyle(4, 0xbcd9d5, 0.82)
+      .setDepth(4);
+    const debris = this.add.particles(x, y, 'wake-dot', {
+      lifespan: 1200,
+      speed: { min: 30, max: 125 },
+      angle: { min: 0, max: 360 },
+      gravityY: 38,
+      scale: { start: 0.8, end: 0.12 },
+      tint: [0x3d291e, 0x795137, 0xd0c3aa],
+      quantity: 22,
+      emitting: false
+    }).setDepth(12);
+    debris.explode(22);
+    this.tweens.add({ targets: ring, alpha: 0, scaleX: 4.4, scaleY: 3.2, duration: 1050, onComplete: () => ring.destroy() });
+    this.tweens.add({
+      targets: visual.container,
+      y: y + 28,
+      alpha: 0,
+      scaleX: 0.76,
+      scaleY: 0.46,
+      rotation: visual.container.rotation + 0.12,
+      duration: 980,
+      ease: 'Quad.easeIn'
+    });
+    this.time.delayedCall(1350, () => debris.destroy());
   }
 }

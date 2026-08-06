@@ -1066,15 +1066,29 @@ p {
   padding: 1rem;
 }
 .ship-hud {
+  position: relative;
+  overflow: hidden;
   padding: 0.8rem 1rem;
   background: linear-gradient(90deg, rgba(4, 16, 20, 0.92), rgba(8, 26, 31, 0.72));
   border: 1px solid var(--line);
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3), inset 3px 0 rgba(117, 164, 147, 0.34);
+  backdrop-filter: blur(8px);
+}
+.ship-hud::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(228, 202, 146, 0.58), transparent);
+  pointer-events: none;
 }
 .ship-hud.enemy {
   text-align: right;
   background: linear-gradient(-90deg, rgba(32, 12, 12, 0.92), rgba(24, 22, 21, 0.72));
   border-color: rgba(192, 78, 59, 0.34);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3), inset -3px 0 rgba(193, 75, 62, 0.42);
 }
 .hud-name {
   display: flex;
@@ -1098,8 +1112,46 @@ p {
   grid-template-columns: 42px 1fr 42px;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.58rem;
+  font-size: 0.64rem;
   color: var(--ink-muted);
+}
+.hud-bar b {
+  color: #e4ddca;
+  font-variant-numeric: tabular-nums;
+}
+.ship-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.55rem;
+}
+.enemy-statuses {
+  justify-content: flex-end;
+}
+.ship-statuses span {
+  padding: 0.16rem 0.42rem;
+  border: 1px solid rgba(188, 199, 186, 0.18);
+  border-radius: 999px;
+  background: rgba(4, 13, 16, 0.58);
+  color: #cbd4cb;
+  font-size: 0.57rem;
+  line-height: 1.3;
+  letter-spacing: 0.025em;
+}
+.ship-statuses span.stable {
+  border-color: rgba(101, 163, 137, 0.34);
+  color: #a9d1bb;
+}
+.ship-statuses span.warning {
+  border-color: rgba(218, 160, 74, 0.5);
+  color: #efc879;
+  background: rgba(82, 48, 14, 0.42);
+}
+.ship-statuses span.danger {
+  border-color: rgba(224, 83, 65, 0.62);
+  color: #ff9a82;
+  background: rgba(91, 20, 17, 0.52);
+  box-shadow: 0 0 14px rgba(205, 56, 42, 0.16);
 }
 .hud-center {
   justify-self: center;
@@ -1108,6 +1160,7 @@ p {
   align-items: flex-start;
 }
 .compass {
+  position: relative;
   width: 96px;
   height: 96px;
   border-radius: 50%;
@@ -1117,6 +1170,16 @@ p {
   place-items: center;
   box-shadow: 0 8px 30px #0008;
 }
+.compass-mark {
+  position: absolute;
+  color: rgba(221, 199, 154, 0.48);
+  font-size: 0.49rem;
+  font-family: serif;
+}
+.compass-mark.north { top: 6px; left: 50%; transform: translateX(-50%); }
+.compass-mark.east { right: 7px; top: 50%; transform: translateY(-50%); }
+.compass-mark.south { bottom: 5px; left: 50%; transform: translateX(-50%); }
+.compass-mark.west { left: 7px; top: 50%; transform: translateY(-50%); }
 .compass-needle {
   color: var(--brass-light);
   transform: rotate(var(--wind-angle));
@@ -1135,6 +1198,13 @@ p {
   font-family: 'Gowun Batang', serif;
   font-size: 1.4rem;
 }
+.speed-readout small:not(.eyebrow) {
+  display: block;
+  margin-top: 0.12rem;
+  color: #b9c3bb;
+  font-size: 0.56rem;
+  white-space: nowrap;
+}
 .hud-bottom {
   position: absolute;
   bottom: 1rem;
@@ -1150,10 +1220,32 @@ p {
   min-width: min(520px, 90vw);
   text-align: center;
   padding: 0.65rem 1.2rem;
-  background: rgba(3, 12, 15, 0.78);
-  border-top: 1px solid var(--line);
+  background: linear-gradient(90deg, transparent, rgba(3, 12, 15, 0.9) 10% 90%, transparent);
+  border-top: 1px solid rgba(201, 165, 91, 0.34);
   color: #e1d8c6;
   text-shadow: 0 1px 4px #000;
+  letter-spacing: 0.025em;
+}
+.ammo-panel {
+  pointer-events: auto;
+  justify-self: start;
+  padding: 0.45rem;
+  background: linear-gradient(180deg, rgba(4, 16, 20, 0.92), rgba(3, 12, 15, 0.82));
+  border: 1px solid var(--line-soft);
+  box-shadow: 0 12px 35px #0006;
+}
+.ammo-stock {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 0.15rem 0.35rem;
+  color: var(--ink-muted);
+  font-size: 0.58rem;
+}
+.ammo-stock b {
+  margin-left: 0.22rem;
+  color: #e4c98f;
+  font-variant-numeric: tabular-nums;
 }
 .ammo-rack {
   pointer-events: auto;
@@ -1168,6 +1260,12 @@ p {
   background: rgba(3, 15, 19, 0.88);
   cursor: pointer;
   color: var(--ink-muted);
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, opacity 120ms ease;
+}
+.ammo-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(218, 181, 109, 0.62);
+  background: rgba(13, 35, 39, 0.96);
 }
 .ammo-button b {
   display: block;
@@ -1175,7 +1273,20 @@ p {
   font-size: 1rem;
 }
 .ammo-button small {
+  display: block;
   font-size: 0.55rem;
+}
+.ammo-button em {
+  display: block;
+  margin-top: 0.16rem;
+  color: #8d9b94;
+  font-size: 0.48rem;
+  font-style: normal;
+}
+.ammo-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.34;
+  filter: grayscale(0.75);
 }
 .ammo-button.selected {
   border-color: var(--brass-light);
@@ -1193,6 +1304,32 @@ p {
 .fire-controls .fire {
   grid-column: 1 / -1;
   min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+.fire-controls .btn > small {
+  color: #aeb9b2;
+  font-size: 0.52rem;
+  font-variant-numeric: tabular-nums;
+}
+.fire-controls .btn.selected {
+  border-color: var(--brass-light);
+  color: #f2dfb7;
+  background: rgba(73, 52, 25, 0.72);
+}
+.fire-controls .fire.ready {
+  box-shadow: 0 0 28px rgba(209, 153, 62, 0.24), inset 0 0 18px rgba(246, 191, 93, 0.08);
+}
+.fire-controls .fire > span {
+  font-family: 'Gowun Batang', serif;
+  font-weight: 700;
+}
+.fire-controls .fire:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  filter: saturate(0.55);
 }
 .reload-line {
   height: 3px;

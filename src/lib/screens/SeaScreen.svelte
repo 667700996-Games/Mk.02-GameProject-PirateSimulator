@@ -18,6 +18,32 @@
 
   const ammoTypes: AmmoType[] = ['round-shot', 'chain-shot', 'grape-shot', 'incendiary', 'piercing'];
 
+  type ConditionTone = 'stable' | 'warning' | 'danger';
+
+  function shipConditions(ship: Ship): { label: string; tone: ConditionTone }[] {
+    const conditions: { label: string; tone: ConditionTone }[] = [];
+    if (ship.fire > 1) conditions.push({ label: `화재 ${Math.ceil(ship.fire)}%`, tone: ship.fire >= 45 ? 'danger' : 'warning' });
+    if (ship.flooding > 1) conditions.push({ label: `침수 ${Math.ceil(ship.flooding)}%`, tone: ship.flooding >= 45 ? 'danger' : 'warning' });
+    if (ship.hull / Math.max(1, ship.stats.hullMax) <= .35) conditions.push({ label: '선체 위기', tone: 'danger' });
+    if (ship.sails / Math.max(1, ship.stats.sailMax) <= .35) conditions.push({ label: '돛 파손', tone: 'warning' });
+    if (ship.rudderCondition < 60) conditions.push({ label: `조타 ${Math.ceil(ship.rudderCondition)}%`, tone: ship.rudderCondition < 30 ? 'danger' : 'warning' });
+    if (ship.cannonCondition < 60) conditions.push({ label: `포대 ${Math.ceil(ship.cannonCondition)}%`, tone: ship.cannonCondition < 30 ? 'danger' : 'warning' });
+    if (ship.morale < 35) conditions.push({ label: '사기 저하', tone: 'warning' });
+    return conditions.length ? conditions : [{ label: '전투 태세 정상', tone: 'stable' }];
+  }
+
+  function selectedReload(value: SeaHudSnapshot): number {
+    if (value.selectedSide === 'port') return value.portReload;
+    if (value.selectedSide === 'starboard') return value.starboardReload;
+    if (value.selectedSide === 'bow') return value.bowReload;
+    return value.sternReload;
+  }
+
+  function hasAmmo(ship: Ship, ammo: AmmoType): boolean {
+    const cost = AMMO[ammo].cost;
+    return (ship.cargo.cannonballs ?? 0) >= cost.cannonballs && (ship.cargo.powder ?? 0) >= cost.powder;
+  }
+
   function scene(): SeaScene | undefined {
     return phaser?.scene.getScene('sea') as SeaScene | undefined;
   }
@@ -67,8 +93,8 @@
   }
 </script>
 
-<section class="sea-screen">
-  <div class="phaser-host" bind:this={host}></div>
+<section class="sea-screen" data-testid="sea-screen" aria-label="해상 전투">
+  <div class="phaser-host" data-testid="naval-canvas-host" aria-label="함선 항해 전술 화면" bind:this={host}></div>
   <div class="sea-vignette"></div>
   {#if snapshot}
     <div class="combat-hud">
@@ -80,10 +106,13 @@
             <div class="hud-bar"><span>돛</span><div class="meter"><span style={`--value:${snapshot.player.sails / snapshot.player.stats.sailMax * 100}%;--meter-color:#c4b075`}></span></div><b>{Math.ceil(snapshot.player.sails)}</b></div>
             <div class="hud-bar"><span>선원</span><div class="meter"><span style={`--value:${snapshot.player.crew / snapshot.player.stats.crewMax * 100}%;--meter-color:#a56c55`}></span></div><b>{snapshot.player.crew}</b></div>
           </div>
+          <div class="ship-statuses" aria-label="아군 함선 상태">
+            {#each shipConditions(snapshot.player) as condition}<span class:stable={condition.tone === 'stable'} class:warning={condition.tone === 'warning'} class:danger={condition.tone === 'danger'}>{condition.label}</span>{/each}
+          </div>
         </div>
         <div class="hud-center">
-          <div class="compass"><span class="compass-needle" style={`--wind-angle:${snapshot.windDirection}rad`}>➤</span></div>
-          <div class="speed-readout"><small class="eyebrow">KNOTS</small><b>{snapshot.speed.toFixed(1)}</b><small>돛 {Math.round(snapshot.sailSetting * 100)}%</small></div>
+          <div class="compass" aria-label={`풍향 ${Math.round(snapshot.windDirection * 180 / Math.PI)}도`}><span class="compass-mark north">N</span><span class="compass-mark east">E</span><span class="compass-mark south">S</span><span class="compass-mark west">W</span><span class="compass-needle" style={`--wind-angle:${snapshot.windDirection}rad`}>➤</span></div>
+          <div class="speed-readout"><small class="eyebrow">KNOTS</small><b>{snapshot.speed.toFixed(1)}</b><small>최대 {snapshot.maxSpeed.toFixed(1)}</small><small>돛 {Math.round(snapshot.sailSetting * 100)}% · 풍속 {snapshot.windSpeed.toFixed(1)}</small></div>
         </div>
         {#if snapshot.enemy}
           <div class="ship-hud enemy">
@@ -93,21 +122,42 @@
               <div class="hud-bar"><span>돛</span><div class="meter"><span style={`--value:${snapshot.enemy.sails / snapshot.enemy.stats.sailMax * 100}%;--meter-color:#a87c54`}></span></div><b>{Math.ceil(snapshot.enemy.sails)}</b></div>
               <div class="hud-bar"><span>선원</span><div class="meter"><span style={`--value:${snapshot.enemy.crew / snapshot.enemy.stats.crewMax * 100}%;--meter-color:#994b47`}></span></div><b>{snapshot.enemy.crew}</b></div>
             </div>
+            <div class="ship-statuses enemy-statuses" aria-label="적 함선 상태">
+              {#each shipConditions(snapshot.enemy) as condition}<span class:stable={condition.tone === 'stable'} class:warning={condition.tone === 'warning'} class:danger={condition.tone === 'danger'}>{condition.label}</span>{/each}
+            </div>
           </div>
         {/if}
       </div>
 
       <div class="hud-bottom">
-        <div class="ammo-rack">
-          {#each ammoTypes as ammo, index}<button class:selected={snapshot.selectedAmmo === ammo} class="ammo-button" onclick={() => scene()?.selectAmmo(ammo)}><b>{index + 1}</b><small>{AMMO[ammo].name}</small></button>{/each}
+        <div class="ammo-panel">
+          <div class="ammo-stock"><span>포탄 <b>{snapshot.player.cargo.cannonballs ?? 0}</b></span><span>화약 <b>{snapshot.player.cargo.powder ?? 0}</b></span></div>
+          <div class="ammo-rack" aria-label="탄종 선택">
+            {#each ammoTypes as ammo, index}
+              <button
+                class:selected={snapshot.selectedAmmo === ammo}
+                class="ammo-button"
+                onclick={() => scene()?.selectAmmo(ammo)}
+                disabled={!hasAmmo(snapshot.player, ammo)}
+                aria-pressed={snapshot.selectedAmmo === ammo}
+                aria-label={`${index + 1}번 ${AMMO[ammo].name}, 포탄 ${AMMO[ammo].cost.cannonballs}, 화약 ${AMMO[ammo].cost.powder}`}
+              ><b>{index + 1}</b><small>{AMMO[ammo].name}</small><em>{AMMO[ammo].cost.cannonballs}/{AMMO[ammo].cost.powder}</em></button>
+            {/each}
+          </div>
         </div>
-        <div class="combat-message">{snapshot.message}</div>
+        <div class="combat-message" role="status" aria-live="polite">{snapshot.message}</div>
         <div class="fire-controls">
-          <button class:selected={snapshot.selectedSide === 'port'} class="btn small" onclick={() => scene()?.selectBroadside('port')}>Q · 좌현<div class="reload-line"><span style={`--reload:${Math.max(0, 100 - snapshot.portReload / 7 * 100)}%`}></span></div></button>
-          <button class:selected={snapshot.selectedSide === 'starboard'} class="btn small" onclick={() => scene()?.selectBroadside('starboard')}>E · 우현<div class="reload-line"><span style={`--reload:${Math.max(0, 100 - snapshot.starboardReload / 7 * 100)}%`}></span></div></button>
-          <button class:selected={snapshot.selectedSide === 'bow'} class="btn small" onclick={() => scene()?.selectBroadside('bow')}>▲ · 선수포<div class="reload-line"><span style={`--reload:${Math.max(0, 100 - snapshot.bowReload / 7 * 100)}%`}></span></div></button>
-          <button class:selected={snapshot.selectedSide === 'stern'} class="btn small" onclick={() => scene()?.selectBroadside('stern')}>▼ · 선미포<div class="reload-line"><span style={`--reload:${Math.max(0, 100 - snapshot.sternReload / 7 * 100)}%`}></span></div></button>
-          <button class="btn primary fire" onclick={() => scene()?.fireSelected()}>SPACE · 포격</button>
+          <button class:selected={snapshot.selectedSide === 'port'} class="btn small" onclick={() => scene()?.selectBroadside('port')} aria-pressed={snapshot.selectedSide === 'port'}>Q · 좌현 <small>{snapshot.portReload > 0 ? `${snapshot.portReload.toFixed(1)}초` : '준비'}</small><div class="reload-line"><span style={`--reload:${Math.max(0, 100 - snapshot.portReload / 7 * 100)}%`}></span></div></button>
+          <button class:selected={snapshot.selectedSide === 'starboard'} class="btn small" onclick={() => scene()?.selectBroadside('starboard')} aria-pressed={snapshot.selectedSide === 'starboard'}>E · 우현 <small>{snapshot.starboardReload > 0 ? `${snapshot.starboardReload.toFixed(1)}초` : '준비'}</small><div class="reload-line"><span style={`--reload:${Math.max(0, 100 - snapshot.starboardReload / 7 * 100)}%`}></span></div></button>
+          <button class:selected={snapshot.selectedSide === 'bow'} class="btn small" onclick={() => scene()?.selectBroadside('bow')} aria-pressed={snapshot.selectedSide === 'bow'}>▲ · 선수포 <small>{snapshot.bowReload > 0 ? `${snapshot.bowReload.toFixed(1)}초` : '준비'}</small><div class="reload-line"><span style={`--reload:${Math.max(0, 100 - snapshot.bowReload / 7 * 100)}%`}></span></div></button>
+          <button class:selected={snapshot.selectedSide === 'stern'} class="btn small" onclick={() => scene()?.selectBroadside('stern')} aria-pressed={snapshot.selectedSide === 'stern'}>▼ · 선미포 <small>{snapshot.sternReload > 0 ? `${snapshot.sternReload.toFixed(1)}초` : '준비'}</small><div class="reload-line"><span style={`--reload:${Math.max(0, 100 - snapshot.sternReload / 7 * 100)}%`}></span></div></button>
+          <button
+            class="btn primary fire"
+            class:ready={selectedReload(snapshot) <= 0 && hasAmmo(snapshot.player, snapshot.selectedAmmo)}
+            class:reloading={selectedReload(snapshot) > 0}
+            onclick={() => scene()?.fireSelected()}
+            disabled={selectedReload(snapshot) > 0 || !hasAmmo(snapshot.player, snapshot.selectedAmmo)}
+          ><span>{selectedReload(snapshot) > 0 ? '재장전 중' : hasAmmo(snapshot.player, snapshot.selectedAmmo) ? 'SPACE · 포격' : '탄약 부족'}</span><small>{selectedReload(snapshot) > 0 ? `${selectedReload(snapshot).toFixed(1)}초` : AMMO[snapshot.selectedAmmo].name}</small></button>
         </div>
       </div>
       {#if snapshot.canBoard}<div class="boarding-prompt"><strong>승선 거리 확보</strong><p class="muted">속도를 맞추고 갈고리를 던지십시오.</p><button class="btn primary" onclick={() => scene()?.attemptBoard()}>F · 승선 작전</button></div>{/if}
