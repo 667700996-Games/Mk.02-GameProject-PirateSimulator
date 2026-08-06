@@ -51,3 +51,14 @@ export function residentDisplaySize(frame: ResidentArtFrame): { width: number; h
   const width = frame === 'officer' ? 36 : frame === 'hauler' ? 35 : 34;
   return { width, height: width * RESIDENT_FRAME_RATIO };
 }
+
+export function residentCrowdOffset(id: string): { x: number; y: number } {
+  let hash = 2166136261;
+  for (const character of id) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  const angle = ((hash >>> 0) % 24) / 24 * Math.PI * 2;
+  const radius = 0.18 + ((hash >>> 8) % 4) * 0.14;
+  return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
+}

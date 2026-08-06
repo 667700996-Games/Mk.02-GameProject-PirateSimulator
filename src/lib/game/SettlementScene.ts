@@ -17,6 +17,7 @@ import {
   RESIDENT_ATLAS_IMAGE,
   RESIDENT_ATLAS_KEY,
   residentArtFrame,
+  residentCrowdOffset,
   residentDisplaySize
 } from './residentArt';
 
@@ -476,7 +477,10 @@ export class SettlementScene extends Phaser.Scene {
     for (const resident of this.snapshot.residents) {
       if (drawn >= visibleLimit) break;
       const tile = tileAt(this.snapshot.island, Math.round(resident.position.x), Math.round(resident.position.y));
-      const point = this.iso(resident.position.x, resident.position.y, tile?.elevation ?? 0);
+      const crowdOffset = residentCrowdOffset(resident.id);
+      const renderX = resident.position.x + crowdOffset.x;
+      const renderY = resident.position.y + crowdOffset.y;
+      const point = this.iso(renderX, renderY, tile?.elevation ?? 0);
       if (point.x < camera.worldView.x - 80 || point.x > camera.worldView.right + 80 || point.y < camera.worldView.y - 80 || point.y > camera.worldView.bottom + 80) continue;
       const frame = residentArtFrame(resident.job, resident.tier);
       const displaySize = residentDisplaySize(frame);
@@ -511,7 +515,7 @@ export class SettlementScene extends Phaser.Scene {
       const bob = inMotion && !this.bridge.getSettings().reducedMotion
         ? Math.sin(this.snapshot.simulationMinutes * 0.32 + phase) * 1.25
         : 0;
-      object.container.setVisible(true).setPosition(point.x, point.y - 5 + bob).setDepth(210 + resident.position.x + resident.position.y);
+      object.container.setVisible(true).setPosition(point.x, point.y - 5 + bob).setDepth(210 + renderX + renderY);
       object.sprite.setAlpha(resident.action === 'SLEEPING' ? 0.68 : 1);
       if (resident.health < 30) object.sprite.setTint(0xd17a6c);
       else if (resident.action === 'FIREFIGHTING') object.sprite.setTint(0xffd28a);
