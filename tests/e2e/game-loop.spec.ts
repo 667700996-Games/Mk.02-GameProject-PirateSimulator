@@ -143,14 +143,18 @@ test('keeps game chrome fixed and supports timed or manual notification dismissa
     const footer = document.querySelector<HTMLElement>('.game-nav')!;
     const activeNavigation = footer.querySelector<HTMLElement>('.nav-item.active')!;
     const activeNavigationStyle = getComputedStyle(activeNavigation);
+    const activeHighlightStyle = getComputedStyle(activeNavigation, '::before');
     return {
       headerPosition: getComputedStyle(header).position,
       headerTop: Math.round(header.getBoundingClientRect().top),
       footerPosition: getComputedStyle(footer).position,
       footerBottom: Math.round(window.innerHeight - footer.getBoundingClientRect().bottom),
       activeHighlightAtTop:
-        activeNavigationStyle.borderTopWidth === '2px' &&
-        activeNavigationStyle.borderTopColor !== 'rgba(0, 0, 0, 0)' &&
+        Number.parseFloat(activeHighlightStyle.top) < 0 &&
+        activeHighlightStyle.height === '3px' &&
+        activeHighlightStyle.opacity === '1' &&
+        activeHighlightStyle.backgroundImage !== 'none' &&
+        activeNavigationStyle.borderTopWidth === '0px' &&
         activeNavigationStyle.borderBottomWidth === '0px'
     };
   });

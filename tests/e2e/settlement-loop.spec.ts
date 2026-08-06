@@ -7,7 +7,11 @@ async function createSettlement(page: import('@playwright/test').Page): Promise<
   await page.locator('#crew-name').fill('절벽의 망치단');
   await page.locator('#ship-name').fill('난파된 왕관');
   await page.getByRole('button', { name: /건축가/ }).click();
+  const atlasResponse = page.waitForResponse(
+    (response) => response.url().endsWith('/art/settlement/core-buildings-atlas.png')
+  );
   await page.getByRole('button', { name: /검은 깃발을 올린다/ }).click();
+  expect((await atlasResponse).ok()).toBe(true);
   await expect(page.getByTestId('settlement-screen')).toBeVisible();
   await expect(page.locator('.settlement-host canvas')).toBeVisible({ timeout: 15_000 });
 }
