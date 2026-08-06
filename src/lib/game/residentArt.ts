@@ -1,4 +1,4 @@
-import type { JobId, PopulationTier } from '$lib/settlement/types';
+import type { JobId, PopulationTier, ResidentAction } from '$lib/settlement/types';
 
 export const RESIDENT_ATLAS_KEY = 'settlement-resident-roles';
 export const RESIDENT_ATLAS_IMAGE = '/art/settlement/resident-roles-atlas.png';
@@ -14,6 +14,45 @@ export type ResidentArtFrame =
   | 'shipwright'
   | 'guard'
   | 'officer';
+
+export interface ResidentActionVisual {
+  bob: number;
+  sway: number;
+  frequency: number;
+  glyph?: string;
+}
+
+export const RESIDENT_ACTION_VISUALS: Record<ResidentAction, ResidentActionVisual> = {
+  IDLE: { bob: 0.34, sway: 0.006, frequency: 0.8 },
+  SLEEPING: { bob: 0.16, sway: 0.004, frequency: 0.45, glyph: 'Z' },
+  WORKING: { bob: 0.72, sway: 0.052, frequency: 2.6, glyph: '⚒' },
+  HAULING: { bob: 1.5, sway: 0.024, frequency: 2.2 },
+  EATING: { bob: 0.28, sway: 0.01, frequency: 1, glyph: '◒' },
+  DRINKING: { bob: 0.3, sway: 0.015, frequency: 1.1, glyph: '♨' },
+  HEALING: { bob: 0.2, sway: 0.006, frequency: 0.7, glyph: '✚' },
+  RESTING: { bob: 0.2, sway: 0.005, frequency: 0.55 },
+  TRAINING: { bob: 0.9, sway: 0.04, frequency: 2.1, glyph: '⚔' },
+  BOARDING: { bob: 1.35, sway: 0.03, frequency: 2.4, glyph: '⚓' },
+  FIREFIGHTING: { bob: 1.05, sway: 0.045, frequency: 2.8, glyph: '◉' },
+  DEFENDING: { bob: 0.82, sway: 0.032, frequency: 1.9, glyph: '◆' },
+  MOVING: { bob: 1.4, sway: 0.025, frequency: 2.25 }
+};
+
+export function residentActivityPose(
+  action: ResidentAction,
+  elapsedMs: number,
+  phase: number,
+  reducedMotion = false
+): { offsetY: number; rotation: number } {
+  if (reducedMotion) return { offsetY: 0, rotation: 0 };
+  const visual = RESIDENT_ACTION_VISUALS[action];
+  const wave = Math.sin(elapsedMs / 1000 * visual.frequency * Math.PI * 2 + phase);
+  return { offsetY: -Math.abs(wave) * visual.bob, rotation: wave * visual.sway };
+}
+
+export function residentActivityGlyph(action: ResidentAction): string {
+  return RESIDENT_ACTION_VISUALS[action].glyph ?? '';
+}
 
 export const RESIDENT_JOB_ART: Record<JobId, ResidentArtFrame> = {
   unassigned: 'laborer',

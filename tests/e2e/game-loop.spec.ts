@@ -245,13 +245,13 @@ test('keeps game chrome fixed and supports timed or manual notification dismissa
 
   const save = page.getByRole('button', { name: '저장', exact: true });
   await save.click();
-  const automaticToast = page.locator('.toast').filter({ hasText: '항해일지' }).last();
-  await expect(automaticToast).toBeVisible();
-  await expect(automaticToast).toBeHidden({ timeout: 8_000 });
-
-  await save.click();
   const manualToast = page.locator('.toast').filter({ hasText: '항해일지' }).last();
   await expect(manualToast).toBeVisible();
   await manualToast.getByRole('button', { name: '알림 닫기: 항해일지' }).click();
   await expect(manualToast).toBeHidden();
+
+  await save.click();
+  const automaticToast = page.locator('.toast').filter({ hasText: '항해일지' }).last();
+  await expect(automaticToast).toBeVisible();
+  await expect(automaticToast).toBeHidden({ timeout: 8_000 });
 });

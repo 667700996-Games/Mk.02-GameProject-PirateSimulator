@@ -13,6 +13,9 @@ async function createSettlement(page: import('@playwright/test').Page): Promise<
     ),
     page.waitForResponse((response) =>
       response.url().endsWith('/art/settlement/resident-roles-atlas.png')
+    ),
+    page.waitForResponse((response) =>
+      response.url().endsWith('/art/settlement/building-progression-overlays-atlas.png')
     )
   ]);
   await page.getByRole('button', { name: /검은 깃발을 올린다/ }).click();

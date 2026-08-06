@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { BUILDINGS, SETTLEMENT_RESOURCES } from '$lib/settlement/catalog';
 import type { BuildingDefinition } from '$lib/settlement/catalog';
 import { buildingCells, tileAt, validatePlacement } from '$lib/settlement/island';
-import type { SettlementBuilding, SettlementBuildingId, SettlementOverlay, SettlementSimulationState, TerrainType } from '$lib/settlement/types';
+import type { ResidentAction, SettlementBuilding, SettlementBuildingId, SettlementOverlay, SettlementSimulationState, TerrainType } from '$lib/settlement/types';
 import type { GameSettings } from '$lib/domain/types';
 import {
   CORE_BUILDING_ART,
@@ -13,9 +13,18 @@ import {
   type CoreBuildingArt
 } from './settlementArt';
 import {
+  BUILDING_PROGRESSION_ATLAS_DATA,
+  BUILDING_PROGRESSION_ATLAS_IMAGE,
+  BUILDING_PROGRESSION_ATLAS_KEY,
+  buildingProgressionDisplaySize,
+  buildingProgressionVisual
+} from './buildingProgressionArt';
+import {
   RESIDENT_ATLAS_DATA,
   RESIDENT_ATLAS_IMAGE,
   RESIDENT_ATLAS_KEY,
+  residentActivityGlyph,
+  residentActivityPose,
   residentArtFrame,
   residentCrowdOffset,
   residentDisplaySize
@@ -87,8 +96,11 @@ export class SettlementScene extends Phaser.Scene {
     {
       container: Phaser.GameObjects.Container;
       sprite: Phaser.GameObjects.Image;
+      shadow: Phaser.GameObjects.Ellipse;
       cargo: Phaser.GameObjects.Text;
       lastWorldX: number;
+      action: ResidentAction;
+      phase: number;
     }
   >();
 
@@ -102,6 +114,9 @@ export class SettlementScene extends Phaser.Scene {
   preload(): void {
     if (!this.textures.exists(CORE_BUILDING_ATLAS_KEY)) {
       this.load.atlas(CORE_BUILDING_ATLAS_KEY, CORE_BUILDING_ATLAS_IMAGE, CORE_BUILDING_ATLAS_DATA);
+    }
+    if (!this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) {
+      this.load.atlas(BUILDING_PROGRESSION_ATLAS_KEY, BUILDING_PROGRESSION_ATLAS_IMAGE, BUILDING_PROGRESSION_ATLAS_DATA);
     }
     if (!this.textures.exists(RESIDENT_ATLAS_KEY)) {
       this.load.atlas(RESIDENT_ATLAS_KEY, RESIDENT_ATLAS_IMAGE, RESIDENT_ATLAS_DATA);
@@ -127,6 +142,16 @@ export class SettlementScene extends Phaser.Scene {
     this.drawTerrain();
     this.drawDynamicLayers(true);
     this.bindInput();
+  }
+
+  update(time: number): void {
+    const reducedMotion = this.bridge.getSettings().reducedMotion;
+    for (const object of this.residentObjects.values()) {
+      if (!object.container.visible) continue;
+      const pose = residentActivityPose(object.action, time, object.phase, reducedMotion);
+      object.sprite.setY(pose.offsetY).setRotation(pose.rotation);
+      object.shadow.setScale(1 - Math.min(0.12, Math.abs(pose.offsetY) * 0.045), 1);
+    }
   }
 
   public syncSnapshot(snapshot: SettlementSimulationState): void {
@@ -370,8 +395,11 @@ export class SettlementScene extends Phaser.Scene {
       container.add(this.add.rectangle(-10, -wallHeight - 4, 28, 7, 0x1b2020).setRotation(-0.2));
       container.add(this.add.circle(4, -wallHeight + 1, 6, 0x2b2e2c));
     }
+    this.drawBuildingProgressionOverlay(container, building, 62 * scale);
     if (building.state === 'CONSTRUCTING' || building.state === 'PLANNED') {
-      for (let scaffold = -1; scaffold <= 1; scaffold += 1) container.add(this.add.rectangle(scaffold * 18, -10, 3, 50, 0x9a7445, 0.9));
+      if (!this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) {
+        for (let scaffold = -1; scaffold <= 1; scaffold += 1) container.add(this.add.rectangle(scaffold * 18, -10, 3, 50, 0x9a7445, 0.9));
+      }
       const progress = this.add.rectangle(0, 22, 50, 5, 0x0b1717).setStrokeStyle(1, 0xd3b06c, 0.6);
       const fill = this.add.rectangle(-25, 22, 50 * building.constructionProgress, 3, 0xd3a754).setOrigin(0, 0.5);
       container.add([progress, fill]);
@@ -435,19 +463,23 @@ export class SettlementScene extends Phaser.Scene {
     else if (building.state === 'BLOCKED' || building.state === 'PAUSED') sprite.setTint(0x8c9691);
     container.add(sprite);
 
-    if (building.level > 1 && !isBlueprint) {
+    if (building.level > 1 && !isBlueprint && !this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) {
       const upgradeGlow = this.add.ellipse(0, 10, displayWidth * 0.54, Math.max(14, displayWidth * 0.12), 0xe0b765, 0.07 + building.level * 0.015);
       const pennantPole = this.add.rectangle(displayWidth * 0.22, -displayHeight * 0.48, 2, 28, 0x3c2a20, 0.92);
       const pennant = this.add.triangle(displayWidth * 0.22 + 8, -displayHeight * 0.58, 0, 0, 17, 5, 0, 10, 0xa94c3e, 0.94);
       container.add([upgradeGlow, pennantPole, pennant]);
     }
 
+    this.drawBuildingProgressionOverlay(container, building, displayWidth);
+
     if (isBlueprint || isConstructing) {
       const scaffoldHeight = Math.max(44, displayHeight * 0.45);
-      for (let scaffold = -1; scaffold <= 1; scaffold += 1) {
-        const post = this.add.rectangle(scaffold * displayWidth * 0.25, 2 - scaffold * 2, 3, scaffoldHeight, 0xb18a52, 0.9);
-        const brace = this.add.rectangle(scaffold * displayWidth * 0.2, -8, displayWidth * 0.42, 3, 0x8f693f, 0.8).setRotation(scaffold * 0.34);
-        container.add([post, brace]);
+      if (!this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) {
+        for (let scaffold = -1; scaffold <= 1; scaffold += 1) {
+          const post = this.add.rectangle(scaffold * displayWidth * 0.25, 2 - scaffold * 2, 3, scaffoldHeight, 0xb18a52, 0.9);
+          const brace = this.add.rectangle(scaffold * displayWidth * 0.2, -8, displayWidth * 0.42, 3, 0x8f693f, 0.8).setRotation(scaffold * 0.34);
+          container.add([post, brace]);
+        }
       }
       const progress = Phaser.Math.Clamp(building.constructionProgress, 0, 1);
       const trackWidth = Math.min(82, displayWidth * 0.62);
@@ -495,6 +527,42 @@ export class SettlementScene extends Phaser.Scene {
     }
   }
 
+  private drawBuildingProgressionOverlay(
+    container: Phaser.GameObjects.Container,
+    building: SettlementBuilding,
+    baseWidth: number
+  ): void {
+    if (!this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) return;
+    const visual = buildingProgressionVisual(building);
+    if (!visual) return;
+    const displaySize = buildingProgressionDisplaySize(baseWidth, visual);
+    const flipped = building.rotation === 1 || building.rotation === 2;
+    const overlay = this.add.image(0, visual.offsetY, BUILDING_PROGRESSION_ATLAS_KEY, visual.frame)
+      .setOrigin(0.5, visual.originY)
+      .setDisplaySize(displaySize, displaySize)
+      .setAlpha(visual.alpha)
+      .setFlipX(flipped);
+    container.add(overlay);
+
+    for (const [index, point] of (visual.lanternGlowPoints ?? []).entries()) {
+      const x = point.x * displaySize * (flipped ? -1 : 1);
+      const glow = this.add.circle(x, point.y * displaySize + visual.offsetY, Math.max(4, displaySize * 0.035), 0xf1a847, 0.24)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      container.add(glow);
+      if (!this.bridge.getSettings().reducedMotion) {
+        this.dynamicTweenTargets.push(glow);
+        this.tweens.add({
+          targets: glow,
+          alpha: { from: 0.12, to: 0.38 },
+          scale: { from: 0.82, to: 1.18 },
+          duration: 620 + index * 130,
+          yoyo: true,
+          repeat: -1
+        });
+      }
+    }
+  }
+
   private drawResidents(): void {
     const camera = this.cameras.main;
     const quality = this.bridge.getSettings().quality;
@@ -516,6 +584,7 @@ export class SettlementScene extends Phaser.Scene {
       if (point.x < camera.worldView.x - 80 || point.x > camera.worldView.right + 80 || point.y < camera.worldView.y - 80 || point.y > camera.worldView.bottom + 80) continue;
       const frame = residentArtFrame(resident.job, resident.tier);
       const displaySize = residentDisplaySize(frame);
+      const phase = ([...resident.id].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 29) / 29 * Math.PI * 2;
       let object = this.residentObjects.get(resident.id);
       if (!object) {
         const container = this.add.container(point.x, point.y - 5);
@@ -534,20 +603,16 @@ export class SettlementScene extends Phaser.Scene {
         }).setOrigin(0.5);
         container.add([shadow, sprite, cargo]);
         this.residentLayer.add(container);
-        object = { container, sprite, cargo, lastWorldX: point.x };
+        object = { container, sprite, shadow, cargo, lastWorldX: point.x, action: resident.action, phase };
         this.residentObjects.set(resident.id, object);
       }
       if (object.sprite.frame.name !== frame) object.sprite.setFrame(frame);
       object.sprite.setDisplaySize(displaySize.width, displaySize.height).clearTint();
+      object.action = resident.action;
       const deltaX = point.x - object.lastWorldX;
       if (Math.abs(deltaX) > 0.18) object.sprite.setFlipX(deltaX < 0);
       object.lastWorldX = point.x;
-      const inMotion = ['MOVING', 'HAULING', 'BOARDING', 'FIREFIGHTING', 'DEFENDING'].includes(resident.action);
-      const phase = [...resident.id].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 13;
-      const bob = inMotion && !this.bridge.getSettings().reducedMotion
-        ? Math.sin(this.snapshot.simulationMinutes * 0.32 + phase) * 1.25
-        : 0;
-      object.container.setVisible(true).setPosition(point.x, point.y - 5 + bob).setDepth(210 + renderX + renderY);
+      object.container.setVisible(true).setPosition(point.x, point.y - 5).setDepth(210 + renderX + renderY);
       object.sprite.setAlpha(resident.action === 'SLEEPING' ? 0.68 : 1);
       if (resident.health < 30) object.sprite.setTint(0xd17a6c);
       else if (resident.action === 'FIREFIGHTING') object.sprite.setTint(0xffd28a);
@@ -556,7 +621,7 @@ export class SettlementScene extends Phaser.Scene {
       if (resident.action === 'HAULING') {
         const job = this.snapshot.transports.find((item) => item.haulerId === resident.id && item.state === 'DELIVERING');
         if (job) object.cargo.setText(SETTLEMENT_RESOURCES[job.resourceId].icon);
-      }
+      } else object.cargo.setText(residentActivityGlyph(resident.action));
       drawn += 1;
     }
   }

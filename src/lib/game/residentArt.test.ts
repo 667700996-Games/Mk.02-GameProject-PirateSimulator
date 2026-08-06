@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  RESIDENT_ACTION_VISUALS,
   RESIDENT_JOB_ART,
+  residentActivityGlyph,
+  residentActivityPose,
   residentArtFrame,
   residentCrowdOffset,
   residentDisplaySize
@@ -30,5 +33,17 @@ describe('settlement resident art', () => {
     expect(residentCrowdOffset('resident-blackwake-02')).not.toEqual(first);
     expect(Math.hypot(first.x, first.y)).toBeGreaterThanOrEqual(0.18);
     expect(Math.hypot(first.x, first.y)).toBeLessThanOrEqual(0.61);
+  });
+
+  it('defines a bounded readable motion language for every simulated action', () => {
+    expect(Object.keys(RESIDENT_ACTION_VISUALS)).toHaveLength(13);
+    for (const action of Object.keys(RESIDENT_ACTION_VISUALS) as Array<keyof typeof RESIDENT_ACTION_VISUALS>) {
+      const pose = residentActivityPose(action, 2_400, 0.7);
+      expect(Math.abs(pose.offsetY)).toBeLessThanOrEqual(1.5);
+      expect(Math.abs(pose.rotation)).toBeLessThanOrEqual(0.052);
+    }
+    expect(residentActivityGlyph('WORKING')).toBe('⚒');
+    expect(residentActivityGlyph('MOVING')).toBe('');
+    expect(residentActivityPose('FIREFIGHTING', 2_400, 0.7, true)).toEqual({ offsetY: 0, rotation: 0 });
   });
 });
