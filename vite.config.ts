@@ -11,6 +11,10 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
+    // The 500-resident contract measures per-tick wall time. Running other
+    // files in parallel can preempt its worker and turn scheduler delay into a
+    // false simulation regression, so keep the quality gate process-isolated.
+    fileParallelism: false,
     coverage: {
       reporter: ['text', 'html'],
       include: [
