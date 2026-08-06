@@ -135,3 +135,35 @@ test('traps keyboard focus inside modal surfaces and exposes named controls', as
   );
   expect(unnamedButtons).toBe(0);
 });
+
+test('keeps game chrome fixed and supports timed or manual notification dismissal', async ({ page }) => {
+  await createCaptain(page);
+  const chrome = await page.evaluate(() => {
+    const header = document.querySelector<HTMLElement>('.game-header')!;
+    const footer = document.querySelector<HTMLElement>('.game-nav')!;
+    return {
+      headerPosition: getComputedStyle(header).position,
+      headerTop: Math.round(header.getBoundingClientRect().top),
+      footerPosition: getComputedStyle(footer).position,
+      footerBottom: Math.round(window.innerHeight - footer.getBoundingClientRect().bottom)
+    };
+  });
+  expect(chrome).toEqual({
+    headerPosition: 'fixed',
+    headerTop: 0,
+    footerPosition: 'fixed',
+    footerBottom: 0
+  });
+
+  const save = page.getByRole('button', { name: '저장', exact: true });
+  await save.click();
+  const automaticToast = page.locator('.toast').filter({ hasText: '항해일지' }).last();
+  await expect(automaticToast).toBeVisible();
+  await expect(automaticToast).toBeHidden({ timeout: 8_000 });
+
+  await save.click();
+  const manualToast = page.locator('.toast').filter({ hasText: '항해일지' }).last();
+  await expect(manualToast).toBeVisible();
+  await manualToast.getByRole('button', { name: '알림 닫기: 항해일지' }).click();
+  await expect(manualToast).toBeHidden();
+});

@@ -589,15 +589,22 @@ p {
 
 /* Main game chrome */
 .game-shell {
-  min-height: 100vh;
+  --game-header-height: 68px;
+  --game-nav-height: calc(58px + env(safe-area-inset-bottom));
+  min-height: 100dvh;
   background: var(--sea-950);
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  padding-top: var(--game-header-height);
+  padding-bottom: var(--game-nav-height);
+}
+.game-shell.no-footer {
+  --game-nav-height: 0px;
 }
 .game-header {
-  height: 68px;
-  position: sticky;
+  height: var(--game-header-height);
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
   display: flex;
   align-items: center;
@@ -666,15 +673,19 @@ p {
   min-width: 44px;
 }
 .main-viewport {
-  min-height: 0;
+  min-height: calc(100dvh - var(--game-header-height) - var(--game-nav-height));
   position: relative;
 }
 .game-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 100;
   display: flex;
   justify-content: center;
   gap: 0.2rem;
-  min-height: 58px;
+  height: var(--game-nav-height);
   padding: 0.45rem 1rem calc(0.45rem + env(safe-area-inset-bottom));
   background: linear-gradient(0deg, #061318, rgba(7, 21, 25, 0.95));
   border-top: 1px solid var(--line);
@@ -1401,7 +1412,7 @@ p {
 .toast-stack {
   position: fixed;
   z-index: 300;
-  bottom: 82px;
+  bottom: calc(var(--game-nav-height, 58px) + 16px);
   right: 18px;
   width: min(340px, calc(100vw - 36px));
   display: grid;
@@ -1409,8 +1420,9 @@ p {
   pointer-events: none;
 }
 .toast {
-  pointer-events: none;
-  padding: 0.8rem 1rem;
+  position: relative;
+  pointer-events: auto;
+  padding: 0.8rem 2.7rem 0.8rem 1rem;
   background: rgba(6, 19, 22, 0.96);
   border: 1px solid var(--line);
   box-shadow: 0 16px 40px #0008;
@@ -1430,7 +1442,29 @@ p {
   font-family: 'Gowun Batang', serif;
 }
 .toast small {
+  display: block;
   color: var(--ink-muted);
+}
+.toast-dismiss {
+  position: absolute;
+  top: 50%;
+  right: 0.65rem;
+  width: 30px;
+  height: 30px;
+  transform: translateY(-50%);
+  border: 1px solid var(--line-soft);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--ink-muted);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.toast-dismiss:hover,
+.toast-dismiss:focus-visible {
+  border-color: var(--brass);
+  color: var(--ink);
+  background: rgba(194, 154, 85, 0.14);
 }
 @keyframes toast-in {
   from {
@@ -1518,8 +1552,10 @@ p {
     grid-template-columns: 1fr;
   }
   .game-header {
-    height: 58px;
     padding: 0 0.7rem;
+  }
+  .game-shell {
+    --game-header-height: 58px;
   }
   .captain-id {
     min-width: 0;
@@ -1544,7 +1580,7 @@ p {
   .toast-stack {
     left: 12px;
     right: 12px;
-    bottom: 126px;
+    bottom: calc(var(--game-nav-height, 58px) + 12px);
     width: auto;
   }
   .haven-screen {
