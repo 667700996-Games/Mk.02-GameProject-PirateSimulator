@@ -1,0 +1,21 @@
+{
+  "frames": {
+    "bunkhouse": { "frame": { "x": 0, "y": 0, "w": 418, "h": 418 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 418, "h": 418 }, "sourceSize": { "w": 418, "h": 418 } },
+    "barracks": { "frame": { "x": 418, "y": 0, "w": 418, "h": 418 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 418, "h": 418 }, "sourceSize": { "w": 418, "h": 418 } },
+    "skilled-house": { "frame": { "x": 836, "y": 0, "w": 418, "h": 418 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 418, "h": 418 }, "sourceSize": { "w": 418, "h": 418 } },
+    "officer-quarters": { "frame": { "x": 0, "y": 418, "w": 418, "h": 418 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 418, "h": 418 }, "sourceSize": { "w": 418, "h": 418 } },
+    "tavern": { "frame": { "x": 418, "y": 418, "w": 418, "h": 418 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 418, "h": 418 }, "sourceSize": { "w": 418, "h": 418 } },
+    "infirmary": { "frame": { "x": 836, "y": 418, "w": 418, "h": 418 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 418, "h": 418 }, "sourceSize": { "w": 418, "h": 418 } },
+    "powder-magazine": { "frame": { "x": 0, "y": 836, "w": 418, "h": 418 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 418, "h": 418 }, "sourceSize": { "w": 418, "h": 418 } },
+    "captains-lodge": { "frame": { "x": 418, "y": 836, "w": 418, "h": 418 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 418, "h": 418 }, "sourceSize": { "w": 418, "h": 418 } },
+    "expedition-office": { "frame": { "x": 836, "y": 836, "w": 418, "h": 418 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 418, "h": 418 }, "sourceSize": { "w": 418, "h": 418 } }
+  },
+  "meta": {
+    "app": "Mk.02-GameProject-PirateSimulator",
+    "version": "1.0",
+    "image": "society-buildings-atlas.png",
+    "format": "RGBA8888",
+    "size": { "w": 1254, "h": 1254 },
+    "scale": "1"
+  }
+}

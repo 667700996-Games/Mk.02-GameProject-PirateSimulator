@@ -3,7 +3,11 @@ import type { JobId, PopulationTier, ResidentAction } from '$lib/settlement/type
 export const RESIDENT_ATLAS_KEY = 'settlement-resident-roles';
 export const RESIDENT_ATLAS_IMAGE = '/art/settlement/resident-roles-atlas.png';
 export const RESIDENT_ATLAS_DATA = '/art/settlement/resident-roles-atlas.json';
+export const RESIDENT_REAR_ATLAS_KEY = 'settlement-resident-roles-rear';
+export const RESIDENT_REAR_ATLAS_IMAGE = '/art/settlement/resident-roles-rear-atlas.png';
+export const RESIDENT_REAR_ATLAS_DATA = '/art/settlement/resident-roles-rear-atlas.json';
 export const RESIDENT_FRAME_RATIO = 512 / 384;
+export type ResidentFacing = 'front' | 'rear';
 
 export type ResidentArtFrame =
   | 'laborer'
@@ -89,6 +93,20 @@ export function residentArtFrame(job: JobId, tier: PopulationTier): ResidentArtF
 export function residentDisplaySize(frame: ResidentArtFrame): { width: number; height: number } {
   const width = frame === 'officer' ? 36 : frame === 'hauler' ? 35 : 34;
   return { width, height: width * RESIDENT_FRAME_RATIO };
+}
+
+export function residentAtlasKey(facing: ResidentFacing): string {
+  return facing === 'rear' ? RESIDENT_REAR_ATLAS_KEY : RESIDENT_ATLAS_KEY;
+}
+
+export function residentFacingForMovement(
+  deltaScreenY: number,
+  current: ResidentFacing,
+  threshold = 0.18
+): ResidentFacing {
+  if (deltaScreenY < -threshold) return 'rear';
+  if (deltaScreenY > threshold) return 'front';
+  return current;
 }
 
 export function residentCrowdOffset(id: string): { x: number; y: number } {
