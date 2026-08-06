@@ -1,0 +1,24 @@
+{
+  "frames": {
+    "wreckage": { "frame": { "x": 0, "y": 0, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "campfire": { "frame": { "x": 384, "y": 0, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "tent": { "frame": { "x": 768, "y": 0, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "water-collector": { "frame": { "x": 1152, "y": 0, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "fisher-hut": { "frame": { "x": 0, "y": 341, "w": 384, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 342 }, "sourceSize": { "w": 384, "h": 342 } },
+    "lumber-camp": { "frame": { "x": 384, "y": 341, "w": 384, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 342 }, "sourceSize": { "w": 384, "h": 342 } },
+    "warehouse": { "frame": { "x": 768, "y": 341, "w": 384, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 342 }, "sourceSize": { "w": 384, "h": 342 } },
+    "sawmill": { "frame": { "x": 1152, "y": 341, "w": 384, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 342 }, "sourceSize": { "w": 384, "h": 342 } },
+    "small-dock": { "frame": { "x": 0, "y": 683, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "shipyard": { "frame": { "x": 384, "y": 683, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "watchtower": { "frame": { "x": 768, "y": 683, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "coastal-battery": { "frame": { "x": 1152, "y": 683, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } }
+  },
+  "meta": {
+    "app": "Mk.02-GameProject-PirateSimulator",
+    "version": "1.0",
+    "image": "core-buildings-atlas.png",
+    "format": "RGBA8888",
+    "size": { "w": 1536, "h": 1024 },
+    "scale": "1"
+  }
+}
