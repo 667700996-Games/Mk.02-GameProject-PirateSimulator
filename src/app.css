@@ -693,7 +693,7 @@ p {
 .nav-item {
   min-width: 102px;
   border: 0;
-  border-bottom: 2px solid transparent;
+  border-top: 2px solid transparent;
   color: var(--ink-muted);
   background: transparent;
   padding: 0.55rem 0.75rem;

@@ -141,18 +141,25 @@ test('keeps game chrome fixed and supports timed or manual notification dismissa
   const chrome = await page.evaluate(() => {
     const header = document.querySelector<HTMLElement>('.game-header')!;
     const footer = document.querySelector<HTMLElement>('.game-nav')!;
+    const activeNavigation = footer.querySelector<HTMLElement>('.nav-item.active')!;
+    const activeNavigationStyle = getComputedStyle(activeNavigation);
     return {
       headerPosition: getComputedStyle(header).position,
       headerTop: Math.round(header.getBoundingClientRect().top),
       footerPosition: getComputedStyle(footer).position,
-      footerBottom: Math.round(window.innerHeight - footer.getBoundingClientRect().bottom)
+      footerBottom: Math.round(window.innerHeight - footer.getBoundingClientRect().bottom),
+      activeHighlightAtTop:
+        activeNavigationStyle.borderTopWidth === '2px' &&
+        activeNavigationStyle.borderTopColor !== 'rgba(0, 0, 0, 0)' &&
+        activeNavigationStyle.borderBottomWidth === '0px'
     };
   });
   expect(chrome).toEqual({
     headerPosition: 'fixed',
     headerTop: 0,
     footerPosition: 'fixed',
-    footerBottom: 0
+    footerBottom: 0,
+    activeHighlightAtTop: true
   });
 
   const save = page.getByRole('button', { name: '저장', exact: true });
