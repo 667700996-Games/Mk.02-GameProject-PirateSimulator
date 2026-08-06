@@ -59,6 +59,28 @@ export function migrateGameState(input: unknown): GameState {
       settlement: migrated.settlement ?? createInitialSettlement(migrated.world?.seed ?? 1, migrated.lastSavedAt ?? Date.now())
     };
   }
+  if ((migrated.version ?? 0) === 3) {
+    const fallback = createInitialSettlement(migrated.world?.seed ?? 1, migrated.lastSavedAt ?? Date.now());
+    const settlement = migrated.settlement ?? fallback;
+    migrated = {
+      ...migrated,
+      version: 4,
+      settlement: {
+        ...fallback,
+        ...settlement,
+        prisoners: settlement.prisoners ?? 0,
+        buildings: Array.isArray(settlement.buildings) ? settlement.buildings : fallback.buildings,
+        residents: Array.isArray(settlement.residents) ? settlement.residents : fallback.residents,
+        transports: Array.isArray(settlement.transports) ? settlement.transports : [],
+        expeditions: Array.isArray(settlement.expeditions) ? settlement.expeditions.map((expedition) => ({
+          ...expedition,
+          purpose: expedition.purpose ?? (expedition.log?.some((entry) => entry.includes('raid')) ? 'raid' : 'explore')
+        })) : [],
+        warnings: Array.isArray(settlement.warnings) ? settlement.warnings : [],
+        statistics: { ...fallback.statistics, ...(settlement.statistics ?? {}) }
+      }
+    };
+  }
   validateRequiredFields(migrated);
   return migrated as GameState;
 }
@@ -69,5 +91,14 @@ function validateRequiredFields(value: LegacySave): asserts value is GameState {
   }
   if (!value.activeShipId || !value.resources || !value.factions) {
     throw new SaveMigrationError('저장 파일이 손상되었습니다.');
+  }
+  if (!Array.isArray(value.settlement.buildings) || !Array.isArray(value.settlement.residents) || !Array.isArray(value.settlement.expeditions)) {
+    throw new SaveMigrationError('정착지 시뮬레이션 데이터가 손상되었습니다.');
+  }
+  if (value.settlement.residents.some((resident) => !resident.id || !resident.name || !resident.needs || !Number.isFinite(resident.health))) {
+    throw new SaveMigrationError('주민 데이터가 손상되었습니다.');
+  }
+  if (value.settlement.buildings.some((building) => !building.id || !building.definitionId || !Number.isFinite(building.x) || !Number.isFinite(building.y))) {
+    throw new SaveMigrationError('건물 데이터가 손상되었습니다.');
   }
 }

@@ -3,7 +3,7 @@ import { createNewGame, DEFAULT_SETTINGS } from '$lib/domain/initialState';
 import { createId } from '$lib/domain/rng';
 import { advanceSimulation } from '$lib/domain/simulation';
 import type { GameScreen, GameSettings, GameState, NewGameOptions, SaveRecord, ToastMessage } from '$lib/domain/types';
-import { listSaves, loadSettings, readSave, removeSave, writeSave, writeSettings } from '$lib/persistence/gameRepository';
+import { exportSave as serializeSave, importSave as deserializeSave, listSaves, loadSettings, readSave, removeSave, writeSave, writeSettings } from '$lib/persistence/gameRepository';
 
 interface SessionState {
   ready: boolean;
@@ -140,6 +140,25 @@ function updateSettings(patch: Partial<GameSettings>): void {
   });
 }
 
+function exportCurrent(): string | undefined {
+  const game = get(session).game;
+  return game ? serializeSave(game) : undefined;
+}
+
+async function importSerialized(serialized: string): Promise<void> {
+  try {
+    const game = deserializeSave(serialized);
+    const record = await writeSave(game, game.saveName);
+    session.update((current) => ({ ...current, game: record.state, error: undefined, saves: [record, ...current.saves.filter((save) => save.id !== record.id)] }));
+  } catch (error) {
+    session.update((current) => ({ ...current, error: error instanceof Error ? error.message : '저장 파일을 가져오지 못했습니다.' }));
+  }
+}
+
+function dismissError(): void {
+  session.update((current) => ({ ...current, error: undefined }));
+}
+
 export const gameSession = {
   subscribe: session.subscribe,
   initialize,
@@ -155,6 +174,9 @@ export const gameSession = {
   setPaused,
   tickPlayTime,
   updateSettings,
+  exportCurrent,
+  importSerialized,
+  dismissError,
   scheduleAutoSave
 };
 

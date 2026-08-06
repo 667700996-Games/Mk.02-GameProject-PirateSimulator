@@ -15,7 +15,10 @@ describe('pirate haven', () => {
   });
 
   it('builds a facility after resources and workers are available', () => {
-    const rich = { ...game, resources: { ...game.resources, gold: 5000, timber: 500, iron: 500, rope: 500 }, haven: { ...game.haven, tier: 2, populationByRole: { ...game.haven.populationByRole, laborers: 30 } } };
+    const rich = structuredClone(game);
+    rich.resources = { ...rich.resources, gold: 5000, timber: 500, iron: 500, rope: 500 };
+    rich.haven = { ...rich.haven, tier: 2, populationByRole: { ...rich.haven.populationByRole, laborers: 30 } };
+    rich.settlement.buildings.find((building) => building.definitionId === 'wreckage')!.outputInventory = { gold: 5000, planks: 500, 'iron-ingots': 500, rope: 500 };
     const next = buildFacility(rich, 'shipyard', 2000);
     expect(next.haven.facilities.shipyard?.level).toBe(1);
     expect(next.resources.gold).toBeLessThan(rich.resources.gold);

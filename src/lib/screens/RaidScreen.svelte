@@ -5,6 +5,7 @@
   import { progressMissions } from '$lib/domain/missions';
   import { completeRaidScouting, configureRaid, launchPreparedRaid, lootRaidTarget, RAID_TARGETS } from '$lib/domain/raid';
   import { gameSession } from '$lib/stores/gameStore';
+  import { canAffordGameResources, spendGameResources } from '$lib/settlement/economyBridge';
   import type { GameState, RaidState, ResourceId, SettlementState, Ship } from '$lib/domain/types';
 
   let { game } = $props<{ game: GameState }>();
@@ -40,7 +41,7 @@
   }
 
   function canAfford(cost = equipmentCost()): boolean {
-    return (Object.entries(cost) as [ResourceId, number][]).every(([id, amount]) => game.resources[id] >= amount);
+    return canAffordGameResources(game, cost);
   }
 
   function costLabel(cost: Partial<Record<ResourceId, number>>): string {
@@ -51,10 +52,8 @@
     if (!settlement) return;
     gameSession.updateGame((state) => {
       const cost = equipment.find((item) => item.id === state.raid.equipment)?.cost ?? {};
-      if (!(Object.entries(cost) as [ResourceId, number][]).every(([id, amount]) => state.resources[id] >= amount)) return state;
-      const resources = { ...state.resources };
-      for (const [id, amount] of Object.entries(cost) as [ResourceId, number][]) resources[id] -= amount;
-      return { ...state, resources, raid: launchPreparedRaid(state.raid, settlement!, state.captain.trait) };
+      const paid = spendGameResources(state, cost);
+      return paid ? { ...paid, raid: launchPreparedRaid(paid.raid, settlement!, paid.captain.trait) } : state;
     }, true);
   }
 

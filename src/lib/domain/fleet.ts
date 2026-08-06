@@ -2,6 +2,7 @@ import { ZONES } from './catalog';
 import { clamp } from './physics';
 import { createId, hashString, mulberry32, randomInt } from './rng';
 import type { FleetAssignment, FleetFormation, FleetOrderType, GameState, Officer, OfficerRole, ResourceStock, ZoneId } from './types';
+import { canAffordGameResources, creditGameResources, spendGameResources } from '$lib/settlement/economyBridge';
 
 const CAPTAIN_NAMES = ['이사벨 로크', '토마스 케인', '누라 알사바', '가브리엘 문', '산티아고 렌', '아니카 볼프', '조나스 핀'];
 const CAPTAIN_TRAITS = ['신중한 추격자', '대담한 약탈자', '항로 계산가', '선원들의 친구', '야심 찬 결투가', '폭풍을 읽는 자'];
@@ -27,12 +28,13 @@ export function captainCandidate(seed: number): Officer {
 }
 
 export function hireCaptain(state: GameState, candidate: Officer, cost: number): GameState {
-  if (state.resources.gold < cost || state.officers.some((officer) => officer.id === candidate.id)) return state;
+  if (!canAffordGameResources(state, { gold: cost }) || state.officers.some((officer) => officer.id === candidate.id)) return state;
+  const paid = spendGameResources(state, { gold: cost });
+  if (!paid) return state;
   return {
-    ...state,
-    resources: { ...state.resources, gold: state.resources.gold - cost },
-    officers: [...state.officers, { ...candidate, isCaptain: true }],
-    haven: { ...state.haven, populationByRole: { ...state.haven.populationByRole, captains: state.haven.populationByRole.captains + 1 } }
+    ...paid,
+    officers: [...paid.officers, { ...candidate, isCaptain: true }],
+    haven: { ...paid.haven, populationByRole: { ...paid.haven.populationByRole, captains: paid.haven.populationByRole.captains + 1 } }
   };
 }
 
@@ -114,9 +116,8 @@ export function updateFleetAssignments(state: GameState, now = Date.now()): Game
 export function claimFleetAssignment(state: GameState, assignmentId: string): GameState {
   const assignment = state.fleet.assignments.find((item) => item.id === assignmentId);
   if (!assignment || !['complete', 'failed', 'deserted'].includes(assignment.status)) return state;
-  const resources = { ...state.resources };
-  for (const [id, amount] of Object.entries(assignment.reward) as [keyof ResourceStock, number][]) resources[id] += amount;
-  return { ...state, resources, fleet: { ...state.fleet, assignments: state.fleet.assignments.filter((item) => item.id !== assignmentId) } };
+  const credited = creditGameResources(state, assignment.reward);
+  return { ...credited, fleet: { ...credited.fleet, assignments: credited.fleet.assignments.filter((item) => item.id !== assignmentId) } };
 }
 
 export function setFleetFormation(state: GameState, formation: FleetFormation): GameState {

@@ -12,8 +12,13 @@ async function createCaptain(page: import('@playwright/test').Page): Promise<voi
   await expect(page.locator('.settlement-host canvas')).toBeVisible({ timeout: 15_000 });
 }
 
-test('creates a pirate settlement and opens every core management surface', async ({ page }, testInfo) => {
+test('creates a pirate settlement and opens every core management surface', async ({
+  page
+}, testInfo) => {
   await createCaptain(page);
+  if (!(await page.getByRole('heading', { name: '도시 건설' }).isVisible())) {
+    await page.getByRole('button', { name: '건설 메뉴 열기' }).click();
+  }
   await expect(page.getByRole('heading', { name: '도시 건설' })).toBeVisible();
   await expect(page.getByText('인구 / 주거')).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('isometric-settlement.png'), fullPage: true });
@@ -31,6 +36,8 @@ test('creates a pirate settlement and opens every core management surface', asyn
 
   await page.locator('.game-nav').getByRole('button', { name: '✥ 해도', exact: true }).click();
   await expect(page.getByRole('heading', { name: '검은 해도' })).toBeVisible();
+  await page.locator(':focus').blur();
+  await page.screenshot({ path: testInfo.outputPath('strategic-map.png'), fullPage: true });
   await page.getByRole('button', { name: '이 해역 원정 편성' }).click();
   await expect(page.getByRole('heading', { name: '함대와 전략 원정' })).toBeVisible();
 
@@ -44,19 +51,26 @@ test('persists and restores the complete settlement state through IndexedDB', as
   await createCaptain(page);
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('항해 기록을 안전하게 보관했습니다.')).toBeVisible();
-  const saved = await page.evaluate(async () => new Promise<{ version: number; residents: number; buildings: number }>((resolve, reject) => {
-    const open = indexedDB.open('blackwake-pirate-simulator', 1);
-    open.onerror = () => reject(open.error);
-    open.onsuccess = () => {
-      const all = open.result.transaction('saves', 'readonly').objectStore('saves').getAll();
-      all.onerror = () => reject(all.error);
-      all.onsuccess = () => {
-        const state = all.result[0].state;
-        resolve({ version: state.version, residents: state.settlement.residents.length, buildings: state.settlement.buildings.length });
-      };
-    };
-  }));
-  expect(saved).toEqual({ version: 3, residents: 16, buildings: 6 });
+  const saved = await page.evaluate(
+    async () =>
+      new Promise<{ version: number; residents: number; buildings: number }>((resolve, reject) => {
+        const open = indexedDB.open('blackwake-pirate-simulator', 1);
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const all = open.result.transaction('saves', 'readonly').objectStore('saves').getAll();
+          all.onerror = () => reject(all.error);
+          all.onsuccess = () => {
+            const state = all.result[0].state;
+            resolve({
+              version: state.version,
+              residents: state.settlement.residents.length,
+              buildings: state.settlement.buildings.length
+            });
+          };
+        };
+      })
+  );
+  expect(saved).toEqual({ version: 4, residents: 16, buildings: 6 });
 
   await page.reload();
   await expect(page.getByRole('button', { name: /항해 계속하기 · 검은수염 테스트/ })).toBeVisible();
@@ -65,7 +79,9 @@ test('persists and restores the complete settlement state through IndexedDB', as
   await expect(page.getByText('인구 / 주거')).toBeVisible();
 });
 
-test('accepts a contract and keeps missions connected to the expedition command', async ({ page }) => {
+test('accepts a contract and keeps missions connected to the expedition command', async ({
+  page
+}) => {
   await createCaptain(page);
   await page.locator('.game-nav').getByRole('button', { name: '▤ 임무', exact: true }).click();
   await expect(page.getByRole('heading', { name: '임무와 소문' })).toBeVisible();
@@ -79,33 +95,47 @@ test('accepts a contract and keeps missions connected to the expedition command'
   await expect(page.getByRole('heading', { name: '함대 진형' })).toBeVisible();
 });
 
-test('runs every coastal defense stage and returns damage to the spatial settlement', async ({ page }) => {
+test('runs every coastal defense stage and returns damage to the spatial settlement', async ({
+  page
+}) => {
   await createCaptain(page);
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('항해 기록을 안전하게 보관했습니다.')).toBeVisible();
 
-  await page.evaluate(async () => new Promise<void>((resolve, reject) => {
-    const open = indexedDB.open('blackwake-pirate-simulator', 1);
-    open.onerror = () => reject(open.error);
-    open.onsuccess = () => {
-      const db = open.result;
-      const store = db.transaction('saves', 'readwrite').objectStore('saves');
-      const all = store.getAll();
-      all.onerror = () => reject(all.error);
-      all.onsuccess = () => {
-        const record = all.result[0];
-        record.state.screen = 'defense';
-        record.state.defense = {
-          ...record.state.defense, active: true, attacker: 'red-tide', stage: 'warning', attackStrength: 180,
-          attackerRemaining: 180, defenseStrength: 0, timeToAttack: Date.now() + 60_000, preparation: 0,
-          civilianRisk: 55, selectedActions: [], log: []
+  await page.evaluate(
+    async () =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('blackwake-pirate-simulator', 1);
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const store = db.transaction('saves', 'readwrite').objectStore('saves');
+          const all = store.getAll();
+          all.onerror = () => reject(all.error);
+          all.onsuccess = () => {
+            const record = all.result[0];
+            record.state.screen = 'defense';
+            record.state.defense = {
+              ...record.state.defense,
+              active: true,
+              attacker: 'red-tide',
+              stage: 'warning',
+              attackStrength: 180,
+              attackerRemaining: 180,
+              defenseStrength: 0,
+              timeToAttack: Date.now() + 60_000,
+              preparation: 0,
+              civilianRisk: 55,
+              selectedActions: [],
+              log: []
+            };
+            const put = store.put(record);
+            put.onerror = () => reject(put.error);
+            put.onsuccess = () => resolve();
+          };
         };
-        const put = store.put(record);
-        put.onerror = () => reject(put.error);
-        put.onsuccess = () => resolve();
-      };
-    };
-  }));
+      })
+  );
 
   await page.reload();
   await page.getByRole('button', { name: /항해 계속하기 · 검은수염 테스트/ }).click();
@@ -123,36 +153,56 @@ test('runs every coastal defense stage and returns damage to the spatial settlem
   await expect(page.getByTestId('settlement-screen')).toBeVisible();
 });
 
-test('commands a turn-based expedition naval battle with wind, range and ammunition', async ({ page }) => {
+test('commands a turn-based expedition naval battle with wind, range and ammunition', async ({
+  page
+}) => {
   await createCaptain(page);
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('항해 기록을 안전하게 보관했습니다.')).toBeVisible();
-  await page.evaluate(async () => new Promise<void>((resolve, reject) => {
-    const open = indexedDB.open('blackwake-pirate-simulator', 1);
-    open.onerror = () => reject(open.error);
-    open.onsuccess = () => {
-      const store = open.result.transaction('saves', 'readwrite').objectStore('saves');
-      const all = store.getAll();
-      all.onerror = () => reject(all.error);
-      all.onsuccess = () => {
-        const record = all.result[0];
-        const ship = record.state.ships[0];
-        ship.hull = ship.stats.hullMax;
-        ship.sails = ship.stats.sailMax;
-        ship.crew = 14;
-        record.state.screen = 'fleet';
-        record.state.settlement.expeditions = [{
-          id: 'e2e-naval-combat', name: '왕실 항로 습격', state: 'EVENT', zoneId: 'beginners-bay', shipIds: [ship.id],
-          captainIds: [record.state.officers[0].id], crewIds: record.state.settlement.residents.slice(0, 10).map((resident: { id: string }) => resident.id),
-          supplies: { cannonballs: 32, powder: 14 }, cargo: {}, routeProgress: .35, durationHours: 12, risk: 40, morale: 74,
-          currentEventId: 'naval-patrol', log: ['왕실 순찰선이 접근한다.']
-        }];
-        const put = store.put(record);
-        put.onerror = () => reject(put.error);
-        put.onsuccess = () => resolve();
-      };
-    };
-  }));
+  await page.evaluate(
+    async () =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('blackwake-pirate-simulator', 1);
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const store = open.result.transaction('saves', 'readwrite').objectStore('saves');
+          const all = store.getAll();
+          all.onerror = () => reject(all.error);
+          all.onsuccess = () => {
+            const record = all.result[0];
+            const ship = record.state.ships[0];
+            ship.hull = ship.stats.hullMax;
+            ship.sails = ship.stats.sailMax;
+            ship.crew = 14;
+            record.state.screen = 'fleet';
+            record.state.settlement.expeditions = [
+              {
+                id: 'e2e-naval-combat',
+                name: '왕실 항로 습격',
+                state: 'EVENT',
+                zoneId: 'beginners-bay',
+                shipIds: [ship.id],
+                captainIds: [record.state.officers[0].id],
+                crewIds: record.state.settlement.residents
+                  .slice(0, 10)
+                  .map((resident: { id: string }) => resident.id),
+                supplies: { cannonballs: 32, powder: 14 },
+                cargo: {},
+                routeProgress: 0.35,
+                durationHours: 12,
+                risk: 40,
+                morale: 74,
+                currentEventId: 'naval-patrol',
+                log: ['왕실 순찰선이 접근한다.']
+              }
+            ];
+            const put = store.put(record);
+            put.onerror = () => reject(put.error);
+            put.onsuccess = () => resolve();
+          };
+        };
+      })
+  );
   await page.reload();
   await page.getByRole('button', { name: /항해 계속하기 · 검은수염 테스트/ }).click();
   await page.getByRole('button', { name: /항해 상황/ }).click();
@@ -165,6 +215,6 @@ test('commands a turn-based expedition naval battle with wind, range and ammunit
     if (!(await fire.isVisible())) break;
     await fire.click();
   }
-  await expect(page.getByRole('button', { name: /전술 해전 승리/ })).toBeVisible();
+  await expect(page.getByText('전술 해전 승리', { exact: true })).toBeVisible();
   await expect(page.locator('.cargo-report').getByText(/군사 지도/)).toBeVisible();
 });

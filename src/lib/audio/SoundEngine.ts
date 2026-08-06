@@ -10,6 +10,9 @@ class SoundEngine {
   private ambience?: GainNode;
   private music?: GainNode;
   private ambientSource?: AudioBufferSourceNode;
+  private harborSource?: AudioBufferSourceNode;
+  private harborGain?: GainNode;
+  private harborFilter?: BiquadFilterNode;
   private musicNodes: AudioScheduledSourceNode[] = [];
   private mood: MusicMood = 'title';
   private settings?: GameSettings;
@@ -29,6 +32,7 @@ class SoundEngine {
     if (!this.context) this.createContext();
     if (this.context?.state === 'suspended') await this.context.resume();
     if (!this.ambientSource) this.startOceanAmbience();
+    if (!this.harborSource) this.startHarborAmbience();
     if (!this.musicNodes.length) this.startMusic();
   }
 
@@ -36,6 +40,15 @@ class SoundEngine {
     if (this.mood === mood) return;
     this.mood = mood;
     if (this.context?.state === 'running') this.startMusic();
+  }
+
+  setSettlementActivity(population: number, activeProduction: number, weather: 'clear' | 'rain' | 'storm' | 'fog', fireCount: number): void {
+    if (!this.context || !this.harborGain || !this.harborFilter) return;
+    const now = this.context.currentTime;
+    const activity = Math.min(1, population / 180 + activeProduction / 32);
+    const weatherLift = weather === 'storm' ? .18 : weather === 'rain' ? .08 : 0;
+    this.harborGain.gain.setTargetAtTime(.04 + activity * .18 + weatherLift + Math.min(.12, fireCount * .04), now, .8);
+    this.harborFilter.frequency.setTargetAtTime(480 + activity * 920 + weatherLift * 1200, now, .8);
   }
 
   play(sound: GameSound): void {
@@ -86,6 +99,24 @@ class SoundEngine {
     source.connect(filter).connect(gain).connect(this.ambience!);
     source.start();
     this.ambientSource = source;
+  }
+
+  private startHarborAmbience(): void {
+    const context = this.context!;
+    const source = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const gain = context.createGain();
+    source.buffer = this.noiseBuffer(9);
+    source.loop = true;
+    filter.type = 'bandpass';
+    filter.frequency.value = 620;
+    filter.Q.value = 1.8;
+    gain.gain.value = .04;
+    source.connect(filter).connect(gain).connect(this.ambience!);
+    source.start();
+    this.harborSource = source;
+    this.harborGain = gain;
+    this.harborFilter = filter;
   }
 
   private startMusic(): void {

@@ -1,5 +1,10 @@
 import { clamp } from './physics';
 import type { FactionId, FactionRelation, GameState, ResourceId, ResourceStock } from './types';
+import { canAffordGameResources, spendGameResources } from '$lib/settlement/economyBridge';
+
+function spatialLevel(state: GameState, definitionId: string): number {
+  return Math.max(0, ...state.settlement.buildings.filter((building) => building.definitionId === definitionId && building.state === 'ACTIVE').map((building) => building.level));
+}
 
 export interface NotorietyEvent {
   bounty: number;
@@ -71,11 +76,11 @@ export interface NotorietyActionQuote {
 }
 
 export function notorietyActionQuotes(state: GameState): NotorietyActionQuote[] {
-  const intelLevel = state.haven.facilities['intel-den']?.level ?? 0;
+  const intelLevel = Math.max(state.haven.facilities['intel-den']?.level ?? 0, spatialLevel(state, 'intelligence-network'));
   const hiddenDockLevel = state.haven.facilities['hidden-dock']?.level ?? 0;
   const bribeCost = Math.max(120, Math.round(state.bounty * .16));
   return [
-    { action: 'bribe', name: '관리 매수', description: '제국 세관의 최근 신고서를 밀봉합니다.', cost: { gold: bribeCost }, bountyReduction: Math.max(80, Math.round(state.bounty * .24)), heatReduction: 18, available: state.bounty > 0 && state.resources.gold >= bribeCost },
+    { action: 'bribe', name: '관리 매수', description: '제국 세관의 최근 신고서를 밀봉합니다.', cost: { gold: bribeCost }, bountyReduction: Math.max(80, Math.round(state.bounty * .24)), heatReduction: 18, available: state.bounty > 0 && canAffordGameResources(state, { gold: bribeCost }) },
     { action: 'forge-identity', name: '위조 신분', description: '새 선적과 통관 증서를 만듭니다.', cost: { gold: 260, contraband: 3, cloth: 4 }, bountyReduction: Math.max(140, Math.round(state.bounty * .34)), heatReduction: 28, requirement: '정보상 거점 1레벨', available: intelLevel >= 1 && state.bounty > 0 && hasResources(state.resources, { gold: 260, contraband: 3, cloth: 4 }) },
     { action: 'destroy-records', name: '수배 기록 소각', description: '잠입조가 해군 문서고의 현상수배 장부를 없앩니다.', cost: { gold: 440, powder: 5, medicine: 2 }, bountyReduction: Math.max(260, Math.round(state.bounty * .48)), heatReduction: 14, requirement: '정보상 거점 2레벨', available: intelLevel >= 2 && state.bounty > 0 && hasResources(state.resources, { gold: 440, powder: 5, medicine: 2 }) },
     { action: 'lay-low', name: '비밀 부두에서 은신', description: '함선을 숨기고 일주일 동안 출항을 중단합니다.', cost: { food: 18, rum: 6 }, bountyReduction: 35 + hiddenDockLevel * 30, heatReduction: 30 + hiddenDockLevel * 8, requirement: '은신 부두 1레벨', available: hiddenDockLevel >= 1 && !state.voyage.active && hasResources(state.resources, { food: 18, rum: 6 }) }
@@ -85,12 +90,12 @@ export function notorietyActionQuotes(state: GameState): NotorietyActionQuote[] 
 export function performNotorietyAction(state: GameState, action: NotorietyAction): GameState {
   const quote = notorietyActionQuotes(state).find((item) => item.action === action);
   if (!quote?.available) return state;
-  const resources = spendResources(state.resources, quote.cost);
+  const paid = spendGameResources(state, quote.cost);
+  if (!paid) return state;
   const navy = state.factions['imperial-navy'];
   const isIllegalManipulation = action === 'forge-identity' || action === 'destroy-records';
   return {
-    ...state,
-    resources,
+    ...paid,
     bounty: Math.max(0, state.bounty - quote.bountyReduction),
     heat: clamp(state.heat - quote.heatReduction, 0, 100),
     world: action === 'lay-low' ? { ...state.world, day: state.world.day + 7, recentEvents: [`${state.captain.name} 선장이 은신해 추격대의 눈을 피했다.`, ...state.world.recentEvents].slice(0, 8) } : state.world,
@@ -101,17 +106,18 @@ export function performNotorietyAction(state: GameState, action: NotorietyAction
 
 export function sendFactionGift(state: GameState, factionId: FactionId): GameState {
   const relation = state.factions[factionId];
-  if (factionId === 'imperial-navy' || factionId === 'bounty-hunters' || factionId === 'red-tide' || state.resources.gold < 240 || relation.hostility >= 85) return state;
+  if (factionId === 'imperial-navy' || factionId === 'bounty-hunters' || factionId === 'red-tide' || !canAffordGameResources(state, { gold: 240 }) || relation.hostility >= 85) return state;
+  const paid = spendGameResources(state, { gold: 240 });
+  if (!paid) return state;
   return {
-    ...state,
-    resources: { ...state.resources, gold: state.resources.gold - 240 },
-    factions: { ...state.factions, [factionId]: { ...relation, favor: clamp(relation.favor + 10, -100, 100), hostility: clamp(relation.hostility - 7, 0, 100), respect: clamp(relation.respect + 3, 0, 100), tradeAllowed: relation.hostility - 7 < 70, lastChangedAt: Date.now() } }
+    ...paid,
+    factions: { ...paid.factions, [factionId]: { ...relation, favor: clamp(relation.favor + 10, -100, 100), hostility: clamp(relation.hostility - 7, 0, 100), respect: clamp(relation.respect + 3, 0, 100), tradeAllowed: relation.hostility - 7 < 70, lastChangedAt: Date.now() } }
   };
 }
 
 export function formAlliance(state: GameState, factionId: FactionId): GameState {
   const relation = state.factions[factionId];
-  const councilLevel = state.haven.facilities['pirate-council']?.level ?? 0;
+  const councilLevel = Math.max(state.haven.facilities['pirate-council']?.level ?? 0, spatialLevel(state, 'pirate-council'));
   if (councilLevel < 1 || relation.favor < 55 || relation.respect < 30 || relation.hostility > 25 || factionId === 'imperial-navy' || factionId === 'bounty-hunters') return state;
   return {
     ...state,
@@ -122,7 +128,7 @@ export function formAlliance(state: GameState, factionId: FactionId): GameState 
 }
 
 export function declareFactionWar(state: GameState, factionId: FactionId): GameState {
-  const councilLevel = state.haven.facilities['pirate-council']?.level ?? 0;
+  const councilLevel = Math.max(state.haven.facilities['pirate-council']?.level ?? 0, spatialLevel(state, 'pirate-council'));
   if (councilLevel < 1 || state.flags[`war:${factionId}`]) return state;
   const relation = state.factions[factionId];
   return {
@@ -137,10 +143,4 @@ export function declareFactionWar(state: GameState, factionId: FactionId): GameS
 
 function hasResources(resources: ResourceStock, cost: Partial<ResourceStock>): boolean {
   return (Object.entries(cost) as [ResourceId, number][]).every(([id, amount]) => resources[id] >= amount);
-}
-
-function spendResources(resources: ResourceStock, cost: Partial<ResourceStock>): ResourceStock {
-  const next = { ...resources };
-  for (const [id, amount] of Object.entries(cost) as [ResourceId, number][]) next[id] -= amount;
-  return next;
 }

@@ -20,9 +20,37 @@ export function aggregateInventory(state: SettlementSimulationState): PartialSet
   return total;
 }
 
+/** Resources that are not already committed to a building input or a transport job. */
+export function availableSettlementInventory(state: SettlementSimulationState): PartialSettlementInventory {
+  const total: PartialSettlementInventory = { ...state.looseInventory };
+  for (const building of state.buildings) {
+    for (const [id, stored] of Object.entries(building.outputInventory) as [SettlementResourceId, number][]) {
+      const available = Math.max(0, stored - (building.reservedInventory[id] ?? 0));
+      total[id] = (total[id] ?? 0) + available;
+    }
+  }
+  return total;
+}
+
 export function hasSettlementResources(state: SettlementSimulationState, cost: PartialSettlementInventory): boolean {
-  const total = aggregateInventory(state);
+  const total = availableSettlementInventory(state);
   return (Object.entries(cost) as [SettlementResourceId, number][]).every(([id, amount]) => (total[id] ?? 0) >= amount);
+}
+
+export function creditSettlementResources(
+  state: SettlementSimulationState,
+  resources: PartialSettlementInventory
+): SettlementSimulationState {
+  const next = structuredClone(state);
+  const store = next.buildings.find((building) => building.definitionId === 'warehouse' && building.state === 'ACTIVE')
+    ?? next.buildings.find((building) => building.definitionId === 'dock-warehouse' && building.state === 'ACTIVE')
+    ?? next.buildings.find((building) => building.definitionId === 'wreckage');
+  const inventory = store?.outputInventory ?? next.looseInventory;
+  for (const [resource, value] of Object.entries(resources) as [SettlementResourceId, number][]) {
+    if (!Number.isFinite(value) || value <= 0) continue;
+    inventory[resource] = (inventory[resource] ?? 0) + value;
+  }
+  return next;
 }
 
 export function buildingUpgradeCost(definitionId: SettlementBuildingId, currentLevel: number): PartialSettlementInventory {

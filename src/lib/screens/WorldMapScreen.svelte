@@ -12,7 +12,7 @@
     game.settlement.expeditions.filter((expedition: StrategicExpedition) => !['COMPLETED', 'LOST'].includes(expedition.state))
   );
   const positions: Record<ZoneId, { x: number; y: number }> = {
-    'beginners-bay': { x: 18, y: 73 }, 'merchant-routes': { x: 35, y: 49 }, 'mist-archipelago': { x: 52, y: 34 }, 'naval-patrol': { x: 68, y: 27 }, 'storm-reach': { x: 73, y: 61 }, 'freeport-waters': { x: 48, y: 62 }, 'imperial-heartway': { x: 84, y: 19 }, 'legend-sea': { x: 91, y: 8 }
+    'beginners-bay': { x: 17, y: 70 }, 'merchant-routes': { x: 31, y: 43 }, 'mist-archipelago': { x: 48, y: 21 }, 'naval-patrol': { x: 73, y: 19 }, 'storm-reach': { x: 12, y: 17 }, 'freeport-waters': { x: 81, y: 46 }, 'imperial-heartway': { x: 52, y: 79 }, 'legend-sea': { x: 83, y: 76 }
   };
 
   function selectSettlement(settlement: SettlementState): void {
@@ -28,6 +28,7 @@
 
 <section class="map-screen">
   <div class="map-canvas">
+    <div class="chart-vignette" aria-hidden="true"></div>
     <div class="map-title"><span class="eyebrow">THE SHATTERED ARCHIPELAGO</span><h1>검은 해도</h1><p class="muted">정착지의 함대가 발견한 항로와 왕실 순찰 정보가 기록됩니다.</p></div>
     {#each Object.values(ZONES) as item}
       {@const discovered = game.world.zones[item.id].discovered}
@@ -35,9 +36,9 @@
         <b>{discovered ? item.name : '미지의 해역'}</b><small>{discovered ? `위험도 ${item.difficulty}` : '정보 필요'}</small>
       </button>
     {/each}
-    {#each game.world.settlements.filter((item: SettlementState) => item.discovered) as settlement}
+    {#each game.world.settlements.filter((item: SettlementState) => item.discovered) as settlement, index}
       <button class="settlement-dot" style={`left:${settlement.position.x}%;top:${settlement.position.y}%`} onclick={() => selectSettlement(settlement)} aria-label={settlement.name}></button>
-      <span class="settlement-label" style={`left:${settlement.position.x}%;top:${settlement.position.y}%`}>{settlement.name}</span>
+      <span class="settlement-label" style={`left:${settlement.position.x}%;top:${settlement.position.y}%;--label-x:${index % 2 === 0 ? -8 : 8}px;--label-y:${12 + (index % 3) * 9}px`}>{settlement.name}</span>
     {/each}
     {#each activeExpeditions as expedition}
       {@const destination = positions[expedition.zoneId as ZoneId]}

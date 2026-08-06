@@ -9,6 +9,7 @@ describe('faction diplomacy and notoriety', () => {
     state.bounty = 500;
     state.heat = 70;
     state.resources.gold = 1000;
+    state.settlement.buildings.find((building) => building.definitionId === 'wreckage')!.outputInventory.gold = 1000;
     const quote = notorietyActionQuotes(state).find((item) => item.action === 'bribe')!;
     const next = performNotorietyAction(state, 'bribe');
     expect(next.resources.gold).toBe(state.resources.gold - (quote.cost.gold ?? 0));
@@ -30,6 +31,7 @@ describe('faction diplomacy and notoriety', () => {
   it('spends gold to improve an eligible relation', () => {
     const state = createNewGame({ captainName: 'Anne', crewName: 'Tide', shipName: 'Gull', flagMark: 'skull', flagColor: '#fff', trait: 'negotiator', difficulty: 'captain' });
     state.resources.gold = 500;
+    state.settlement.buildings.find((building) => building.definitionId === 'wreckage')!.outputInventory.gold = 500;
     const next = sendFactionGift(state, 'isle-kin');
     expect(next.resources.gold).toBe(260);
     expect(next.factions['isle-kin'].favor).toBeGreaterThan(state.factions['isle-kin'].favor);

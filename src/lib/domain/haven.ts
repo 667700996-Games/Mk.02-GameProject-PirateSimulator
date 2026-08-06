@@ -1,7 +1,7 @@
 import { FACILITIES } from './catalog';
-import { hasResources, transferStock } from './economy';
 import { clamp } from './physics';
 import type { CaptainTrait, FacilityId, GameState, HavenState, ResourceId, ResourceStock } from './types';
+import { canAffordGameResources, spendGameResources } from '$lib/settlement/economyBridge';
 
 export interface BuildCheck {
   allowed: boolean;
@@ -42,7 +42,7 @@ export function checkFacilityBuild(state: GameState, id: FacilityId): BuildCheck
       return { allowed: false, reason: `${FACILITIES[definition.prerequisite.id].name} ${definition.prerequisite.level}단계가 필요합니다.`, cost, nextLevel };
     }
   }
-  if (!hasResources(state.resources, cost)) return { allowed: false, reason: '건설 자원이 부족합니다.', cost, nextLevel };
+  if (!canAffordGameResources(state, cost)) return { allowed: false, reason: '건설 자원이 부족합니다.', cost, nextLevel };
   const availableWorkers = state.haven.populationByRole.laborers - assignedWorkers(state.haven);
   if (availableWorkers < Math.max(1, Math.ceil(definition.workersPerLevel / 2))) return { allowed: false, reason: '가용 노동자가 부족합니다.', cost, nextLevel };
   return { allowed: true, cost, nextLevel };
@@ -60,13 +60,14 @@ export function buildFacility(state: GameState, id: FacilityId, now = Date.now()
   const workers = Math.min(definition.workersPerLevel * check.nextLevel, Math.max(definition.workersPerLevel, state.haven.populationByRole.laborers));
   const baseMinutes = 18 + check.nextLevel * 12;
   const duration = baseMinutes * 60_000 * (state.captain.trait === 'architect' ? 0.85 : 1);
+  const paid = spendGameResources(state, check.cost);
+  if (!paid) return state;
   return {
-    ...state,
-    resources: transferStock(state.resources, check.cost),
+    ...paid,
     haven: {
-      ...state.haven,
+      ...paid.haven,
       facilities: {
-        ...state.haven.facilities,
+        ...paid.haven.facilities,
         [id]: {
           id,
           level: check.nextLevel,

@@ -25,6 +25,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   reducedMotion: false,
   screenShake: true,
   quality: 'high',
+  uiScale: 'normal',
+  colorVision: 'standard',
+  highContrast: false,
   showDamageNumbers: true,
   keyBindings: {
     sailUp: 'KeyW',
@@ -139,8 +142,8 @@ function createMissions(): Mission[] {
   return [
     {
       id: 'story-first-prize',
-      title: '첫 번째 전리품',
-      description: '소금바람 마을로 가는 무장하지 않은 상선을 찾아 화물을 빼앗고 살아서 귀환하라.',
+      title: '난파선에서 검은 깃발까지',
+      description: '식수·목재 생산망을 세우고 부두와 원정 사무소를 복구한 뒤, 초보자의 만으로 첫 약탈 원정을 보내라.',
       type: 'merchant-raid',
       status: 'active',
       zoneId: 'beginners-bay',
@@ -278,7 +281,7 @@ export function createNewGame(options: NewGameOptions, now = Date.now()): GameSt
     tutorialStep: 0,
     flags: { firstLaunch: true, metFreeport: false, builtShipyard: false },
     toasts: [
-      { id: createId('toast'), kind: 'info', title: '첫 임무', detail: '부두에서 출항 준비를 마치고 초보자의 만으로 나가십시오.', createdAt: now }
+      { id: createId('toast'), kind: 'info', title: '생존자들의 첫 아침', detail: '건설 메뉴에서 빗물 집수장과 벌목장을 배치하십시오. 자재는 난파선에서 운반됩니다.', createdAt: now }
     ]
   };
 }

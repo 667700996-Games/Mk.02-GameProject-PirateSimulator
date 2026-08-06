@@ -1,6 +1,7 @@
 import { ZONES } from './catalog';
 import { createId, mulberry32, pickOne, randomInt } from './rng';
-import type { FactionId, GameState, Mission, MissionType, ResourceId, ResourceStock, ZoneId } from './types';
+import type { FactionId, GameState, Mission, MissionType, ResourceStock, ZoneId } from './types';
+import { creditGameResources } from '$lib/settlement/economyBridge';
 
 export interface MissionEvent {
   kind: 'ship-defeated' | 'ship-captured' | 'cargo-stolen' | 'raid-complete' | 'contraband-delivered' | 'treasure-found' | 'survivor-rescued' | 'haven-defended';
@@ -101,19 +102,17 @@ export function progressMissions(state: GameState, event: MissionEvent): GameSta
 export function claimMissionReward(state: GameState, missionId: string): GameState {
   const mission = state.missions.find((item) => item.id === missionId);
   if (!mission || mission.status !== 'complete' || mission.claimed) return state;
-  const resources = { ...state.resources };
-  for (const [id, amount] of Object.entries(mission.reward) as [ResourceId, number][]) resources[id] += amount;
-  const factions = { ...state.factions };
+  const credited = creditGameResources(state, mission.reward);
+  const factions = { ...credited.factions };
   if (mission.issuerFactionId) {
     const relation = factions[mission.issuerFactionId];
     factions[mission.issuerFactionId] = { ...relation, favor: Math.min(100, relation.favor + 5 + (mission.difficulty ?? 1)), respect: Math.min(100, relation.respect + 3), lastChangedAt: Date.now() };
   }
   return {
-    ...state,
-    resources,
+    ...credited,
     factions,
-    captain: { ...state.captain, renown: state.captain.renown + mission.renownReward, experience: state.captain.experience + mission.renownReward * 4 },
-    missions: state.missions.map((item) => item.id === missionId ? { ...item, claimed: true } : item)
+    captain: { ...credited.captain, renown: credited.captain.renown + mission.renownReward, experience: credited.captain.experience + mission.renownReward * 4 },
+    missions: credited.missions.map((item) => item.id === missionId ? { ...item, claimed: true } : item)
   };
 }
 

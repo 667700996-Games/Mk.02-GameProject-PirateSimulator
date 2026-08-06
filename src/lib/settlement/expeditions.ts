@@ -3,6 +3,7 @@ import { ZONES } from '$lib/domain/catalog';
 import type { Officer, Ship, ZoneId } from '$lib/domain/types';
 import { aggregateInventory } from './construction';
 import type { PartialSettlementInventory, SettlementResourceId, SettlementSimulationState, StrategicExpedition } from './types';
+import { policyModifiers } from './progression';
 
 export type ExpeditionPurpose = 'explore' | 'raid' | 'trade' | 'rescue';
 export type ExpeditionChoice = 'cautious' | 'bold' | 'parley';
@@ -47,6 +48,7 @@ export interface PrepareExpeditionOptions {
   shipIds: string[];
   captainIds: string[];
   crewIds: string[];
+  missionId?: string;
 }
 
 export function prepareExpedition(
@@ -56,6 +58,8 @@ export function prepareExpedition(
   options: PrepareExpeditionOptions
 ): { state: SettlementSimulationState; ok: boolean; reason?: string; expeditionId?: string } {
   if (!state.progression.unlocked.includes('seamanship-expeditions')) return { state, ok: false, reason: '군도 원정술 발전이 필요합니다.' };
+  const activeLimit = state.progression.unlocked.includes('federation-captains') ? 3 : 1;
+  if (state.expeditions.filter((expedition) => !['COMPLETED', 'LOST'].includes(expedition.state)).length >= activeLimit) return { state, ok: false, reason: activeLimit === 1 ? '복수 함대를 운용하려면 「여러 깃발, 하나의 항구」 발전이 필요합니다.' : '현재 지휘 가능한 원정 함대가 모두 출항 중입니다.' };
   const office = state.buildings.find((building) => building.definitionId === 'expedition-office' && building.state === 'ACTIVE');
   if (!office) return { state, ok: false, reason: '가동 중인 원정 사무소가 필요합니다.' };
   const selectedShips = ships.filter((ship) => options.shipIds.includes(ship.id));
@@ -63,15 +67,17 @@ export function prepareExpedition(
   if (selectedShips.some((ship) => ship.hull < ship.stats.hullMax * 0.35 || ship.sails < ship.stats.sailMax * 0.35)) return { state, ok: false, reason: '파손이 심한 함선이 포함되어 있습니다.' };
   if (state.expeditions.some((expedition) => !['COMPLETED', 'LOST'].includes(expedition.state) && expedition.shipIds.some((id) => options.shipIds.includes(id)))) return { state, ok: false, reason: '선택한 함선이 이미 원정 중입니다.' };
   const crew = state.residents.filter((resident) => options.crewIds.includes(resident.id));
-  const estimate = estimateExpedition(options.zoneId, selectedShips, crew.length, options.purpose);
+  const baseEstimate = estimateExpedition(options.zoneId, selectedShips, crew.length, options.purpose);
+  const modifiers = policyModifiers(state);
+  const estimate = { ...baseEstimate, risk: Math.max(3, Math.min(95, baseEstimate.risk * modifiers.patrolRisk)) };
   if (crew.length < estimate.requiredCrew) return { state, ok: false, reason: `${estimate.requiredCrew - crew.length}명의 원정 선원이 더 필요합니다.` };
   if (options.captainIds.length < selectedShips.length || !options.captainIds.every((id) => officers.some((officer) => officer.id === id))) return { state, ok: false, reason: '함선마다 지휘할 장교가 필요합니다.' };
   const inventory = aggregateInventory(state);
   if (!(Object.entries(estimate.supplies) as [SettlementResourceId, number][]).every(([id, required]) => (inventory[id] ?? 0) >= required)) return { state, ok: false, reason: '원정 보급품이 정착지에 부족합니다.' };
   const expedition: StrategicExpedition = {
-    id: createId('expedition'), name: options.name.trim() || `${ZONES[options.zoneId].name} 원정`, state: 'PREPARING', zoneId: options.zoneId,
+    id: createId('expedition'), name: options.name.trim() || `${ZONES[options.zoneId].name} 원정`, state: 'PREPARING', zoneId: options.zoneId, purpose: options.purpose, missionId: options.missionId,
     shipIds: options.shipIds, captainIds: options.captainIds, crewIds: options.crewIds, supplies: estimate.supplies, cargo: {}, routeProgress: 0,
-    durationHours: estimate.durationHours, risk: estimate.risk, morale: crew.reduce((sum, resident) => sum + resident.morale, 0) / Math.max(1, crew.length),
+    durationHours: estimate.durationHours, risk: estimate.risk, morale: Math.min(100, crew.reduce((sum, resident) => sum + resident.morale, 0) / Math.max(1, crew.length) + modifiers.expeditionMorale),
     log: [`${ZONES[options.zoneId].name} 항로와 보급표를 작성했다.`, `작전 교리: ${options.purpose}`]
   };
   return { state: { ...state, expeditions: [...state.expeditions, expedition] }, ok: true, expeditionId: expedition.id };
@@ -85,12 +91,17 @@ function consumeSupplies(inventory: PartialSettlementInventory, supplies: Partia
   for (const [id, required] of Object.entries(supplies) as [SettlementResourceId, number][]) inventory[id] = Math.max(0, (inventory[id] ?? 0) - required);
 }
 
-function expeditionLoot(expedition: StrategicExpedition): PartialSettlementInventory {
+function expeditionLoot(expedition: StrategicExpedition, state: SettlementSimulationState): PartialSettlementInventory {
   const random = mulberry32(hashString(expedition.id));
   const zone = ZONES[expedition.zoneId];
-  const loot: PartialSettlementInventory = { 'royal-coins': Math.floor((12 + zone.difficulty * 9) * (0.75 + random() * 0.6)) };
-  const rare: SettlementResourceId[] = zone.difficulty >= 7 ? ['rare-metal', 'military-maps', 'naval-ciphers'] : zone.difficulty >= 4 ? ['spices', 'silver', 'foreign-textiles'] : ['fruit', 'tobacco', 'wine'];
-  loot[rare[Math.floor(random() * rare.length)]] = 2 + Math.floor(random() * (4 + zone.difficulty));
+  const modifiers = policyModifiers(state);
+  const purposeFactor = expedition.purpose === 'raid' ? 1.25 : expedition.purpose === 'trade' ? 1.05 : expedition.purpose === 'rescue' ? 0.72 : 0.88;
+  const gold = Math.floor((18 + zone.difficulty * 12) * (0.75 + random() * 0.6) * purposeFactor * modifiers.allLoot * modifiers.goldLoot);
+  const loot: PartialSettlementInventory = { gold, 'royal-coins': Math.floor(gold * 0.28) };
+  const rare: SettlementResourceId[] = expedition.purpose === 'explore'
+    ? (zone.difficulty >= 6 ? ['military-maps', 'naval-ciphers', 'ancient-relics'] : ['foreign-textiles', 'wine', 'spices'])
+    : zone.difficulty >= 7 ? ['rare-metal', 'military-maps', 'naval-ciphers'] : zone.difficulty >= 4 ? ['spices', 'silver', 'foreign-textiles'] : ['fruit', 'tobacco', 'wine'];
+  loot[rare[Math.floor(random() * rare.length)]] = Math.max(1, Math.floor((2 + random() * (4 + zone.difficulty)) * modifiers.allLoot));
   if (random() > 0.78 - zone.difficulty * 0.025) loot['rare-blueprints'] = 1;
   return loot;
 }
@@ -135,7 +146,7 @@ export function advanceExpeditions(
         expedition.currentEventId = expedition.zoneId === 'storm-reach' ? 'black-squall' : 'uncharted-island';
         expedition.log.push(expedition.currentEventId === 'black-squall' ? '검은 돌풍이 함대를 집어삼킨다.' : '해도에 없는 섬에서 불빛이 보인다.');
       } else if (expedition.routeProgress >= 1) {
-        const earned = expeditionLoot(expedition);
+        const earned = expeditionLoot(expedition, settlement);
         for (const [id, cargo] of Object.entries(earned) as [SettlementResourceId, number][]) expedition.cargo[id] = (expedition.cargo[id] ?? 0) + cargo;
         expedition.state = 'RETURNING';
         expedition.routeProgress = 0;
@@ -146,6 +157,7 @@ export function advanceExpeditions(
       expedition.returnsAt = now;
       const landing = settlement.buildings.find((building) => building.definitionId === 'dock-warehouse' && building.state === 'ACTIVE') ?? office;
       if (landing) for (const [id, cargo] of Object.entries(expedition.cargo) as [SettlementResourceId, number][]) landing.outputInventory[id] = (landing.outputInventory[id] ?? 0) + cargo;
+      if (expedition.purpose === 'raid') settlement.prisoners = (settlement.prisoners ?? 0) + Math.max(1, Math.floor(ZONES[expedition.zoneId].difficulty / 3));
       for (const resident of settlement.residents.filter((person) => expedition.crewIds.includes(person.id))) {
         resident.action = 'IDLE';
         resident.morale = Math.min(100, resident.morale + 6);

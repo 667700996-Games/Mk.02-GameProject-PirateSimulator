@@ -163,3 +163,19 @@ export function pathDistance(path: GridPoint[]): number {
   for (let index = 1; index < path.length; index += 1) distance += Math.hypot(path[index].x - path[index - 1].x, path[index].y - path[index - 1].y);
   return distance;
 }
+
+export function pathTravelCost(island: IslandMapState, path: GridPoint[], buildings: SettlementBuilding[] = []): number {
+  if (path.length < 2) return 0;
+  let cost = 0;
+  for (let index = 1; index < path.length; index += 1) {
+    const tile = tileAt(island, path[index].x, path[index].y);
+    const previous = tileAt(island, path[index - 1].x, path[index - 1].y);
+    if (!tile) continue;
+    const infrastructure = infrastructureAt(buildings, path[index].x, path[index].y);
+    let step = Number.isFinite(movementCost(tile)) ? movementCost(tile) : 2;
+    if (infrastructure) step = infrastructure.definitionId === 'cargo-lift' ? 0.45 : infrastructure.definitionId === 'bridge' ? 0.65 : 0.8;
+    const elevationPenalty = infrastructure && ['stairs', 'ramp', 'cargo-lift'].includes(infrastructure.definitionId) ? 0.12 : 0.7;
+    cost += step + Math.abs(tile.elevation - (previous?.elevation ?? tile.elevation)) * elevationPenalty;
+  }
+  return cost;
+}

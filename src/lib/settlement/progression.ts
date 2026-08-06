@@ -61,6 +61,52 @@ export const POLICIES: PolicyDefinition[] = [
   { id: 'smuggler-favor', category: 'diplomacy', name: '밀수업자 우대', benefit: '희귀품 가격 개선', drawback: '해군 탐지 위험 증가' }
 ];
 
+export interface PolicyModifiers {
+  production: number;
+  skilledProduction: number;
+  foodConsumption: number;
+  foodSatisfaction: number;
+  moralePerHour: number;
+  loyaltyPerHour: number;
+  workerFatigueRecovery: number;
+  officerMoralePerHour: number;
+  pirateExperience: number;
+  laborerMoralePerHour: number;
+  expeditionMorale: number;
+  goldLoot: number;
+  allLoot: number;
+  wageGoldPerResident: number;
+  patrolRisk: number;
+  tradePrice: number;
+}
+
+export function policyModifiers(state: SettlementSimulationState): PolicyModifiers {
+  const result: PolicyModifiers = {
+    production: 1, skilledProduction: 1, foodConsumption: 1, foodSatisfaction: 1, moralePerHour: 0,
+    loyaltyPerHour: 0, workerFatigueRecovery: 0, officerMoralePerHour: 0, pirateExperience: 1,
+    laborerMoralePerHour: 0, expeditionMorale: 0, goldLoot: 1, allLoot: 1, wageGoldPerResident: 0,
+    patrolRisk: 1, tradePrice: 1
+  };
+  const active = state.policies.active;
+  if (active.loot === 'captains-tithe') { result.goldLoot *= 1.15; result.loyaltyPerHour -= 0.18; }
+  if (active.loot === 'equal-shares') { result.goldLoot *= 0.9; result.moralePerHour += 0.3; result.loyaltyPerHour += 0.12; }
+  if (active.loot === 'battle-merit') { result.pirateExperience *= 1.2; result.laborerMoralePerHour -= 0.12; }
+  if (active.labor === 'free-labor') result.loyaltyPerHour += 0.08;
+  if (active.labor === 'forced-quota') { result.production *= 1.18; result.moralePerHour -= 0.35; result.loyaltyPerHour -= 0.18; }
+  if (active.labor === 'merit-pay') { result.skilledProduction *= 1.12; result.wageGoldPerResident += 0.035; }
+  if (active.food === 'worker-rations') { result.workerFatigueRecovery += 3; result.officerMoralePerHour -= 0.16; }
+  if (active.food === 'fleet-rations') { result.expeditionMorale += 12; result.foodSatisfaction *= 0.78; }
+  if (active.food === 'reserve-rations') { result.foodConsumption *= 0.88; result.moralePerHour -= 0.25; }
+  if (active.prisoners === 'prison-labor') { result.production *= 1 + Math.min(0.16, (state.prisoners ?? 0) * 0.012); result.loyaltyPerHour -= Math.min(0.12, (state.prisoners ?? 0) * 0.006); }
+  if (active.diplomacy === 'raid-all') { result.allLoot *= 1.18; result.patrolRisk *= 1.16; }
+  if (active.diplomacy === 'protected-traders') { result.allLoot *= 0.86; result.patrolRisk *= 0.82; result.tradePrice *= 1.08; }
+  if (active.diplomacy === 'smuggler-favor') { result.tradePrice *= 1.15; result.patrolRisk *= 1.08; }
+  const councilBonus = state.progression.unlocked.includes('federation-council') ? 1.1 : 1;
+  result.moralePerHour *= councilBonus;
+  result.loyaltyPerHour *= councilBonus;
+  return result;
+}
+
 export function unlockProgression(state: SettlementSimulationState, nodeId: string): { state: SettlementSimulationState; ok: boolean; reason?: string } {
   const node = PROGRESSION_NODES.find((item) => item.id === nodeId);
   if (!node) return { state, ok: false, reason: '발전 항목을 찾을 수 없습니다.' };

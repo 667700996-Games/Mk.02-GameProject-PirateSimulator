@@ -2,7 +2,8 @@ import { calculateHavenDefense, completeConstructions } from './haven';
 import { clamp } from './physics';
 import { createId } from './rng';
 import { updateFleetAssignments } from './fleet';
-import { expireAndRefreshMissions } from './missions';
+import { expireAndRefreshMissions, progressMissions } from './missions';
+import { applyNotoriety, NOTORIETY_EVENTS } from './factions';
 import type { GameState } from './types';
 import { advanceSettlement } from '$lib/settlement/simulation';
 import { settlementLegacyHaven, settlementLegacyResources } from '$lib/settlement/summary';
@@ -33,7 +34,18 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
   const newlyCompleted = settlement.expeditions.filter((expedition) => expedition.state === 'COMPLETED' && state.settlement.expeditions.find((previous) => previous.id === expedition.id)?.state !== 'COMPLETED');
   if (newlyCompleted.length > 0) {
     const zones = { ...next.world.zones };
-    for (const expedition of newlyCompleted) zones[expedition.zoneId] = { ...zones[expedition.zoneId], discovered: true, intel: Math.min(100, zones[expedition.zoneId].intel + 24) };
+    for (const expedition of newlyCompleted) {
+      zones[expedition.zoneId] = { ...zones[expedition.zoneId], discovered: true, intel: Math.min(100, zones[expedition.zoneId].intel + 24) };
+      if (expedition.purpose === 'raid') {
+        const opponent = ['naval-patrol', 'imperial-heartway'].includes(expedition.zoneId) ? 'navy' as const : 'merchant' as const;
+        next = progressMissions(next, { kind: 'ship-defeated', zoneId: expedition.zoneId, opponent });
+        next = progressMissions(next, { kind: 'cargo-stolen', zoneId: expedition.zoneId, amount: Math.max(1, Object.values(expedition.cargo).reduce((sum, value) => sum + (value ?? 0), 0)) });
+        next = progressMissions(next, { kind: 'raid-complete', zoneId: expedition.zoneId });
+        next = applyNotoriety(next, opponent === 'navy' ? NOTORIETY_EVENTS.navySink : NOTORIETY_EVENTS.merchantRaid, now);
+      } else if (expedition.purpose === 'explore') next = progressMissions(next, { kind: 'treasure-found', zoneId: expedition.zoneId });
+      else if (expedition.purpose === 'trade') next = progressMissions(next, { kind: 'contraband-delivered', zoneId: expedition.zoneId, amount: Math.max(1, expedition.cargo['royal-equipment'] ?? 3) });
+      else next = progressMissions(next, { kind: 'survivor-rescued', zoneId: expedition.zoneId });
+    }
     next = { ...next, world: { ...next.world, zones, recentEvents: [`${newlyCompleted[0].name}이 새로운 항로와 섬을 해도에 기록했다.`, ...next.world.recentEvents].slice(0, 6) } };
   }
 
@@ -45,7 +57,7 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
   const raidThreat = clamp(next.haven.raidThreat + threatGain, 0, 100);
   let invasion = { ...next.settlement.threat };
   if (raidThreat >= 65 && !invasion.active) {
-    const watchtower = next.settlement.buildings.some((building) => building.definitionId === 'watchtower' && building.state === 'ACTIVE' && building.workers.length > 0);
+    const watchtower = next.settlement.buildings.some((building) => ['watchtower', 'signal-tower', 'intelligence-network'].includes(building.definitionId) && building.state === 'ACTIVE' && building.workers.length > 0);
     invasion = {
       active: true,
       source: next.bounty > 1600 ? 'imperial-navy' : 'red-tide',

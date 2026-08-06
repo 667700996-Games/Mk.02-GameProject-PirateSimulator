@@ -30,6 +30,9 @@
     const mood = !game ? 'title' : game.screen === 'sailing' ? (game.voyage.weather === 'storm' ? 'storm' : game.voyage.currentEncounter?.enemyShip ? 'battle' : 'sea') : game.screen === 'freeport' || game.screen === 'trade' ? 'freeport' : game.screen === 'boarding' || game.screen === 'raid' || game.screen === 'defense' ? 'battle' : game.screen === 'haven' ? 'haven' : 'aftermath';
     soundEngine.setMood(mood);
     document.documentElement.dataset.reducedMotion = String($gameSession.settings.reducedMotion);
+    document.documentElement.dataset.uiScale = $gameSession.settings.uiScale;
+    document.documentElement.dataset.colorVision = $gameSession.settings.colorVision;
+    document.documentElement.dataset.highContrast = String($gameSession.settings.highContrast);
   });
 
   function create(options: NewGameOptions): void {
@@ -57,4 +60,7 @@
   {#if showSettings}
     <div class="modal-backdrop" role="presentation"><section class="modal panel"><div class="panel-title"><div><span class="eyebrow">SETTINGS</span><h2>타이틀 설정</h2></div><button class="btn small ghost" onclick={() => (showSettings = false)}>닫기</button></div><div class="field"><label for="title-volume">전체 음량 · {Math.round($gameSession.settings.masterVolume * 100)}%</label><input id="title-volume" type="range" min="0" max="1" step=".05" value={$gameSession.settings.masterVolume} oninput={(event) => gameSession.updateSettings({ masterVolume: Number(event.currentTarget.value) })} /></div><div class="field"><label for="title-quality">렌더링 품질</label><select id="title-quality" value={$gameSession.settings.quality} onchange={(event) => gameSession.updateSettings({ quality: event.currentTarget.value as 'low' | 'medium' | 'high' })}><option value="low">낮음</option><option value="medium">중간</option><option value="high">높음</option></select></div></section></div>
   {/if}
+{/if}
+{#if $gameSession.error}
+  <div class="session-error" role="alert"><strong>항해일지 오류</strong><span>{$gameSession.error}</span><button onclick={gameSession.dismissError} aria-label="오류 닫기">×</button></div>
 {/if}

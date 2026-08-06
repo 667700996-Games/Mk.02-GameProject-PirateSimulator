@@ -45,7 +45,7 @@
   <a class="skip-link" href="#game-content">게임 내용으로 건너뛰기</a>
   <GameHeader {game} {saving} onSave={() => gameSession.saveCurrent()} onSettings={() => navigate('settings')} />
   <main class="main-viewport" id="game-content" tabindex="-1">
-    {#if game.screen === 'haven'}<HavenScreen {game} {navigate} />
+    {#if game.screen === 'haven'}<HavenScreen {game} {settings} {navigate} />
     {:else if game.screen === 'world-map'}<WorldMapScreen {game} />
     {:else if game.screen === 'sailing'}<SeaScreen {game} {settings} />
     {:else if game.screen === 'boarding'}<BoardingScreen {game} />
@@ -57,9 +57,9 @@
     {:else if game.screen === 'missions'}<MissionsScreen {game} />
     {:else if game.screen === 'factions'}<FactionsScreen {game} />
     {:else if game.screen === 'progression'}<ProgressionScreen {game} />
-    {:else if game.screen === 'settings'}<SettingsScreen {settings} {saves} onUpdate={gameSession.updateSettings} onLoad={gameSession.load} onDelete={gameSession.deleteSave} onBack={backFromSettings} onTitle={title} />
+    {:else if game.screen === 'settings'}<SettingsScreen {settings} {saves} onUpdate={gameSession.updateSettings} onLoad={gameSession.load} onDelete={gameSession.deleteSave} onExport={gameSession.exportCurrent} onImport={gameSession.importSerialized} onBack={backFromSettings} onTitle={title} />
     {:else if game.screen === 'defense'}<DefenseScreen {game} />
-    {:else}<HavenScreen {game} {navigate} />{/if}
+    {:else}<HavenScreen {game} {settings} {navigate} />{/if}
   </main>
   {#if game.screen !== 'settings'}<GameNav screen={game.screen} onNavigate={navigate} />{/if}
   <ToastStack toasts={game.toasts} onDismiss={gameSession.dismissToast} />

@@ -1,0 +1,19 @@
+{
+  "name": "검은물결: 해적 군주",
+  "short_name": "검은물결",
+  "description": "섬을 건설하고 함대를 이끄는 싱글플레이 해적 경영 시뮬레이션",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#061319",
+  "theme_color": "#061319",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/pirate-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

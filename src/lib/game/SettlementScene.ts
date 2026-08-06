@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BUILDINGS, SETTLEMENT_RESOURCES } from '$lib/settlement/catalog';
 import { buildingCells, tileAt, validatePlacement } from '$lib/settlement/island';
 import type { SettlementBuilding, SettlementBuildingId, SettlementOverlay, SettlementSimulationState, TerrainType } from '$lib/settlement/types';
+import type { GameSettings } from '$lib/domain/types';
 
 export interface SettlementSceneBridge {
   getState: () => SettlementSimulationState;
@@ -11,6 +12,7 @@ export interface SettlementSceneBridge {
   onHoverTile: (x?: number, y?: number) => void;
   onCancelTool: () => void;
   onSound: (sound: 'ui' | 'impact' | 'critical') => void;
+  getSettings: () => Pick<GameSettings, 'quality' | 'reducedMotion'>;
 }
 
 interface SceneData { bridge: SettlementSceneBridge }
@@ -52,12 +54,16 @@ export class SettlementScene extends Phaser.Scene {
   private waveSprites: Phaser.GameObjects.Ellipse[] = [];
   private dynamicTweenTargets: Phaser.GameObjects.GameObject[] = [];
   private weatherSignature = '';
+  private buildingSignature = '';
+  private overlaySignature = '';
+  private terrainSignature = '';
+  private residentObjects = new Map<string, { container: Phaser.GameObjects.Container; body: Phaser.GameObjects.Rectangle; cargo: Phaser.GameObjects.Text }>();
 
   constructor() { super('settlement'); }
 
   init(data: SceneData): void {
     this.bridge = data.bridge;
-    this.snapshot = structuredClone(this.bridge.getState());
+    this.snapshot = this.bridge.getState();
   }
 
   create(): void {
@@ -73,12 +79,12 @@ export class SettlementScene extends Phaser.Scene {
     this.preview = this.add.graphics().setDepth(450);
     this.drawOceanAtmosphere();
     this.drawTerrain();
-    this.drawDynamicLayers();
+    this.drawDynamicLayers(true);
     this.bindInput();
   }
 
   public syncSnapshot(snapshot: SettlementSimulationState): void {
-    this.snapshot = structuredClone(snapshot);
+    this.snapshot = snapshot;
     if (!this.scene.isActive()) return;
     this.drawDynamicLayers();
   }
@@ -123,16 +129,21 @@ export class SettlementScene extends Phaser.Scene {
   }
 
   private drawOceanAtmosphere(): void {
-    for (let index = 0; index < 32; index += 1) {
+    const settings = this.bridge.getSettings();
+    const waveCount = settings.quality === 'low' ? 14 : settings.quality === 'medium' ? 24 : 32;
+    for (let index = 0; index < waveCount; index += 1) {
       const wave = this.add.ellipse(80 + (index * 193) % 2040, 120 + (index * 97) % 1180, 46 + (index % 5) * 18, 3, 0x77b2b2, 0.09).setRotation(-0.35).setDepth(-20);
-      this.tweens.add({ targets: wave, x: wave.x + 55, alpha: { from: 0.03, to: 0.15 }, duration: 3500 + (index % 7) * 380, yoyo: true, repeat: -1, delay: index * 90 });
+      if (!settings.reducedMotion) this.tweens.add({ targets: wave, x: wave.x + 55, alpha: { from: 0.03, to: 0.15 }, duration: 3500 + (index % 7) * 380, yoyo: true, repeat: -1, delay: index * 90 });
       this.waveSprites.push(wave);
     }
     const fog = this.add.rectangle(1100, 760, 2200, 1450, 0x06151b, 0.08).setDepth(-10);
-    this.tweens.add({ targets: fog, alpha: { from: 0.04, to: 0.12 }, duration: 8000, yoyo: true, repeat: -1 });
+    if (!settings.reducedMotion) this.tweens.add({ targets: fog, alpha: { from: 0.04, to: 0.12 }, duration: 8000, yoyo: true, repeat: -1 });
   }
 
   private drawTerrain(): void {
+    const signature = this.snapshot.island.tiles.map((tile) => `${tile.discovered ? 1 : 0}:${tile.terrain}:${Math.floor((tile.resourceRemaining ?? 0) / 50)}`).join('|');
+    if (signature === this.terrainSignature) return;
+    this.terrainSignature = signature;
     this.terrainLayer.removeAll(true);
     const graphics = this.add.graphics();
     for (const tile of [...this.snapshot.island.tiles].sort((a, b) => (a.x + a.y) - (b.x + b.y))) {
@@ -167,15 +178,23 @@ export class SettlementScene extends Phaser.Scene {
     }
   }
 
-  private drawDynamicLayers(): void {
-    if (this.dynamicTweenTargets.length > 0) this.tweens.killTweensOf(this.dynamicTweenTargets);
-    this.dynamicTweenTargets = [];
-    this.buildingLayer.removeAll(true);
-    this.residentLayer.removeAll(true);
-    this.overlayLayer.removeAll(true);
-    for (const building of [...this.snapshot.buildings].sort((a, b) => (a.x + a.y) - (b.x + b.y))) this.drawBuilding(building);
+  private drawDynamicLayers(force = false): void {
+    this.drawTerrain();
+    const buildingSignature = `${this.selectedBuildingId ?? ''}|${this.snapshot.buildings.map((building) => `${building.id}:${building.x}:${building.y}:${building.rotation}:${building.level}:${building.state}:${Math.floor(building.condition / 5)}:${Math.floor(building.fire / 5)}:${Math.floor(building.constructionProgress * 20)}:${building.workers.length}:${building.statusReason ?? ''}`).join('|')}`;
+    if (force || buildingSignature !== this.buildingSignature) {
+      this.buildingSignature = buildingSignature;
+      if (this.dynamicTweenTargets.length > 0) this.tweens.killTweensOf(this.dynamicTweenTargets);
+      this.dynamicTweenTargets = [];
+      this.buildingLayer.removeAll(true);
+      for (const building of [...this.snapshot.buildings].sort((a, b) => (a.x + a.y) - (b.x + b.y))) this.drawBuilding(building);
+    }
     this.drawResidents();
-    this.drawOverlay(this.snapshot.overlay);
+    const overlaySignature = `${this.snapshot.overlay}|${this.snapshot.transports.map((job) => `${job.id}:${job.state}:${Math.floor(job.progress * 20)}`).join('|')}|${this.snapshot.buildings.map((building) => `${building.id}:${building.state}:${building.workers.length}:${Math.floor((building.inputInventory.hardtack ?? 0) + (building.inputInventory.water ?? 0) + (building.inputInventory.cannonballs ?? 0))}`).join('|')}`;
+    if (force || overlaySignature !== this.overlaySignature) {
+      this.overlaySignature = overlaySignature;
+      this.overlayLayer.removeAll(true);
+      this.drawOverlay(this.snapshot.overlay);
+    }
     this.drawWeather();
     this.drawPreview();
   }
@@ -197,6 +216,53 @@ export class SettlementScene extends Phaser.Scene {
       .setStrokeStyle(selected ? 3 : 1, selected ? 0xf0c873 : 0x1b201c, selected ? 1 : 0.72);
     const roof = this.add.polygon(0, -wallHeight, [-28 * scale, 0, 0, 15 * scale, 28 * scale, 0, 0, -14 * scale], definition.category === 'military' ? 0x2d3332 : 0x4f3829, building.state === 'PLANNED' ? 0.35 : 1).setStrokeStyle(1, 0xa08255, 0.55);
     container.add([shadow, wall, roof]);
+    if (building.definitionId === 'wreckage') {
+      container.add(this.add.polygon(-5, 3, [-34, 8, 30, -2, 22, 15, -25, 18], 0x4d3023, 1).setStrokeStyle(2, 0x241811));
+      container.add(this.add.rectangle(14, -18, 4, 55, 0x33231c).setRotation(-0.18));
+      container.add(this.add.triangle(24, -29, 0, 0, 29, 9, 2, 24, 0x75634d, 0.7));
+    } else if (['tent', 'campfire'].includes(building.definitionId)) {
+      if (building.definitionId === 'tent') container.add(this.add.triangle(0, -7, -27, 17, 0, -32, 27, 17, 0x8b7655, 1).setStrokeStyle(2, 0x3e3024));
+      else {
+        container.add(this.add.circle(0, 1, 12, 0x4a3323));
+        const flame = this.add.triangle(0, -7, -8, 9, 0, -15, 8, 9, 0xe88b3c, 0.95);
+        container.add(flame);
+        this.dynamicTweenTargets.push(flame);
+        this.tweens.add({ targets: flame, scaleX: { from: .78, to: 1.18 }, duration: 320, yoyo: true, repeat: -1 });
+      }
+    }
+    if (definition.category === 'gathering' && !['wreckage', 'campfire'].includes(building.definitionId)) {
+      if (['quarry', 'iron-mine', 'copper-mine'].includes(building.definitionId)) container.add(this.add.polygon(-17, 5, [-12, 8, -4, -12, 8, -8, 14, 9], 0x77746b, 1));
+      else for (let stack = 0; stack < 3; stack += 1) container.add(this.add.rectangle(-19 + stack * 7, 7 - stack * 3, 22, 4, 0x5f3d28).setRotation(-0.18));
+    }
+    if (definition.category === 'logistics') {
+      for (let crate = 0; crate < Math.min(4, 1 + building.level); crate += 1) container.add(this.add.rectangle(-18 + crate * 11, 2 - (crate % 2) * 7, 10, 10, 0x84603a).setStrokeStyle(1, 0x3a281b));
+    }
+    if (definition.category === 'welfare' && !['campfire'].includes(building.definitionId)) {
+      const lanterns = Math.min(5, 2 + building.level);
+      for (let lamp = 0; lamp < lanterns; lamp += 1) {
+        const glow = this.add.circle(-20 + lamp * 10, -wallHeight + 8, 3, 0xf1b854, 0.85);
+        container.add(glow);
+        this.dynamicTweenTargets.push(glow);
+        this.tweens.add({ targets: glow, alpha: { from: .45, to: 1 }, duration: 700 + lamp * 90, yoyo: true, repeat: -1 });
+      }
+    }
+    if (definition.category === 'military') {
+      for (let merlon = -2; merlon <= 2; merlon += 1) container.add(this.add.rectangle(merlon * 10, -wallHeight - 4, 6, 9, 0x4b4c47));
+    }
+    if (definition.category === 'administration') {
+      container.add(this.add.rectangle(18, -wallHeight - 21, 3, 45, 0x30231b));
+      container.add(this.add.triangle(29, -wallHeight - 36, 0, 0, 23, 7, 0, 15, 0x9f4338, 1));
+    }
+    if (definition.category === 'infrastructure') {
+      const beams = Math.min(5, 2 + building.level);
+      for (let beam = 0; beam < beams; beam += 1) container.add(this.add.rectangle(-22 + beam * 11, 5 + beam * 3, 38, 4, 0x765138).setRotation(.43));
+    }
+    if (building.level > 1) {
+      for (let level = 1; level < building.level; level += 1) {
+        const side = level % 2 === 0 ? -1 : 1;
+        container.add(this.add.rectangle(side * (28 + level * 3), -8 - level * 2, 17, 18 + level * 2, baseColor, .95).setStrokeStyle(1, 0xb69256, .45));
+      }
+    }
     if (['small-dock', 'shipyard', 'dock-warehouse'].includes(building.definitionId)) {
       for (let plank = 0; plank < 4; plank += 1) container.add(this.add.rectangle(12 + plank * 10, 10 + plank * 5, 45, 5, 0x553a27).setRotation(0.46));
       if (building.definitionId === 'shipyard') {
@@ -238,7 +304,14 @@ export class SettlementScene extends Phaser.Scene {
 
   private drawResidents(): void {
     const camera = this.cameras.main;
-    const visibleLimit = this.snapshot.residents.length > 180 ? 120 : this.snapshot.residents.length;
+    const quality = this.bridge.getSettings().quality;
+    const qualityLimit = quality === 'low' ? 70 : quality === 'medium' ? 120 : 180;
+    const visibleLimit = Math.min(qualityLimit, this.snapshot.residents.length);
+    const residentIds = new Set(this.snapshot.residents.map((resident) => resident.id));
+    for (const [id, object] of this.residentObjects) {
+      object.container.setVisible(false);
+      if (!residentIds.has(id)) { object.container.destroy(true); this.residentObjects.delete(id); }
+    }
     let drawn = 0;
     for (const resident of this.snapshot.residents) {
       if (drawn >= visibleLimit) break;
@@ -246,13 +319,23 @@ export class SettlementScene extends Phaser.Scene {
       const point = this.iso(resident.position.x, resident.position.y, tile?.elevation ?? 0);
       if (point.x < camera.worldView.x - 80 || point.x > camera.worldView.right + 80 || point.y < camera.worldView.y - 80 || point.y > camera.worldView.bottom + 80) continue;
       const color = resident.job === 'hauler' ? 0xd7ad64 : resident.job === 'builder' ? 0xb9764f : resident.tier === 'officer' ? 0xdfd2ad : 0x93aca0;
-      const container = this.add.container(point.x, point.y - 8).setDepth(210 + resident.position.x + resident.position.y);
-      container.add([this.add.ellipse(0, 6, 10, 4, 0x031013, 0.6), this.add.circle(0, -5, 3.2, 0xc9aa83), this.add.rectangle(0, 1, 5, 10, color)]);
+      let object = this.residentObjects.get(resident.id);
+      if (!object) {
+        const container = this.add.container(point.x, point.y - 8);
+        const body = this.add.rectangle(0, 1, 5, 10, color);
+        const cargo = this.add.text(5, -11, '', { fontSize: '10px', color: '#f2d28e', stroke: '#071414', strokeThickness: 2 });
+        container.add([this.add.ellipse(0, 6, 10, 4, 0x031013, 0.6), this.add.circle(0, -5, 3.2, 0xc9aa83), body, cargo]);
+        this.residentLayer.add(container);
+        object = { container, body, cargo };
+        this.residentObjects.set(resident.id, object);
+      }
+      object.container.setVisible(true).setPosition(point.x, point.y - 8).setDepth(210 + resident.position.x + resident.position.y);
+      object.body.setFillStyle(color);
+      object.cargo.setText('');
       if (resident.action === 'HAULING') {
         const job = this.snapshot.transports.find((item) => item.haulerId === resident.id && item.state === 'DELIVERING');
-        if (job) container.add(this.add.text(5, -11, SETTLEMENT_RESOURCES[job.resourceId].icon, { fontSize: '10px', color: '#f2d28e', stroke: '#071414', strokeThickness: 2 }));
+        if (job) object.cargo.setText(SETTLEMENT_RESOURCES[job.resourceId].icon);
       }
-      this.residentLayer.add(container);
       drawn += 1;
     }
   }
@@ -340,11 +423,13 @@ export class SettlementScene extends Phaser.Scene {
     const night = hour < 6 || hour > 19 ? 0.34 : hour < 8 || hour > 17 ? 0.14 : 0;
     if (night > 0) this.weatherLayer.add(this.add.rectangle(1100, 725, 2200, 1450, 0x071026, night).setScrollFactor(0));
     if (this.snapshot.weather === 'rain' || this.snapshot.weather === 'storm') {
-      const count = this.snapshot.weather === 'storm' ? 80 : 42;
+      const quality = this.bridge.getSettings().quality;
+      const density = quality === 'low' ? .4 : quality === 'medium' ? .7 : 1;
+      const count = Math.floor((this.snapshot.weather === 'storm' ? 80 : 42) * density);
       for (let index = 0; index < count; index += 1) {
         const drop = this.add.line((index * 83) % 1800, (index * 47) % 950, 0, 0, -9, 24, 0x9bbbc3, 0.24).setScrollFactor(0);
         this.weatherLayer.add(drop);
-        this.tweens.add({ targets: drop, x: drop.x - 130, y: drop.y + 480, duration: 900 + (index % 5) * 90, repeat: -1 });
+        if (!this.bridge.getSettings().reducedMotion) this.tweens.add({ targets: drop, x: drop.x - 130, y: drop.y + 480, duration: 900 + (index % 5) * 90, repeat: -1 });
       }
     }
   }
@@ -373,26 +458,7 @@ export class SettlementScene extends Phaser.Scene {
       if (this.dragDistance > 7) return;
       const tile = this.pickTile(pointer);
       if (!tile) return;
-      if (this.buildTool) {
-        const validation = validatePlacement(this.snapshot.island, this.snapshot.buildings, this.buildTool, tile.x, tile.y, this.rotation);
-        if (validation.valid) {
-          this.bridge.onPlace(this.buildTool, tile.x, tile.y, this.rotation);
-          this.bridge.onSound('impact');
-        } else this.bridge.onSound('critical');
-        return;
-      }
-      if (this.movingBuildingId) {
-        const building = this.snapshot.buildings.find((item) => item.id === this.movingBuildingId);
-        if (!building) return;
-        const validation = validatePlacement(this.snapshot.island, this.snapshot.buildings, building.definitionId, tile.x, tile.y, building.rotation, building.id);
-        if (validation.valid) {
-          this.bridge.onMoveBuilding(building.id, tile.x, tile.y);
-          this.bridge.onSound('impact');
-          this.movingBuildingId = undefined;
-          this.bridge.onCancelTool();
-        } else this.bridge.onSound('critical');
-        return;
-      }
+      if (this.buildTool || this.movingBuildingId) { this.activateToolAt(tile); return; }
       const building = [...this.snapshot.buildings].reverse().find((item) => buildingCells(item).some((cell) => cell.x === tile.x && cell.y === tile.y));
       this.selectedBuildingId = building?.id;
       this.bridge.onSelectBuilding(building?.id);
@@ -402,13 +468,41 @@ export class SettlementScene extends Phaser.Scene {
       this.cameras.main.zoomTo(Phaser.Math.Clamp(this.cameras.main.zoom - dy * 0.0007, 0.55, 1.35), 120);
     });
     this.input.keyboard?.on('keydown-R', () => this.rotateBuildTool());
-    this.input.keyboard?.on('keydown-ESC', () => {
-      if (!this.buildTool && !this.movingBuildingId) return;
-      this.buildTool = undefined;
+    this.input.keyboard?.on('keydown-ENTER', () => { if (this.hoverTile) this.activateToolAt(this.hoverTile); });
+    this.input.keyboard?.on('keydown-UP', () => this.moveKeyboardCursor(0, -1));
+    this.input.keyboard?.on('keydown-DOWN', () => this.moveKeyboardCursor(0, 1));
+    this.input.keyboard?.on('keydown-LEFT', () => this.moveKeyboardCursor(-1, 0));
+    this.input.keyboard?.on('keydown-RIGHT', () => this.moveKeyboardCursor(1, 0));
+  }
+
+  private moveKeyboardCursor(dx: number, dy: number): void {
+    if (!this.buildTool && !this.movingBuildingId) return;
+    const current = this.hoverTile ?? { x: Math.floor(this.snapshot.island.width / 2), y: Math.floor(this.snapshot.island.height / 2) };
+    this.hoverTile = {
+      x: Phaser.Math.Clamp(current.x + dx, 0, this.snapshot.island.width - 1),
+      y: Phaser.Math.Clamp(current.y + dy, 0, this.snapshot.island.height - 1)
+    };
+    this.bridge.onHoverTile(this.hoverTile.x, this.hoverTile.y);
+    this.drawPreview();
+  }
+
+  private activateToolAt(tile: { x: number; y: number }): void {
+    if (this.buildTool) {
+      const validation = validatePlacement(this.snapshot.island, this.snapshot.buildings, this.buildTool, tile.x, tile.y, this.rotation);
+      if (validation.valid) { this.bridge.onPlace(this.buildTool, tile.x, tile.y, this.rotation); this.bridge.onSound('impact'); }
+      else this.bridge.onSound('critical');
+      return;
+    }
+    if (!this.movingBuildingId) return;
+    const building = this.snapshot.buildings.find((item) => item.id === this.movingBuildingId);
+    if (!building) return;
+    const validation = validatePlacement(this.snapshot.island, this.snapshot.buildings, building.definitionId, tile.x, tile.y, building.rotation, building.id);
+    if (validation.valid) {
+      this.bridge.onMoveBuilding(building.id, tile.x, tile.y);
+      this.bridge.onSound('impact');
       this.movingBuildingId = undefined;
-      this.preview.clear();
       this.bridge.onCancelTool();
-    });
+    } else this.bridge.onSound('critical');
   }
 
   private pickTile(pointer: Phaser.Input.Pointer): { x: number; y: number } | undefined {

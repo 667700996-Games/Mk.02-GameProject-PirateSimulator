@@ -2,8 +2,9 @@ import { FACTIONS } from './catalog';
 import { fleetDefensePower } from './fleet';
 import { progressMissions } from './missions';
 import { clamp } from './physics';
-import type { FacilityId, GameState, ResourceId, ResourceStock } from './types';
+import type { FacilityId, GameState } from './types';
 import { spendSettlementResources } from '$lib/settlement/construction';
+import { creditGameResources, spendGameResources } from '$lib/settlement/economyBridge';
 import { settlementSummary } from '$lib/settlement/summary';
 import type { PartialSettlementInventory, SettlementSimulationState } from '$lib/settlement/types';
 
@@ -83,7 +84,8 @@ export function resolveLandingStage(state: GameState, action: LandingAction, ran
   const fighterPower = (state.haven.populationByRole.fighters * 2.2 + state.crew.roles.marine * 3 + (state.defense.preparation ?? 0) * .65) * choice.attack;
   const damage = Math.max(5, Math.round(fighterPower * (.58 + random() * .35)));
   const attackerRemaining = Math.max(0, remaining - damage);
-  const casualties = Math.round(remaining * choice.casualty * (.18 + random() * .34));
+  const wallProtection = Math.min(.38, state.settlement.buildings.filter((building) => building.definitionId === 'fort-wall' && building.state === 'ACTIVE').reduce((sum, wall) => sum + wall.level * wall.condition / 2500, 0));
+  const casualties = Math.round(remaining * choice.casualty * (.18 + random() * .34) * (1 - wallProtection));
   const injured = new Set(state.settlement.residents.filter((resident) => ['guard', 'gunner', 'raider'].includes(resident.job)).slice(0, casualties).map((resident) => resident.id));
   const settlement = { ...state.settlement, residents: state.settlement.residents.map((resident) => injured.has(resident.id) ? { ...resident, health: Math.max(1, resident.health - 45), morale: Math.max(0, resident.morale - 12) } : resident) };
   const haven = { ...state.haven, population: Math.max(1, state.haven.population - casualties), morale: clamp(state.haven.morale + (attackerRemaining <= 0 ? 8 : -6), 0, 100), populationByRole: { ...state.haven.populationByRole, fighters: Math.max(0, state.haven.populationByRole.fighters - casualties) } };
@@ -105,10 +107,12 @@ export function resolveInteriorStage(state: GameState, action: InteriorAction, r
   const victory = power >= remaining;
   const resourceDamage = victory ? Math.round(remaining * choice.damage * .2) : Math.round(remaining * choice.damage + 35);
   const civilianRisk = clamp((state.defense.civilianRisk ?? 50) + choice.civilian, 0, 100);
-  const resources = applyRaidLoss(state.resources, resourceDamage);
   const facilities = damageFacilities(state, victory ? Math.ceil(resourceDamage / 12) : Math.ceil(resourceDamage / 5));
   const settlement = damageSettlementBuildings(state.settlement, victory ? Math.ceil(resourceDamage / 14) : Math.ceil(resourceDamage / 6));
-  const prepared = { ...state, settlement, resources, haven: { ...state.haven, facilities }, defense: { ...state.defense, attackerRemaining: victory ? 0 : remaining, civilianRisk, log: [...(state.defense.log ?? []), choice.label] } };
+  const loss = { gold: Math.min(state.resources.gold, resourceDamage * 4), food: Math.min(state.resources.food, Math.ceil(resourceDamage * .45)), timber: Math.min(state.resources.timber, Math.ceil(resourceDamage * .3)), powder: Math.min(state.resources.powder, Math.ceil(resourceDamage * .12)) };
+  const damagedState = { ...state, settlement };
+  const paid = spendGameResources(damagedState, loss) ?? damagedState;
+  const prepared = { ...paid, haven: { ...paid.haven, facilities }, defense: { ...paid.defense, attackerRemaining: victory ? 0 : remaining, civilianRisk, log: [...(paid.defense.log ?? []), choice.label] } };
   return finishDefense(prepared, victory);
 }
 
@@ -132,15 +136,8 @@ function finishDefense(state: GameState, victory: boolean): GameState {
 
 export function claimDefenseResult(state: GameState): GameState {
   if (state.defense.stage !== 'resolved') return state;
-  const resources = { ...state.resources };
-  for (const [id, amount] of Object.entries(state.defense.reward ?? {}) as [ResourceId, number][]) resources[id] += amount;
-  const settlement = structuredClone(state.settlement);
-  const salvageStore = settlement.buildings.find((building) => building.definitionId === 'warehouse' && building.state === 'ACTIVE') ?? settlement.buildings.find((building) => building.definitionId === 'wreckage');
-  if (salvageStore) {
-    salvageStore.outputInventory.gold = (salvageStore.outputInventory.gold ?? 0) + (state.defense.reward?.gold ?? 0);
-    salvageStore.outputInventory['iron-ingots'] = (salvageStore.outputInventory['iron-ingots'] ?? 0) + (state.defense.reward?.iron ?? 0);
-  }
-  return { ...state, settlement: { ...settlement, threat: { ...settlement.threat, active: false, discovered: false, strength: 0, etaHours: 0, fleetDescription: '' } }, resources, screen: 'haven', defense: { ...state.defense, reward: {}, log: [] } };
+  const credited = creditGameResources(state, state.defense.reward ?? {});
+  return { ...credited, settlement: { ...credited.settlement, threat: { ...credited.settlement.threat, active: false, discovered: false, strength: 0, etaHours: 0, fleetDescription: '' } }, screen: 'haven', defense: { ...credited.defense, reward: {}, log: [] } };
 }
 
 export function batteryAmmunition(settlement: SettlementSimulationState): number {
@@ -186,10 +183,6 @@ function damageFleet(state: GameState, damage: number): GameState['ships'] {
   if (!targets.length || damage <= 0) return state.ships;
   const perShip = damage / targets.length;
   return state.ships.map((ship) => targets.some((target) => target.id === ship.id) ? { ...ship, hull: Math.max(1, ship.hull - perShip), morale: clamp(ship.morale - perShip * .15, 0, 100) } : ship);
-}
-
-function applyRaidLoss(resources: ResourceStock, damage: number): ResourceStock {
-  return { ...resources, gold: Math.max(0, resources.gold - damage * 4), food: Math.max(0, resources.food - Math.ceil(damage * .45)), timber: Math.max(0, resources.timber - Math.ceil(damage * .3)), powder: Math.max(0, resources.powder - Math.ceil(damage * .12)) };
 }
 
 function damageFacilities(state: GameState, damage: number): GameState['haven']['facilities'] {

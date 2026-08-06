@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="검은물결 해적 나침반">
+  <rect width="512" height="512" rx="108" fill="#061319"/>
+  <circle cx="256" cy="256" r="178" fill="#0d2830" stroke="#c49a50" stroke-width="18"/>
+  <path d="M256 76 286 210 436 256 286 302 256 436 226 302 76 256 226 210Z" fill="#d6b56e"/>
+  <circle cx="256" cy="256" r="72" fill="#17110d" stroke="#f0d495" stroke-width="10"/>
+  <path d="M221 265c-6-16-4-42 5-58 17-29 43-29 60 0 9 16 11 42 5 58l-13 11v28h-13v-24h-18v24h-13v-28Zm18-35a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm34 0a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z" fill="#efe4ca"/>
+</svg>

@@ -2,7 +2,7 @@ import { createId } from '$lib/domain/rng';
 import { BUILDINGS, RECIPES } from './catalog';
 import { buildingUpgradeCost } from './construction';
 import { SHIP_PLANS } from './shipbuilding';
-import { findCachedPath, pathDistance } from './island';
+import { findCachedPath, pathTravelCost } from './island';
 import type { PartialSettlementInventory, Resident, SettlementBuilding, SettlementResourceId, SettlementSimulationState, TransportJob } from './types';
 
 function amount(inventory: PartialSettlementInventory, resource: SettlementResourceId): number {
@@ -53,6 +53,10 @@ export function scheduleLogistics(state: SettlementSimulationState): SettlementS
   for (const building of targets) {
     const definition = BUILDINGS[building.definitionId];
     if (!definition || building.paused || building.state === 'DESTROYED') continue;
+    if (building.state === 'DAMAGED') {
+      requestResource(next, building, 'planks', Math.max(0, 3 - amount(building.inputInventory, 'planks')), 86);
+      requestResource(next, building, 'stone-blocks', Math.max(0, 2 - amount(building.inputInventory, 'stone-blocks')), 82);
+    }
     if (!['ACTIVE', 'DAMAGED', 'BURNING'].includes(building.state)) {
       if (building.constructionMaterialsCommitted || building.upgradeMaterialsCommitted) continue;
       const constructionCost = building.state === 'UPGRADING' || building.pausedFrom === 'UPGRADING'
@@ -73,13 +77,32 @@ export function scheduleLogistics(state: SettlementSimulationState): SettlementS
       }
     }
     if (definition.housing) {
-      const capacity = Object.values(definition.housing).reduce((sum, value) => sum + (value ?? 0), 0);
+      const occupants = next.residents.filter((resident) => resident.homeId === building.id);
+      const capacity = Math.max(occupants.length, Object.values(definition.housing).reduce((sum, value) => sum + (value ?? 0), 0));
       requestResource(next, building, 'water', Math.max(0, Math.ceil(capacity * 0.5) - amount(building.inputInventory, 'water')), 72);
       const foodStored = amount(building.inputInventory, 'hardtack') + amount(building.inputInventory, 'fish-stew');
       if (foodStored < capacity * 0.4) {
         const preferred = findSource(next, 'fish-stew', building) ? 'fish-stew' : 'hardtack';
         requestResource(next, building, preferred, Math.ceil(capacity * 0.5 - foodStored), 70);
       }
+      if (occupants.some((resident) => ['laborer', 'skilled'].includes(resident.tier))) {
+        requestResource(next, building, 'clothes', Math.max(0, Math.ceil(occupants.length * 0.15) - amount(building.inputInventory, 'clothes')), 58);
+        requestResource(next, building, 'boots', Math.max(0, Math.ceil(occupants.length * 0.08) - amount(building.inputInventory, 'boots')), 48);
+      }
+      if (occupants.some((resident) => resident.tier === 'skilled')) requestResource(next, building, 'tools', Math.max(0, 2 - amount(building.inputInventory, 'tools')), 52);
+      if (occupants.some((resident) => resident.tier === 'pirate')) requestResource(next, building, 'cutlasses', Math.max(0, 2 - amount(building.inputInventory, 'cutlasses')), 58);
+      if (occupants.some((resident) => resident.tier === 'elite')) requestResource(next, building, 'pistols', Math.max(0, 2 - amount(building.inputInventory, 'pistols')), 62);
+      if (occupants.some((resident) => resident.tier === 'officer')) requestResource(next, building, 'officer-pistols', Math.max(0, 1 - amount(building.inputInventory, 'officer-pistols')), 66);
+    }
+    if (['tavern', 'gambling-den', 'festival-square'].includes(building.definitionId)) {
+      requestResource(next, building, 'rum', Math.max(0, 8 - amount(building.inputInventory, 'rum')), 64);
+      if (building.definitionId === 'tavern') requestResource(next, building, 'beer', Math.max(0, 4 - amount(building.inputInventory, 'beer')), 45);
+    }
+    if (building.definitionId === 'infirmary') requestResource(next, building, 'medicine', Math.max(0, 8 - amount(building.inputInventory, 'medicine')), 82);
+    if (building.definitionId === 'bathhouse') requestResource(next, building, 'water', Math.max(0, 14 - amount(building.inputInventory, 'water')), 68);
+    if (building.definitionId === 'powder-magazine') {
+      requestResource(next, building, 'powder', Math.max(0, 30 - amount(building.inputInventory, 'powder')), 76);
+      requestResource(next, building, 'powder-kegs', Math.max(0, 8 - amount(building.inputInventory, 'powder-kegs')), 74);
     }
     if (building.definitionId === 'coastal-battery') {
       requestResource(next, building, 'cannonballs', Math.max(0, 20 - amount(building.inputInventory, 'cannonballs')), 95);
@@ -177,7 +200,8 @@ export function advanceTransports(state: SettlementSimulationState, gameMinutes:
       releaseJob(next, job);
       continue;
     }
-    const duration = Math.max(1.2, pathDistance(job.path) * 1.15);
+    const logisticsBonus = next.progression.unlocked.includes('prosperity-logistics') ? 1.1 : 1;
+    const duration = Math.max(1.2, pathTravelCost(next.island, job.path, next.buildings) * 1.15 / logisticsBonus);
     job.progress = Math.min(1, job.progress + gameMinutes / duration);
     updateResidentAlongPath(resident, job);
     if (job.progress < 1) continue;

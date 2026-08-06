@@ -1,6 +1,6 @@
 import type { SettlementSimulationState } from '$lib/settlement/types';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export type GameScreen =
   | 'title'
@@ -479,6 +479,9 @@ export interface GameSettings {
   reducedMotion: boolean;
   screenShake: boolean;
   quality: 'low' | 'medium' | 'high';
+  uiScale: 'compact' | 'normal' | 'large';
+  colorVision: 'standard' | 'deuteranopia' | 'protanopia';
+  highContrast: boolean;
   showDamageNumbers: boolean;
   keyBindings: KeyBindings;
 }

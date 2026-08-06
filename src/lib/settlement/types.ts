@@ -186,6 +186,8 @@ export interface StrategicExpedition {
   name: string;
   state: ExpeditionState;
   zoneId: ZoneId;
+  purpose?: 'explore' | 'raid' | 'trade' | 'rescue';
+  missionId?: string;
   shipIds: string[];
   captainIds: string[];
   crewIds: string[];
@@ -241,6 +243,7 @@ export interface SettlementSimulationState {
   island: IslandMapState;
   buildings: SettlementBuilding[];
   residents: Resident[];
+  prisoners: number;
   transports: TransportJob[];
   workforce: WorkforceRule[];
   looseInventory: PartialSettlementInventory;

@@ -13,7 +13,7 @@
   import { SETTLEMENT_RESOURCES } from '$lib/settlement/catalog';
   import { aggregateInventory } from '$lib/settlement/construction';
   import { gameSession } from '$lib/stores/gameStore';
-  import type { FleetFormation, GameState, Officer, Ship, ZoneId } from '$lib/domain/types';
+  import type { FleetFormation, GameState, Mission, Officer, Ship, ZoneId } from '$lib/domain/types';
   import type { Resident, SettlementBuilding, StrategicExpedition } from '$lib/settlement/types';
 
   let { game } = $props<{ game: GameState }>();
@@ -66,6 +66,12 @@
         building.definitionId === 'expedition-office' && building.state === 'ACTIVE'
     )
   );
+  let matchedMission = $derived(game.missions.find((mission: Mission) => mission.status === 'active' && mission.zoneId === selectedZone && (
+    purpose === 'raid' ? ['merchant-raid', 'convoy', 'cargo-theft', 'rival-hunt', 'village-raid', 'fort-assault'].includes(mission.type)
+      : purpose === 'trade' ? mission.type === 'smuggling'
+      : purpose === 'rescue' ? ['rescue', 'kidnap'].includes(mission.type)
+      : ['treasure', 'legendary-hunt'].includes(mission.type)
+  )));
 
   $effect(() => {
     if (initializedZone) return;
@@ -93,7 +99,8 @@
         purpose,
         shipIds: selectedShipIds,
         captainIds: state.officers.slice(0, selectedShipIds.length).map((officer) => officer.id),
-        crewIds: eligibleCrew.map((resident) => resident.id)
+        crewIds: eligibleCrew.map((resident) => resident.id),
+        missionId: matchedMission?.id
       });
       ok = result.ok;
       reason = result.reason ?? '';
@@ -228,6 +235,7 @@
               ><strong>{item.name}</strong><small>{item.description}</small></button
             >{/each}
         </div>
+        {#if matchedMission}<div class="mission-link"><span>◆ 활성 임무 연동</span><strong>{matchedMission.title}</strong><small>{matchedMission.description}</small></div>{/if}
       </article>
 
       <article class="panel manifest">
@@ -610,6 +618,7 @@
   .purpose-grid small {
     display: block;
   }
+  .mission-link{margin-top:.7rem;padding:.7rem;border:1px solid rgba(211,174,96,.38);background:linear-gradient(90deg,rgba(117,76,35,.2),rgba(6,21,24,.5));display:grid;gap:.2rem}.mission-link span{font-size:.56rem;color:var(--brass-light);letter-spacing:.12em}.mission-link strong{font-family:'Gowun Batang',serif}.mission-link small{color:var(--ink-muted);font-size:.64rem}
   .purpose-grid small {
     font-size: 0.5rem;
     color: var(--ink-muted);
