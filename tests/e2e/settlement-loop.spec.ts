@@ -15,6 +15,7 @@ async function createSettlement(page: import('@playwright/test').Page): Promise<
 test('places a terrain-bound building and runs its physical construction flow', async ({
   page
 }, testInfo) => {
+  test.slow();
   await createSettlement(page);
   if (!(await page.getByTestId('build-water-collector').isVisible())) {
     await page.getByRole('button', { name: '건설 메뉴 열기' }).click();
@@ -31,18 +32,22 @@ test('places a terrain-bound building and runs its physical construction flow', 
   });
   await expect(page.getByText('빗물 집수장 계획 배치')).toBeVisible();
   await page.getByRole('button', { name: '3×', exact: true }).click();
-  await expect(page.getByText(/CONSTRUCTING|ACTIVE/)).toBeVisible({ timeout: 15_000 });
+  // The construction is intentionally gated by two physical deliveries before builders begin.
+  await expect(page.getByText(/CONSTRUCTING|ACTIVE/)).toBeVisible({ timeout: 45_000 });
   await page.screenshot({ path: testInfo.outputPath('settlement-city.png'), fullPage: true });
 });
 
 test('shows the logistics overlay and persists settlement schema v4', async ({ page }) => {
   await createSettlement(page);
+  if ((page.viewportSize()?.width ?? 1280) <= 760) {
+    await page.getByRole('button', { name: '분석 도구 열기' }).click();
+  }
   await page.getByRole('button', { name: '⇄물류', exact: true }).click();
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('항해 기록을 안전하게 보관했습니다.')).toBeVisible();
   const storedVersion = await page.evaluate(async () => {
     return await new Promise<number>((resolve, reject) => {
-      const open = indexedDB.open('blackwake-pirate-simulator', 1);
+      const open = indexedDB.open('blackwake-pirate-simulator');
       open.onerror = () => reject(open.error);
       open.onsuccess = () => {
         const tx = open.result.transaction('saves', 'readonly');

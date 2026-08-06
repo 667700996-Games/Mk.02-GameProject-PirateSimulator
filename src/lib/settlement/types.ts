@@ -199,6 +199,8 @@ export interface StrategicExpedition {
   morale: number;
   currentEventId?: string;
   combat?: ExpeditionNavalCombat;
+  casualties?: number;
+  lostShipNames?: string[];
   log: string[];
   departedAt?: number;
   returnsAt?: number;
@@ -253,6 +255,7 @@ export interface SettlementSimulationState {
   policies: SettlementPolicies;
   threat: InvasionThreat;
   warnings: SettlementWarning[];
+  residentUpdateCursor: number;
   overlay: SettlementOverlay;
   statistics: SettlementStatistics;
   tutorialStep: number;

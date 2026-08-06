@@ -2,6 +2,7 @@
   import { SHIP_CLASSES, ZONES } from '$lib/domain/catalog';
   import {
     beginExpeditionCombat,
+    expeditionEvent,
     estimateExpedition,
     prepareExpedition,
     resolveExpeditionCombatTurn,
@@ -179,7 +180,7 @@
   <div class="fleet-tabs">
     <button class:active={tab === 'prepare'} onclick={() => (tab = 'prepare')}>✥ 원정 준비</button
     ><button class:active={tab === 'active'} onclick={() => (tab = 'active')}>◢ 항해 상황</button
-    ><button class:active={tab === 'composition'} onclick={() => (tab = 'composition')}
+    ><button data-testid="fleet-doctrine-tab" class:active={tab === 'composition'} onclick={() => (tab = 'composition')}
       >♛ 함대 교리</button
     >
   </div>
@@ -321,13 +322,7 @@
           {#if expedition.state === 'EVENT'}<div class="event-choice">
               <span class="eyebrow">CAPTAIN'S DECISION</span>
               <h3>
-                {expedition.currentEventId === 'naval-patrol'
-                  ? '왕실 순찰선이 접근한다'
-                  : expedition.currentEventId === 'merchant-sails'
-                    ? '정체를 숨긴 상선'
-                    : expedition.currentEventId === 'black-squall'
-                      ? '검은 돌풍'
-                      : '해도에 없는 섬'}
+                {expeditionEvent(expedition.currentEventId)?.title ?? '미지의 조우'}
               </h3>
               <p>{expedition.log.at(-1)}</p>
               <div>
@@ -338,7 +333,7 @@
                   ></button
                 ><button onclick={() => resolve(expedition.id, 'parley')}
                   ><strong>거짓 깃발</strong><small>협상과 기만으로 통과한다</small></button
-                >{#if ['naval-patrol', 'merchant-sails'].includes(expedition.currentEventId ?? '')}<button
+                >{#if expeditionEvent(expedition.currentEventId)?.kind === 'combat'}<button
                     class="combat-entry"
                     onclick={() => beginCombat(expedition.id)}
                     ><strong>전술 교전</strong><small>거리·풍향·탄약을 직접 지휘한다</small></button
@@ -442,6 +437,9 @@
                   {SETTLEMENT_RESOURCES[id as keyof typeof SETTLEMENT_RESOURCES].name}
                   {amount}</span
                 >{/each}
+            </div>{/if}
+          {#if (expedition.casualties ?? 0) > 0 || (expedition.lostShipNames?.length ?? 0) > 0}<div class="loss-report">
+              <strong>영구 손실</strong><span>전사·실종 {expedition.casualties ?? 0}명</span>{#each expedition.lostShipNames ?? [] as shipName}<span>{shipName} 침몰</span>{/each}
             </div>{/if}
         </article>
       {:else}<div class="panel no-expedition">
@@ -949,6 +947,17 @@
   }
   .cargo-report span {
     color: var(--brass-light);
+  }
+  .loss-report {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+    padding: 0.45rem;
+    border: 1px solid #a94f42;
+    background: #361815aa;
+    color: #f1b0a4;
+    font-size: 0.55rem;
   }
   .no-expedition {
     grid-column: 1/-1;

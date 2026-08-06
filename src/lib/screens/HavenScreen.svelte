@@ -31,6 +31,7 @@
     PartialSettlementInventory,
     SettlementBuilding,
     SettlementBuildingId,
+    IslandTile,
     SettlementOverlay,
     SettlementResourceId,
     SettlementWarning,
@@ -52,6 +53,9 @@
   let hoverTile = $state<{ x: number; y: number }>();
   let rightTab = $state<'selection' | 'warnings' | 'statistics' | 'mission'>('selection');
   let buildMenuOpen = $state(true);
+  let inspectorOpen = $state(true);
+  let overlayMenuOpen = $state(false);
+  let mobileLayout = $state(false);
 
   const categories: { id: BuildingCategory; name: string; icon: string }[] = [
     { id: 'gathering', name: '채집', icon: '♣' },
@@ -120,6 +124,22 @@
   );
   let day = $derived(Math.floor(game.settlement.simulationMinutes / 1440) + 1);
   let hour = $derived(Math.floor((game.settlement.simulationMinutes / 60) % 24));
+  let surveyPercent = $derived(
+    Math.round(
+      (game.settlement.island.tiles.filter((tile: IslandTile) => tile.discovered).length /
+        game.settlement.island.tiles.length) *
+        100
+    )
+  );
+  let weatherLabel = $derived(
+    game.settlement.weather === 'clear'
+      ? '맑음'
+      : game.settlement.weather === 'rain'
+        ? '비'
+        : game.settlement.weather === 'storm'
+          ? '폭풍'
+          : '해무'
+  );
   let elapsedHours = $derived(Math.max(1, game.settlement.simulationMinutes / 60));
   let statisticRows = $derived(
     SETTLEMENT_RESOURCE_IDS.map((id) => ({
@@ -147,10 +167,8 @@
 
   function startPlacement(id: SettlementBuildingId): void {
     setTool(id);
-    buildMenuOpen =
-      typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches
-        ? false
-        : true;
+    buildMenuOpen = !mobileLayout;
+    inspectorOpen = false;
     soundEngine.play('ui');
   }
 
@@ -168,6 +186,13 @@
     }, true);
     if (ok) {
       selectedBuildingId = placedId;
+      if (mobileLayout) {
+        rightTab = 'selection';
+        inspectorOpen = true;
+        buildMenuOpen = false;
+        overlayMenuOpen = false;
+        setTool();
+      }
       gameSession.addToast(
         'success',
         `${BUILDINGS[id]?.name} 계획 배치`,
@@ -306,12 +331,26 @@
     if (!buildingId) return;
     selectedBuildingId = buildingId;
     rightTab = 'selection';
+    inspectorOpen = true;
     scene()?.focusBuilding(buildingId);
   }
 
   onMount(() => {
     if (!host) return;
-    if (window.matchMedia('(max-width: 760px)').matches) buildMenuOpen = false;
+    const media = window.matchMedia('(max-width: 760px)');
+    const syncLayout = () => {
+      mobileLayout = media.matches;
+      if (mobileLayout) {
+        buildMenuOpen = false;
+        inspectorOpen = false;
+        overlayMenuOpen = false;
+      } else {
+        inspectorOpen = true;
+        overlayMenuOpen = true;
+      }
+    };
+    syncLayout();
+    media.addEventListener('change', syncLayout);
     let disposed = false;
     void import('$lib/game/SettlementGame').then(({ createSettlementGame }) => {
       if (disposed || !host) return;
@@ -322,6 +361,11 @@
         onSelectBuilding: (id) => {
           selectedBuildingId = id;
           rightTab = 'selection';
+          if (mobileLayout) {
+            inspectorOpen = true;
+            buildMenuOpen = false;
+            overlayMenuOpen = false;
+          }
         },
         onHoverTile: (x, y) => {
           hoverTile = x === undefined || y === undefined ? undefined : { x, y };
@@ -361,6 +405,7 @@
     window.addEventListener('keydown', keydown, true);
     return () => {
       disposed = true;
+      media.removeEventListener('change', syncLayout);
       window.removeEventListener('keydown', keydown, true);
       phaser?.destroy(true);
       phaser = null;
@@ -389,7 +434,9 @@
       <span class="eyebrow">DAY {day} · {String(hour).padStart(2, '0')}:00</span><strong
         >{game.haven.name}</strong
       ><small
-        >{hoverTile ? `구역 ${hoverTile.x}:${hoverTile.y}` : '파도절벽 군도 · 정착지 시야'}</small
+        >{hoverTile
+          ? `구역 ${hoverTile.x}:${hoverTile.y}`
+          : `${weatherLabel} · 섬 정찰 ${surveyPercent}%`}</small
       >
     </div>
     <div class="city-metric">
@@ -491,7 +538,7 @@
     {/if}
   </aside>
 
-  <aside class="city-inspector panel">
+  <aside class:mobile-open={inspectorOpen} class="city-inspector panel">
     <div class="inspector-tabs">
       <button class:active={rightTab === 'selection'} onclick={() => (rightTab = 'selection')}
         >선택</button
@@ -714,7 +761,7 @@
     {/if}
   </aside>
 
-  <div class="overlay-toolbar panel">
+  <div class:mobile-open={overlayMenuOpen} class="overlay-toolbar panel">
     <span class="eyebrow">OVERLAYS</span>
     {#each overlays as overlay}<button
         class:active={game.settlement.overlay === overlay.id}
@@ -725,6 +772,12 @@
     <button onclick={() => navigate('crew')}>♟ 주민</button><button
       onclick={() => navigate('fleet')}>⚓ 함대</button
     ><button onclick={() => navigate('world-map')}>✥ 군도 지도</button>
+  </div>
+  <div class="mobile-city-controls panel" aria-label="정착지 도구">
+    <button class:active={buildMenuOpen} onclick={() => { buildMenuOpen = !buildMenuOpen; inspectorOpen = false; overlayMenuOpen = false; }} aria-label={buildMenuOpen ? '건설 메뉴 닫기' : '건설 메뉴 열기'} aria-expanded={buildMenuOpen}>⚒<small>건설</small></button>
+    <button class:active={inspectorOpen && rightTab === 'warnings'} onclick={() => { rightTab = 'warnings'; inspectorOpen = true; buildMenuOpen = false; overlayMenuOpen = false; }} aria-label={`정착지 경고 ${activeWarnings.length}건`}>▲<small>경고 {activeWarnings.length}</small></button>
+    <button class:active={inspectorOpen && rightTab === 'mission'} onclick={() => { rightTab = 'mission'; inspectorOpen = true; buildMenuOpen = false; overlayMenuOpen = false; }} aria-label="초기 임무 열기">▤<small>임무</small></button>
+    <button class:active={overlayMenuOpen} onclick={() => { overlayMenuOpen = !overlayMenuOpen; inspectorOpen = false; buildMenuOpen = false; }} aria-label={overlayMenuOpen ? '분석 도구 닫기' : '분석 도구 열기'} aria-expanded={overlayMenuOpen}>◈<small>분석</small></button>
   </div>
 </section>
 
@@ -773,7 +826,7 @@
   }
   .city-identity strong {
     display: block;
-    font-family: 'Gowun Batang', serif;
+    font-family: 'Blackwake Display', Georgia, serif;
     font-size: 1.06rem;
   }
   .city-identity small {
@@ -1345,6 +1398,9 @@
     background: var(--line);
     margin: 0 0.3rem;
   }
+  .mobile-city-controls {
+    display: none;
+  }
   @media (max-width: 1100px) {
     .city-status-bar {
       right: 0.5rem;
@@ -1373,8 +1429,8 @@
   }
   @media (max-width: 760px) {
     .settlement-screen {
-      height: calc(100vh - 126px);
-      min-height: 620px;
+      height: calc(100dvh - 126px);
+      min-height: 520px;
     }
     .city-status-bar {
       top: 0.4rem;
@@ -1396,9 +1452,10 @@
       display: none;
     }
     .speed-control {
-      position: fixed;
+      position: absolute;
       right: 0.65rem;
-      top: 135px;
+      top: calc(100% + 0.45rem);
+      z-index: 2;
       background: #071619dd;
       padding: 0.25rem;
     }
@@ -1406,17 +1463,13 @@
       top: auto;
       left: 0.5rem;
       right: 0.5rem;
-      bottom: 62px;
+      bottom: 56px;
       width: auto;
-      max-height: 46%;
+      max-height: min(52%, 390px);
       padding: 0.75rem;
     }
     .build-panel.collapsed {
-      left: 0.5rem;
-      right: auto;
-      bottom: 70px;
-      width: 42px;
-      height: 44px;
+      display: none;
     }
     .build-panel .building-list {
       grid-template-columns: 1fr 1fr;
@@ -1425,32 +1478,66 @@
     .build-panel .building-option small {
       display: none;
     }
-    .settlement-screen.build-open .city-inspector {
-      display: none;
-    }
     .city-inspector {
+      display: none;
       top: auto;
       left: 0.5rem;
       right: 0.5rem;
-      bottom: 62px;
+      bottom: 56px;
       width: auto;
-      max-height: 38%;
+      max-height: min(48%, 410px);
       padding: 0.75rem;
     }
-    .city-inspector:has(.empty-selection) {
-      display: none;
+    .city-inspector.mobile-open {
+      display: block;
     }
     .overlay-toolbar {
+      display: none;
       left: 0.5rem;
       right: 0.5rem;
       transform: none;
-      bottom: 0.3rem;
+      bottom: 56px;
       overflow-x: auto;
       justify-content: flex-start;
+    }
+    .overlay-toolbar.mobile-open {
+      display: flex;
     }
     .overlay-toolbar > i,
     .overlay-toolbar button:nth-last-child(-n + 3) {
       display: none;
+    }
+    .mobile-city-controls {
+      position: absolute;
+      z-index: 14;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      left: 0.5rem;
+      right: 0.5rem;
+      bottom: 0.35rem;
+      height: 48px;
+      padding: 0.2rem;
+      background: #06171bf2;
+      backdrop-filter: blur(12px);
+    }
+    .mobile-city-controls button {
+      display: grid;
+      place-items: center;
+      gap: 0;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: var(--brass-light);
+    }
+    .mobile-city-controls button.active {
+      border-color: var(--brass);
+      background: #263a35;
+      color: white;
+    }
+    .mobile-city-controls small {
+      display: block;
+      color: inherit;
+      font-size: 0.52rem;
     }
   }
 </style>

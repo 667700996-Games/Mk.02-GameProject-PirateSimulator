@@ -83,8 +83,19 @@ function infrastructureAt(buildings: SettlementBuilding[], x: number, y: number)
   return buildings.find((building) => building.state === 'ACTIVE' && PATH_INFRASTRUCTURE.includes(building.definitionId) && buildingCells(building).some((cell) => cell.x === x && cell.y === y));
 }
 
-function infrastructureSignature(buildings: SettlementBuilding[]): string {
-  return buildings.filter((building) => building.state === 'ACTIVE' && PATH_INFRASTRUCTURE.includes(building.definitionId)).map((building) => `${building.definitionId}:${building.x}:${building.y}:${building.rotation}`).sort().join('|');
+function navigationSignature(island: IslandMapState, buildings: SettlementBuilding[]): string {
+  const layout = buildings
+    .filter((building) => building.state !== 'DESTROYED')
+    .map((building) => `${building.definitionId}:${building.x}:${building.y}:${building.rotation}:${building.state === 'ACTIVE' ? 1 : 0}`)
+    .sort()
+    .join('|');
+  let discoveryHash = 2166136261;
+  for (let index = 0; index < island.tiles.length; index += 1) {
+    if (!island.tiles[index].discovered) continue;
+    discoveryHash ^= index + 1;
+    discoveryHash = Math.imul(discoveryHash, 16777619);
+  }
+  return `${discoveryHash >>> 0}:${layout}`;
 }
 
 export function findPath(island: IslandMapState, start: GridPoint, goal: GridPoint, buildings: SettlementBuilding[] = []): GridPoint[] {
@@ -94,8 +105,14 @@ export function findPath(island: IslandMapState, start: GridPoint, goal: GridPoi
   const goalY = Math.round(goal.y);
   const startTile = tileAt(island, startX, startY);
   const goalTile = tileAt(island, goalX, goalY);
-  if (!startTile || !goalTile) return [];
+  if (!startTile || !goalTile || !startTile.discovered || !goalTile.discovered) return [];
   const key = (x: number, y: number) => `${x},${y}`;
+  const occupied = occupiedCells(buildings.filter((building) => !PATH_INFRASTRUCTURE.includes(building.definitionId)));
+  for (const building of buildings) {
+    const cells = buildingCells(building);
+    if (!cells.some((cell) => (cell.x === startX && cell.y === startY) || (cell.x === goalX && cell.y === goalY))) continue;
+    for (const cell of cells) occupied.delete(key(cell.x, cell.y));
+  }
   const frontier: { x: number; y: number; score: number }[] = [{ x: startX, y: startY, score: 0 }];
   const cameFrom = new Map<string, string>();
   const costs = new Map<string, number>([[key(startX, startY), 0]]);
@@ -109,7 +126,7 @@ export function findPath(island: IslandMapState, start: GridPoint, goal: GridPoi
       const nx = current.x + dx;
       const ny = current.y + dy;
       const tile = tileAt(island, nx, ny);
-      if (!tile) continue;
+      if (!tile || !tile.discovered || occupied.has(key(nx, ny))) continue;
       const infrastructure = infrastructureAt(buildings, nx, ny);
       let step = movementCost(tile);
       if (!Number.isFinite(step) && !infrastructure && !(nx === goalX && ny === goalY)) continue;
@@ -144,7 +161,7 @@ export function findPath(island: IslandMapState, start: GridPoint, goal: GridPoi
 }
 
 export function findCachedPath(island: IslandMapState, start: GridPoint, goal: GridPoint, buildings: SettlementBuilding[] = []): { path: GridPoint[]; hit: boolean } {
-  const key = `${island.seed}:${Math.round(start.x)},${Math.round(start.y)}>${Math.round(goal.x)},${Math.round(goal.y)}:${infrastructureSignature(buildings)}`;
+  const key = `${island.seed}:${Math.round(start.x)},${Math.round(start.y)}>${Math.round(goal.x)},${Math.round(goal.y)}:${navigationSignature(island, buildings)}`;
   const cached = pathCache.get(key);
   if (cached) {
     pathCache.delete(key);

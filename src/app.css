@@ -1,7 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
+@font-face {
+  font-family: 'Blackwake Sans';
+  src: local('Noto Sans KR'), local('Apple SD Gothic Neo'), local('Malgun Gothic');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Blackwake Display';
+  src: local('Gowun Batang'), local('Nanum Myeongjo'), local('Batang');
+  font-display: swap;
+}
 
 :root {
-  font-family: 'Noto Sans KR', system-ui, sans-serif;
+  font-family: 'Blackwake Sans', system-ui, sans-serif;
   color: #ede5d4;
   background: #041015;
   font-synthesis: none;
@@ -158,7 +167,7 @@ h1,
 h2,
 h3,
 .display {
-  font-family: 'Gowun Batang', Georgia, serif;
+  font-family: 'Blackwake Display', Georgia, serif;
   letter-spacing: -0.02em;
 }
 h1,

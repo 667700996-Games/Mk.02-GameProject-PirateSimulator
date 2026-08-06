@@ -154,12 +154,18 @@ export class SettlementScene extends Phaser.Scene {
         graphics.fillStyle(0x303a34, 1);
         graphics.fillPoints([{ x: point.x + TILE_W / 2, y: point.y }, { x: point.x, y: point.y + TILE_H / 2 }, { x: point.x, y: point.y + TILE_H / 2 + tile.elevation * ELEVATION_H }, { x: point.x + TILE_W / 2, y: point.y + tile.elevation * ELEVATION_H }], true);
       }
-      const color = TERRAIN_COLORS[tile.terrain];
-      graphics.fillStyle(color, tile.discovered ? 1 : 0.34).fillPoints(this.diamond(point), true);
-      graphics.lineStyle(1, tile.terrain === 'deep-water' ? 0x17414b : 0x071a18, tile.terrain === 'deep-water' ? 0.2 : 0.42).strokePoints(this.diamond(point), true);
+      const color = tile.discovered ? TERRAIN_COLORS[tile.terrain] : 0x0a2025;
+      graphics.fillStyle(color, 1).fillPoints(this.diamond(point), true);
+      graphics.lineStyle(
+        1,
+        tile.discovered ? (tile.terrain === 'deep-water' ? 0x17414b : 0x071a18) : 0x15353a,
+        tile.discovered && tile.terrain === 'deep-water' ? 0.2 : 0.42
+      ).strokePoints(this.diamond(point), true);
     }
     this.terrainLayer.add(graphics);
     for (const tile of this.snapshot.island.tiles) {
+      // Hidden cells deliberately reveal neither terrain nor resource silhouettes.
+      if (!tile.discovered) continue;
       const point = this.iso(tile.x, tile.y, tile.elevation);
       if (tile.terrain === 'forest') {
         const trees = this.add.container(point.x, point.y - 12);
@@ -174,6 +180,21 @@ export class SettlementScene extends Phaser.Scene {
         const rocks = this.add.container(point.x, point.y - 5);
         rocks.add([this.add.polygon(-9, 0, [-10, 8, -4, -8, 6, -11, 12, 7], oreColor, 1), this.add.polygon(10, 3, [-8, 5, -2, -6, 7, -3, 9, 6], oreColor, 0.85)]);
         this.terrainLayer.add(rocks);
+      } else if (tile.terrain === 'wetland') {
+        const marsh = this.add.container(point.x, point.y - 2);
+        marsh.add(this.add.ellipse(0, 4, 38, 10, 0x183f43, 0.72).setStrokeStyle(1, 0x5c8980, 0.45));
+        for (let index = 0; index < 4; index += 1) marsh.add(this.add.line(-16 + index * 10, 1, 0, 7, 2, -9 - (index % 2) * 3, 0x728b5c, 0.9));
+        this.terrainLayer.add(marsh);
+      } else if (tile.terrain === 'cave') {
+        const cave = this.add.container(point.x, point.y - 9);
+        cave.add(this.add.ellipse(0, 5, 43, 25, 0x11191a, 1).setStrokeStyle(5, 0x555a50, 0.9));
+        cave.add(this.add.ellipse(0, 8, 24, 17, 0x040a0c, 1));
+        this.terrainLayer.add(cave);
+      } else if (tile.terrain === 'ravine') {
+        const fissure = this.add.line(point.x, point.y, -22, -4, 21, 6, 0x0b1415, 0.96).setLineWidth(5).setDepth(1);
+        this.terrainLayer.add(fissure);
+      } else if (tile.terrain === 'beach') {
+        this.terrainLayer.add(this.add.ellipse(point.x + 6, point.y + 6, 46, 3, 0xd7d2ae, 0.32).setRotation(-0.22));
       }
     }
   }

@@ -11,6 +11,7 @@
   import { gameSession } from '$lib/stores/gameStore';
   import type { FactionId, FactionRelation, GameState, ResourceId } from '$lib/domain/types';
   import type { SettlementBuilding } from '$lib/settlement/types';
+  import { lureRivalFleet } from '$lib/domain/defense';
 
   let { game } = $props<{ game: GameState }>();
   let pursuit = $derived(pursuitTier(game.bounty));
@@ -101,6 +102,8 @@
       <div class="force-number danger">{Math.round(game.bounty).toLocaleString()}</div>
       <p class="muted">열기 {Math.round(game.heat)}% · 해군 순찰 ×{pursuit.patrolMultiplier}</p>
       <div class="meter"><span style={`--value:${game.heat}%;--meter-color:#ac4538`}></span></div>
+      <button class="btn danger-button wide" onclick={() => gameSession.updateGame((state) => lureRivalFleet(state), true)} disabled={game.defense.active || game.settlement.threat.active || game.resources.gold < 80 || game.resources.rum < 4}>붉은 파도 유인 · 금화 80 · 럼 4</button>
+      <small class="faint">적을 준비된 수역으로 끌어들여 본거지 방어전을 시작합니다. 패배하면 주민과 시설을 실제로 잃습니다.</small>
       <div class="map-details">
         <div class="map-row">
           <span>사냥꾼 조우율</span><b>{Math.round(pursuit.hunterChance * 100)}%</b>

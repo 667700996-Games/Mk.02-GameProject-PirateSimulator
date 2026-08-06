@@ -6,8 +6,64 @@ import { createId } from '$lib/domain/rng';
 import { findCachedPath, pathTravelCost } from './island';
 import { policyModifiers } from './progression';
 
+type SettlementWeather = SettlementSimulationState['weather'];
+
+export function settlementWeatherAt(seed: number, simulationMinutes: number): SettlementWeather {
+  const period = Math.floor(simulationMinutes / 360);
+  let value = (seed ^ Math.imul(period + 17, 1_597_334_677)) >>> 0;
+  value = Math.imul(value ^ (value >>> 15), 2_246_822_519) >>> 0;
+  const roll = ((value ^ (value >>> 13)) >>> 0) / 4_294_967_295;
+  const hour = (simulationMinutes / 60) % 24;
+  if (roll < 0.1) return 'storm';
+  if (roll < 0.3) return 'rain';
+  if (roll < 0.43 || (hour < 7 && roll < 0.58)) return 'fog';
+  return 'clear';
+}
+
+export function revealIslandFromServices(state: SettlementSimulationState): number {
+  const scouts = state.buildings.filter((building) =>
+    building.state === 'ACTIVE' && !building.paused &&
+    ['watchtower', 'signal-tower', 'intelligence-network'].includes(building.definitionId) &&
+    building.workers.length > 0
+  );
+  let revealed = 0;
+  for (const scout of scouts) {
+    const baseRange = scout.definitionId === 'intelligence-network' ? 5 : scout.definitionId === 'signal-tower' ? 8 : 6;
+    const range = baseRange + scout.level * 2;
+    for (const tile of state.island.tiles) {
+      if (tile.discovered || Math.hypot(tile.x - scout.x, tile.y - scout.y) > range) continue;
+      tile.discovered = true;
+      revealed += 1;
+    }
+  }
+  return revealed;
+}
+
 function amount(inventory: Partial<Record<SettlementResourceId, number>>, id: SettlementResourceId): number {
   return inventory[id] ?? 0;
+}
+
+interface SimulationIndexes {
+  residentsById: Map<string, Resident>;
+  buildingsById: Map<string, SettlementBuilding>;
+  servicesByDefinition: Map<SettlementBuilding['definitionId'], SettlementBuilding[]>;
+  workforceByJob: Map<JobId, SettlementSimulationState['workforce'][number]>;
+}
+
+function createSimulationIndexes(state: SettlementSimulationState): SimulationIndexes {
+  const servicesByDefinition = new Map<SettlementBuilding['definitionId'], SettlementBuilding[]>();
+  for (const building of state.buildings) {
+    if (building.state !== 'ACTIVE' || building.paused) continue;
+    const list = servicesByDefinition.get(building.definitionId) ?? [];
+    list.push(building);
+    servicesByDefinition.set(building.definitionId, list);
+  }
+  return {
+    residentsById: new Map(state.residents.map((resident) => [resident.id, resident])),
+    buildingsById: new Map(state.buildings.map((building) => [building.id, building])),
+    servicesByDefinition,
+    workforceByJob: new Map(state.workforce.map((rule) => [rule.job, rule]))
+  };
 }
 
 function requiredWorkers(recipeId?: string): number {
@@ -15,17 +71,17 @@ function requiredWorkers(recipeId?: string): number {
   return recipe ? Object.values(recipe.workers).reduce((sum, value) => sum + (value ?? 0), 0) : 0;
 }
 
-function autoAssign(state: SettlementSimulationState): void {
+function autoAssign(state: SettlementSimulationState, indexes: SimulationIndexes): void {
   const assigned = new Set(state.buildings.flatMap((building) => building.workers));
   const available = state.residents.filter((resident) => !assigned.has(resident.id) && !['builder', 'hauler'].includes(resident.job));
-  const priority = (job?: JobId) => state.workforce.find((rule) => rule.job === job)?.priority ?? 3;
+  const priority = (job?: JobId) => (job ? indexes.workforceByJob.get(job)?.priority : undefined) ?? 3;
   const buildings = [...state.buildings].sort((a, b) => priority(BUILDINGS[b.definitionId]?.workerJob) - priority(BUILDINGS[a.definitionId]?.workerJob));
   for (const building of buildings) {
     const definition = BUILDINGS[building.definitionId];
     if (!definition?.workerJob || building.state !== 'ACTIVE') continue;
-    const rule = state.workforce.find((item) => item.job === definition.workerJob);
+    const rule = indexes.workforceByJob.get(definition.workerJob);
     if (rule && !rule.autoAssign) continue;
-    building.workers = building.workers.filter((id) => state.residents.some((resident) => resident.id === id));
+    building.workers = building.workers.filter((id) => indexes.residentsById.has(id));
     const target = Math.min(definition.workerSlots, rule?.maximum ?? definition.workerSlots);
     while (building.workers.length < target) {
       let resident = rule?.preferSkilled ? available.find((person) => person.job === definition.workerJob && ['skilled', 'pirate', 'elite', 'officer'].includes(person.tier)) : undefined;
@@ -49,7 +105,7 @@ function consumeInputs(building: SettlementBuilding, inputs: Partial<Record<Sett
   for (const [resource, required] of Object.entries(inputs) as [SettlementResourceId, number][]) building.inputInventory[resource] = Math.max(0, amount(building.inputInventory, resource) - required);
 }
 
-function advanceConstruction(state: SettlementSimulationState, gameMinutes: number): void {
+function advanceConstruction(state: SettlementSimulationState, gameMinutes: number, indexes: SimulationIndexes): void {
   const builders = state.residents.filter((resident) => resident.job === 'builder' && resident.health > 20);
   const allocatedBuilders = new Set(state.buildings.filter((building) => building.state === 'CONSTRUCTING').flatMap((building) => building.workers));
   for (const building of state.buildings) {
@@ -75,7 +131,7 @@ function advanceConstruction(state: SettlementSimulationState, gameMinutes: numb
       if (upgrading) building.upgradeMaterialsCommitted = true;
       else { building.state = 'CONSTRUCTING'; building.constructionMaterialsCommitted = true; }
     }
-    let assignedBuilders = building.workers.map((id) => builders.find((resident) => resident.id === id)).filter((resident): resident is Resident => !!resident);
+    let assignedBuilders = building.workers.map((id) => indexes.residentsById.get(id)).filter((resident): resident is Resident => !!resident && resident.job === 'builder' && resident.health > 20);
     if (assignedBuilders.length === 0) {
       assignedBuilders = builders.filter((resident) => !allocatedBuilders.has(resident.id)).slice(0, Math.max(1, Math.min(4, building.constructionPriority)));
       assignedBuilders.forEach((resident) => allocatedBuilders.add(resident.id));
@@ -119,7 +175,7 @@ function advanceConstruction(state: SettlementSimulationState, gameMinutes: numb
   }
 }
 
-function advanceProduction(state: SettlementSimulationState, gameMinutes: number): void {
+function advanceProduction(state: SettlementSimulationState, gameMinutes: number, indexes: SimulationIndexes): void {
   for (const building of state.buildings) {
     if (building.state !== 'ACTIVE' || building.paused || !building.recipeId) continue;
     const recipe = RECIPES[building.recipeId];
@@ -131,7 +187,7 @@ function advanceProduction(state: SettlementSimulationState, gameMinutes: number
       continue;
     }
     const needed = requiredWorkers(recipe.id);
-    const healthyWorkers = building.workers.map((id) => state.residents.find((resident) => resident.id === id)).filter((resident): resident is Resident => !!resident && resident.health > 25 && Math.hypot(resident.position.x - building.x, resident.position.y - building.y) <= 1.5);
+    const healthyWorkers = building.workers.map((id) => indexes.residentsById.get(id)).filter((resident): resident is Resident => !!resident && resident.health > 25 && Math.hypot(resident.position.x - building.x, resident.position.y - building.y) <= 1.5);
     if (healthyWorkers.length < Math.max(1, Math.ceil(needed * 0.5))) {
       building.statusReason = '작업자 부족';
       continue;
@@ -151,7 +207,17 @@ function advanceProduction(state: SettlementSimulationState, gameMinutes: number
       const skilled = ['skilled', 'pirate', 'elite', 'officer'].includes(worker.tier) ? modifiers.skilledProduction : 1;
       return sum + POPULATION_TIERS[worker.tier].productivity * skilled * (0.55 + worker.morale / 220) * (1 - worker.fatigue / 180);
     }, 0) / Math.max(1, needed) * modifiers.production;
-    building.recipeProgress += gameMinutes * Math.max(0.25, workerEfficiency) / recipe.durationMinutes;
+    const outdoor = ['lumber-camp', 'quarry', 'iron-mine', 'copper-mine', 'farm', 'hunter-hut', 'fisher-hut'].includes(building.definitionId);
+    const weatherEfficiency = !outdoor
+      ? 1
+      : state.weather === 'storm'
+        ? 0.58
+        : state.weather === 'rain'
+          ? building.definitionId === 'farm' ? 1.12 : 0.84
+          : state.weather === 'fog'
+            ? building.definitionId === 'fisher-hut' ? 0.72 : 0.92
+            : 1;
+    building.recipeProgress += gameMinutes * Math.max(0.25, workerEfficiency) * weatherEfficiency / recipe.durationMinutes;
     building.statusReason = `생산 ${Math.floor(Math.min(1, building.recipeProgress) * 100)}%`;
     if (building.recipeProgress < 1) continue;
     consumeInputs(building, recipe.inputs);
@@ -175,12 +241,26 @@ function advanceProduction(state: SettlementSimulationState, gameMinutes: number
   }
 }
 
-function advanceResidentMovement(state: SettlementSimulationState, gameMinutes: number): void {
+function movementBatch(state: SettlementSimulationState): { residents: Resident[]; cadence: number } {
+  const eligible = state.residents.filter((resident) => !['builder', 'hauler'].includes(resident.job));
+  const limit = state.residents.length > 350 ? 160 : state.residents.length > 220 ? 200 : eligible.length;
+  if (eligible.length <= limit) return { residents: eligible, cadence: 1 };
+  const start = state.residentUpdateCursor % eligible.length;
+  const residents = Array.from({ length: limit }, (_, index) => eligible[(start + index) % eligible.length]);
+  state.residentUpdateCursor = (start + limit) % eligible.length;
+  return { residents, cadence: eligible.length / limit };
+}
+
+function advanceResidentMovement(state: SettlementSimulationState, gameMinutes: number, indexes: SimulationIndexes): void {
   const busyHaulers = new Set(state.transports.filter((job) => ['PICKING_UP', 'DELIVERING'].includes(job.state)).map((job) => job.haulerId));
-  for (const resident of state.residents) {
-    if (busyHaulers.has(resident.id) || resident.job === 'builder') continue;
-    const workplace = resident.workplaceId ? state.buildings.find((building) => building.id === resident.workplaceId && building.state === 'ACTIVE') : undefined;
-    const home = resident.homeId ? state.buildings.find((building) => building.id === resident.homeId && building.state === 'ACTIVE') : undefined;
+  const batch = movementBatch(state);
+  const elapsed = gameMinutes * batch.cadence;
+  for (const resident of batch.residents) {
+    if (busyHaulers.has(resident.id)) continue;
+    const workplaceCandidate = resident.workplaceId ? indexes.buildingsById.get(resident.workplaceId) : undefined;
+    const homeCandidate = resident.homeId ? indexes.buildingsById.get(resident.homeId) : undefined;
+    const workplace = workplaceCandidate?.state === 'ACTIVE' ? workplaceCandidate : undefined;
+    const home = homeCandidate?.state === 'ACTIVE' ? homeCandidate : undefined;
     const target = workplace ?? home;
     if (!target) { resident.action = 'IDLE'; continue; }
     const distance = Math.hypot(resident.position.x - target.x, resident.position.y - target.y);
@@ -201,7 +281,7 @@ function advanceResidentMovement(state: SettlementSimulationState, gameMinutes: 
     }
     if (resident.path.length < 2) continue;
     const duration = Math.max(1, pathTravelCost(state.island, resident.path, state.buildings) * (1.55 - POPULATION_TIERS[resident.tier].productivity * 0.18));
-    resident.pathProgress = Math.min(1, resident.pathProgress + gameMinutes / duration);
+    resident.pathProgress = Math.min(1, resident.pathProgress + elapsed / duration);
     const scaled = Math.min(resident.path.length - 1, resident.pathProgress * (resident.path.length - 1));
     const index = Math.floor(scaled);
     const nextIndex = Math.min(resident.path.length - 1, index + 1);
@@ -219,13 +299,19 @@ function needScore(resident: Resident): number {
   return required.reduce((sum, need) => sum + resident.needs[need], 0) / Math.max(1, required.length);
 }
 
-function serviceNear(state: SettlementSimulationState, resident: Resident, ids: SettlementBuilding['definitionId'][]): SettlementBuilding | undefined {
-  const origin = state.buildings.find((building) => building.id === resident.homeId) ?? { x: resident.position.x, y: resident.position.y };
-  return state.buildings
-    .filter((building) => ids.includes(building.definitionId) && building.state === 'ACTIVE' && !building.paused)
-    .filter((building) => (BUILDINGS[building.definitionId]?.workerSlots ?? 0) === 0 || building.workers.length > 0)
-    .filter((building) => Math.hypot(building.x - origin.x, building.y - origin.y) <= (BUILDINGS[building.definitionId]?.range ?? 5))
-    .sort((a, b) => Math.hypot(a.x - origin.x, a.y - origin.y) - Math.hypot(b.x - origin.x, b.y - origin.y))[0];
+function serviceNear(indexes: SimulationIndexes, resident: Resident, ids: SettlementBuilding['definitionId'][]): SettlementBuilding | undefined {
+  const origin = (resident.homeId ? indexes.buildingsById.get(resident.homeId) : undefined) ?? resident.position;
+  let nearest: SettlementBuilding | undefined;
+  let nearestDistance = Infinity;
+  for (const id of ids) for (const building of indexes.servicesByDefinition.get(id) ?? []) {
+    if ((BUILDINGS[building.definitionId]?.workerSlots ?? 0) > 0 && building.workers.length === 0) continue;
+    const distance = Math.hypot(building.x - origin.x, building.y - origin.y);
+    if (distance <= (BUILDINGS[building.definitionId]?.range ?? 5) && distance < nearestDistance) {
+      nearest = building;
+      nearestDistance = distance;
+    }
+  }
+  return nearest;
 }
 
 function consumeStored(building: SettlementBuilding | undefined, resource: SettlementResourceId, quantity: number): boolean {
@@ -250,11 +336,11 @@ function consumeAnywhere(state: SettlementSimulationState, resource: SettlementR
   return remaining <= 0;
 }
 
-function consumeAtHome(state: SettlementSimulationState): void {
+function consumeAtHome(state: SettlementSimulationState, indexes: SimulationIndexes): void {
   const modifiers = policyModifiers(state);
   const consumption = modifiers.foodConsumption;
   for (const resident of state.residents) {
-    const home = state.buildings.find((building) => building.id === resident.homeId);
+    const home = resident.homeId ? indexes.buildingsById.get(resident.homeId) : undefined;
     if (!home) {
       resident.needs.housing = Math.max(0, resident.needs.housing - 8);
       resident.morale = Math.max(0, resident.morale - 2);
@@ -282,8 +368,8 @@ function consumeAtHome(state: SettlementSimulationState): void {
       resident.needs.clothing = Math.max(0, Math.min(100, resident.needs.clothing + (clothing ? 7 : -5)));
     }
     if (requiredNeeds.has('health')) {
-      const infirmary = serviceNear(state, resident, ['infirmary']);
-      const bathhouse = serviceNear(state, resident, ['bathhouse']);
+      const infirmary = serviceNear(indexes, resident, ['infirmary']);
+      const bathhouse = serviceNear(indexes, resident, ['bathhouse']);
       const treated = consumeStored(infirmary, 'medicine', 0.035 * consumption);
       const washed = consumeStored(bathhouse, 'water', 0.08 * consumption);
       const recovery = treated ? 9 : washed ? 5 : -4;
@@ -293,14 +379,14 @@ function consumeAtHome(state: SettlementSimulationState): void {
       if (treated) resident.action = 'HEALING';
     }
     if (requiredNeeds.has('leisure')) {
-      const tavern = serviceNear(state, resident, ['tavern', 'gambling-den']);
-      const publicSpace = serviceNear(state, resident, ['campfire', 'festival-square', 'arena']);
+      const tavern = serviceNear(indexes, resident, ['tavern', 'gambling-den']);
+      const publicSpace = serviceNear(indexes, resident, ['campfire', 'festival-square', 'arena']);
       const drink = consumeStored(tavern, 'rum', 0.04 * consumption) || consumeStored(tavern, 'beer', 0.05 * consumption);
       resident.needs.leisure = Math.max(0, Math.min(100, resident.needs.leisure + (drink ? 8 : publicSpace ? 4 : -5)));
       if (drink) resident.action = 'DRINKING';
     }
     if (requiredNeeds.has('pirateCulture')) {
-      const culture = serviceNear(state, resident, ['tavern', 'arena', 'festival-square', 'training-yard', 'pirate-council']);
+      const culture = serviceNear(indexes, resident, ['tavern', 'arena', 'festival-square', 'training-yard', 'pirate-council']);
       resident.needs.pirateCulture = Math.max(0, Math.min(100, resident.needs.pirateCulture + (culture ? 6 : -5)));
     }
     if (requiredNeeds.has('equipment')) {
@@ -461,16 +547,23 @@ export function advanceSettlement(input: SettlementSimulationState, realSeconds:
   let state = structuredClone(input);
   state.simulationMinutes += gameMinutes;
   state.lastTickAt = Date.now();
-  advanceConstruction(state, gameMinutes);
-  autoAssign(state);
-  advanceResidentMovement(state, gameMinutes);
-  advanceProduction(state, gameMinutes);
+  state.weather = settlementWeatherAt(state.island.seed, state.simulationMinutes);
+  const indexes = createSimulationIndexes(state);
+  advanceConstruction(state, gameMinutes, indexes);
+  autoAssign(state, indexes);
+  advanceResidentMovement(state, gameMinutes, indexes);
+  advanceProduction(state, gameMinutes, indexes);
   advanceHazards(state, gameMinutes);
-  state = scheduleLogistics(state);
-  state = advanceTransports(state, gameMinutes);
-  if (Math.floor(state.simulationMinutes / 60) > previousHour) consumeAtHome(state);
+  state = scheduleLogistics(state, false);
+  state = advanceTransports(state, gameMinutes, false);
+  if (Math.floor(state.simulationMinutes / 60) > previousHour) {
+    consumeAtHome(state, indexes);
+    const revealed = revealIslandFromServices(state);
+    if (revealed > 0) state.warnings.push({ id: `warning-survey-${Math.floor(state.simulationMinutes)}`, code: 'survey-progress', severity: 'info', title: '섬 탐사 진전', detail: `감시망이 미탐사 지형 ${revealed}칸을 해도에 기록했습니다.`, createdAt: state.simulationMinutes, acknowledged: false });
+  }
   if (Math.floor(state.simulationMinutes / 1440) > previousDay) advancePopulationDay(state);
-  updateWarnings(state);
+  const warningWindowChanged = Math.floor(state.simulationMinutes / 5) > Math.floor(input.simulationMinutes / 5);
+  if (warningWindowChanged || state.warnings.length === 0) updateWarnings(state);
   return state;
 }
 

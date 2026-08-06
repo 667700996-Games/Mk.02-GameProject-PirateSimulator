@@ -2,7 +2,7 @@ import { createId } from '$lib/domain/rng';
 import { BUILDINGS, RECIPES } from './catalog';
 import { buildingUpgradeCost } from './construction';
 import { SHIP_PLANS } from './shipbuilding';
-import { findCachedPath, pathTravelCost } from './island';
+import { buildingCells, findCachedPath, pathTravelCost } from './island';
 import type { PartialSettlementInventory, Resident, SettlementBuilding, SettlementResourceId, SettlementSimulationState, TransportJob } from './types';
 
 function amount(inventory: PartialSettlementInventory, resource: SettlementResourceId): number {
@@ -47,8 +47,8 @@ function requestResource(state: SettlementSimulationState, target: SettlementBui
   }
 }
 
-export function scheduleLogistics(state: SettlementSimulationState): SettlementSimulationState {
-  const next = structuredClone(state);
+export function scheduleLogistics(state: SettlementSimulationState, copyState = true): SettlementSimulationState {
+  const next = copyState ? structuredClone(state) : state;
   const targets = [...next.buildings].sort((a, b) => b.constructionPriority - a.constructionPriority);
   for (const building of targets) {
     const definition = BUILDINGS[building.definitionId];
@@ -188,8 +188,51 @@ function updateResidentAlongPath(resident: Resident, job: TransportJob): void {
   resident.pathProgress = job.progress;
 }
 
-export function advanceTransports(state: SettlementSimulationState, gameMinutes: number): SettlementSimulationState {
-  const next = structuredClone(state);
+function trafficLoad(transports: TransportJob[]): Map<string, number> {
+  const load = new Map<string, number>();
+  for (const job of transports.filter((item) => ['PICKING_UP', 'DELIVERING'].includes(item.state))) {
+    for (const point of job.path) {
+      const key = `${point.x},${point.y}`;
+      load.set(key, (load.get(key) ?? 0) + 1);
+    }
+  }
+  return load;
+}
+
+function routeCapacity(buildings: SettlementBuilding[], x: number, y: number): number {
+  const infrastructure = buildings.find((building) =>
+    building.state === 'ACTIVE' &&
+    ['bridge', 'stairs', 'ramp', 'cargo-lift', 'cliff-platform'].includes(building.definitionId) &&
+    buildingCells(building).some((cell) => cell.x === x && cell.y === y)
+  );
+  if (!infrastructure) return 2;
+  if (['bridge', 'cargo-lift'].includes(infrastructure.definitionId)) return 1;
+  return 3;
+}
+
+export function transportCongestionMultiplier(job: TransportJob, load: Map<string, number>, buildings: SettlementBuilding[]): number {
+  if (job.path.length === 0) return 1;
+  let totalRatio = 0;
+  let peakRatio = 1;
+  for (const point of job.path) {
+    const ratio = (load.get(`${point.x},${point.y}`) ?? 1) / routeCapacity(buildings, point.x, point.y);
+    totalRatio += ratio;
+    peakRatio = Math.max(peakRatio, ratio);
+  }
+  const averageRatio = totalRatio / job.path.length;
+  return Math.min(2.75, 1 + Math.max(0, averageRatio - 1) * .28 + Math.max(0, peakRatio - 1) * .18);
+}
+
+function weatherTravelMultiplier(state: SettlementSimulationState): number {
+  if (state.weather === 'storm') return 1.38;
+  if (state.weather === 'rain') return 1.16;
+  if (state.weather === 'fog') return 1.08;
+  return 1;
+}
+
+export function advanceTransports(state: SettlementSimulationState, gameMinutes: number, copyState = true): SettlementSimulationState {
+  const next = copyState ? structuredClone(state) : state;
+  const load = trafficLoad(next.transports);
   for (const job of next.transports.filter((item) => ['PICKING_UP', 'DELIVERING'].includes(item.state))) {
     const resident = next.residents.find((person) => person.id === job.haulerId);
     const source = next.buildings.find((building) => building.id === job.sourceBuildingId);
@@ -201,7 +244,8 @@ export function advanceTransports(state: SettlementSimulationState, gameMinutes:
       continue;
     }
     const logisticsBonus = next.progression.unlocked.includes('prosperity-logistics') ? 1.1 : 1;
-    const duration = Math.max(1.2, pathTravelCost(next.island, job.path, next.buildings) * 1.15 / logisticsBonus);
+    const congestion = transportCongestionMultiplier(job, load, next.buildings);
+    const duration = Math.max(1.2, pathTravelCost(next.island, job.path, next.buildings) * 1.15 * congestion * weatherTravelMultiplier(next) / logisticsBonus);
     job.progress = Math.min(1, job.progress + gameMinutes / duration);
     updateResidentAlongPath(resident, job);
     if (job.progress < 1) continue;

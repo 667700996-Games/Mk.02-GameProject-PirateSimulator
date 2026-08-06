@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createNewGame, DEFAULT_SETTINGS } from '$lib/domain/initialState';
-import { exportSave, importSave, loadSettings, writeSettings } from './gameRepository';
+import type { SaveRecord } from '$lib/domain/types';
+import { exportSave, importSave, listSaveBackups, loadSettings, recoverSaveState, removeSave, writeSave, writeSettings, type SaveBackupRecord } from './gameRepository';
 
 function createGame() {
   return createNewGame(
@@ -18,7 +19,10 @@ function createGame() {
   );
 }
 
-afterEach(() => localStorage.clear());
+afterEach(() => {
+  localStorage.clear();
+  vi.useRealTimers();
+});
 
 describe('portable saves and settings', () => {
   it('exports and imports the complete versioned settlement state', () => {
@@ -39,5 +43,39 @@ describe('portable saves and settings', () => {
     expect(loadSettings().highContrast).toBe(true);
     localStorage.setItem('blackwake-settings-v1', '{broken');
     expect(loadSettings()).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('keeps only the three newest rolling recovery points', async () => {
+    const game = createGame();
+    await removeSave(game.saveId);
+    vi.useFakeTimers();
+    for (let index = 0; index < 5; index += 1) {
+      vi.setSystemTime(10_000 + index * 1_000);
+      game.playTimeSeconds = index;
+      await writeSave(game);
+    }
+    const backups = await listSaveBackups(game.saveId);
+    expect(backups).toHaveLength(3);
+    expect(backups.map((backup) => backup.playTimeSeconds)).toEqual([3, 2, 1]);
+    await removeSave(game.saveId);
+    expect(await listSaveBackups(game.saveId)).toHaveLength(0);
+  });
+
+  it('selects a valid recovery point when the primary record fails integrity', () => {
+    const game = createGame();
+    const record = (state = game): SaveRecord => ({
+      id: game.saveId, name: game.saveName, version: game.version, updatedAt: 2_000,
+      playTimeSeconds: state.playTimeSeconds, captainName: game.captain.name,
+      shipName: game.ships[0].name, havenTier: game.haven.tier, state
+    });
+    const corrupt = { ...record(structuredClone(game)), integrity: 'fnv1a-corrupt' };
+    const backup: SaveBackupRecord = { ...record(structuredClone(game)), id: 'backup-1', saveId: game.saveId, updatedAt: 1_000 };
+    const recovered = recoverSaveState(corrupt, [backup]);
+    expect(recovered.recovered).toBe(true);
+    expect(recovered.state?.captain.name).toBe('기록관');
+  });
+
+  it('rejects oversized portable save files before parsing', () => {
+    expect(() => importSave('x'.repeat(8 * 1024 * 1024 + 1))).toThrow('8MB');
   });
 });

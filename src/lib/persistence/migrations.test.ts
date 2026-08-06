@@ -131,4 +131,26 @@ describe('save migrations', () => {
     second.settlement.buildings[0].x = Number.NaN;
     expect(() => migrateGameState(second)).toThrow('건물 데이터');
   });
+
+  it('rejects negative inventory and broken cross references', () => {
+    const game = createNewGame(
+      {
+        captainName: '교차 검증', crewName: '장부단', shipName: '정상 참조', flagMark: '□',
+        flagColor: '#222222', trait: 'architect', difficulty: 'story', seed: 6
+      },
+      1000
+    );
+    game.settlement.buildings[0].outputInventory.gold = -1;
+    expect(() => migrateGameState(game)).toThrow('수치가 손상');
+
+    const broken = createNewGame(
+      {
+        captainName: '교차 검증', crewName: '장부단', shipName: '깨진 참조', flagMark: '□',
+        flagColor: '#222222', trait: 'architect', difficulty: 'story', seed: 7
+      },
+      1000
+    );
+    broken.settlement.residents[0].homeId = 'missing-home';
+    expect(() => migrateGameState(broken)).toThrow('주거 참조');
+  });
 });

@@ -6,6 +6,7 @@
   import { gameSession } from '$lib/stores/gameStore';
   import { soundEngine } from '$lib/audio/SoundEngine';
   import type { NewGameOptions } from '$lib/domain/types';
+  import { focusTrap } from '$lib/actions/focusTrap';
 
   let creating = $state(false);
   let showSaves = $state(false);
@@ -17,11 +18,15 @@
     const unlock = () => void soundEngine.unlock($gameSession.settings);
     const uiClick = (event: MouseEvent) => { if ((event.target as HTMLElement)?.closest('button,select')) soundEngine.play('ui'); };
     const saveWhenHidden = () => { if (document.visibilityState === 'hidden' && $gameSession.game) gameSession.scheduleAutoSave(0); };
+    const serviceWorkerUpdated = () => gameSession.addToast('info', '새 항해 규칙 적용', '게임 셸이 최신 버전으로 교체되었습니다. 진행 상태는 그대로 유지됩니다.');
+    const wentOffline = () => gameSession.addToast('info', '오프라인 항해', '핵심 게임 자산과 저장소를 기기에서 계속 사용합니다.');
     window.addEventListener('pointerdown', unlock, { once: true });
     window.addEventListener('keydown', unlock, { once: true });
     window.addEventListener('click', uiClick);
     document.addEventListener('visibilitychange', saveWhenHidden);
-    return () => { window.clearInterval(timer); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); window.removeEventListener('click', uiClick); document.removeEventListener('visibilitychange', saveWhenHidden); };
+    navigator.serviceWorker?.addEventListener('controllerchange', serviceWorkerUpdated);
+    window.addEventListener('offline', wentOffline);
+    return () => { window.clearInterval(timer); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); window.removeEventListener('click', uiClick); window.removeEventListener('offline', wentOffline); navigator.serviceWorker?.removeEventListener('controllerchange', serviceWorkerUpdated); document.removeEventListener('visibilitychange', saveWhenHidden); };
   });
 
   $effect(() => {
@@ -55,10 +60,10 @@
 {:else}
   <TitleScreen saves={$gameSession.saves} onNew={() => (creating = true)} onContinue={load} onOpenSaves={() => (showSaves = true)} onSettings={() => (showSettings = true)} />
   {#if showSaves}
-    <div class="modal-backdrop" role="presentation"><section class="modal panel"><div class="panel-title"><div><span class="eyebrow">VOYAGE LOGS</span><h2>항해일지 불러오기</h2></div><button class="btn small ghost" onclick={() => (showSaves = false)}>닫기</button></div>{#each $gameSession.saves as save}<div class="save-card"><div><strong>{save.name}</strong><small class="muted" style="display:block">{save.captainName} · {save.shipName} · {new Date(save.updatedAt).toLocaleString('ko-KR')}</small></div><button class="btn small primary" onclick={() => load(save.id)}>계속</button></div>{/each}</section></div>
+    <div class="modal-backdrop"><div class="modal panel" role="dialog" aria-modal="true" aria-labelledby="save-dialog-title" tabindex="-1" use:focusTrap><div class="panel-title"><div><span class="eyebrow">VOYAGE LOGS</span><h2 id="save-dialog-title">항해일지 불러오기</h2></div><button class="btn small ghost" onclick={() => (showSaves = false)}>닫기</button></div>{#each $gameSession.saves as save}<div class="save-card"><div><strong>{save.name}</strong><small class="muted" style="display:block">{save.captainName} · {save.shipName} · {new Date(save.updatedAt).toLocaleString('ko-KR')}</small></div><button class="btn small primary" onclick={() => load(save.id)}>계속</button></div>{/each}</div></div>
   {/if}
   {#if showSettings}
-    <div class="modal-backdrop" role="presentation"><section class="modal panel"><div class="panel-title"><div><span class="eyebrow">SETTINGS</span><h2>타이틀 설정</h2></div><button class="btn small ghost" onclick={() => (showSettings = false)}>닫기</button></div><div class="field"><label for="title-volume">전체 음량 · {Math.round($gameSession.settings.masterVolume * 100)}%</label><input id="title-volume" type="range" min="0" max="1" step=".05" value={$gameSession.settings.masterVolume} oninput={(event) => gameSession.updateSettings({ masterVolume: Number(event.currentTarget.value) })} /></div><div class="field"><label for="title-quality">렌더링 품질</label><select id="title-quality" value={$gameSession.settings.quality} onchange={(event) => gameSession.updateSettings({ quality: event.currentTarget.value as 'low' | 'medium' | 'high' })}><option value="low">낮음</option><option value="medium">중간</option><option value="high">높음</option></select></div></section></div>
+    <div class="modal-backdrop"><div class="modal panel" role="dialog" aria-modal="true" aria-labelledby="title-settings-title" tabindex="-1" use:focusTrap><div class="panel-title"><div><span class="eyebrow">SETTINGS</span><h2 id="title-settings-title">타이틀 설정</h2></div><button class="btn small ghost" onclick={() => (showSettings = false)}>닫기</button></div><div class="field"><label for="title-volume">전체 음량 · {Math.round($gameSession.settings.masterVolume * 100)}%</label><input id="title-volume" type="range" min="0" max="1" step=".05" value={$gameSession.settings.masterVolume} oninput={(event) => gameSession.updateSettings({ masterVolume: Number(event.currentTarget.value) })} /></div><div class="field"><label for="title-quality">렌더링 품질</label><select id="title-quality" value={$gameSession.settings.quality} onchange={(event) => gameSession.updateSettings({ quality: event.currentTarget.value as 'low' | 'medium' | 'high' })}><option value="low">낮음</option><option value="medium">중간</option><option value="high">높음</option></select></div></div></div>
   {/if}
 {/if}
 {#if $gameSession.error}

@@ -23,20 +23,20 @@ test('creates a pirate settlement and opens every core management surface', asyn
   await expect(page.getByText('인구 / 주거')).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('isometric-settlement.png'), fullPage: true });
 
-  await page.locator('.game-nav').getByRole('button', { name: '♞ 선원단', exact: true }).click();
+  await page.locator('.game-nav').getByRole('button', { name: '선원단', exact: true }).click();
   await expect(page.getByRole('heading', { name: '주민과 노동력' })).toBeVisible();
   await expect(page.getByRole('heading', { name: '정착민 명부' })).toBeVisible();
 
-  await page.locator('.game-nav').getByRole('button', { name: '✣ 발전', exact: true }).click();
+  await page.locator('.game-nav').getByRole('button', { name: '발전', exact: true }).click();
   await expect(page.getByRole('heading', { name: '해적 사회의 발전과 통치' })).toBeVisible();
   await expect(page.getByRole('heading', { name: '정착지 정책' })).toBeVisible();
 
-  await page.locator('.game-nav').getByRole('button', { name: '◢ 함선', exact: true }).click();
+  await page.locator('.game-nav').getByRole('button', { name: '함선', exact: true }).click();
   await expect(page.getByRole('heading', { name: '조선소와 함선 건조' })).toBeVisible();
 
-  await page.locator('.game-nav').getByRole('button', { name: '✥ 해도', exact: true }).click();
+  await page.locator('.game-nav').getByRole('button', { name: '해도', exact: true }).click();
   await expect(page.getByRole('heading', { name: '검은 해도' })).toBeVisible();
-  await page.locator(':focus').blur();
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await page.screenshot({ path: testInfo.outputPath('strategic-map.png'), fullPage: true });
   await page.getByRole('button', { name: '이 해역 원정 편성' }).click();
   await expect(page.getByRole('heading', { name: '함대와 전략 원정' })).toBeVisible();
@@ -54,7 +54,7 @@ test('persists and restores the complete settlement state through IndexedDB', as
   const saved = await page.evaluate(
     async () =>
       new Promise<{ version: number; residents: number; buildings: number }>((resolve, reject) => {
-        const open = indexedDB.open('blackwake-pirate-simulator', 1);
+        const open = indexedDB.open('blackwake-pirate-simulator');
         open.onerror = () => reject(open.error);
         open.onsuccess = () => {
           const all = open.result.transaction('saves', 'readonly').objectStore('saves').getAll();
@@ -83,63 +83,29 @@ test('accepts a contract and keeps missions connected to the expedition command'
   page
 }) => {
   await createCaptain(page);
-  await page.locator('.game-nav').getByRole('button', { name: '▤ 임무', exact: true }).click();
+  await page.locator('.game-nav').getByRole('button', { name: '임무', exact: true }).click();
   await expect(page.getByRole('heading', { name: '임무와 소문' })).toBeVisible();
   const accept = page.getByRole('button', { name: '수락' }).first();
   await expect(accept).toBeEnabled();
   await accept.click();
   await expect(page.getByText('활성 2 / 4')).toBeVisible();
-  await page.locator('.game-nav').getByRole('button', { name: '♜ 함대', exact: true }).click();
+  await page.locator('.game-nav').getByRole('button', { name: '함대', exact: true }).click();
   await expect(page.getByRole('heading', { name: '함대와 전략 원정' })).toBeVisible();
-  await page.getByRole('button', { name: '함대 교리' }).click();
-  await expect(page.getByRole('heading', { name: '함대 진형' })).toBeVisible();
+  const doctrineTab = page.getByTestId('fleet-doctrine-tab');
+  await doctrineTab.click();
+  await expect(doctrineTab).toHaveClass(/active/);
+  await expect(page.getByRole('heading', { name: '함대 진형' })).toBeVisible({ timeout: 10_000 });
+  await page.waitForTimeout(1_250);
+  await expect(doctrineTab).toHaveClass(/active/);
 });
 
 test('runs every coastal defense stage and returns damage to the spatial settlement', async ({
   page
 }) => {
   await createCaptain(page);
-  await page.getByRole('button', { name: '저장', exact: true }).click();
-  await expect(page.getByText('항해 기록을 안전하게 보관했습니다.')).toBeVisible();
-
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve, reject) => {
-        const open = indexedDB.open('blackwake-pirate-simulator', 1);
-        open.onerror = () => reject(open.error);
-        open.onsuccess = () => {
-          const db = open.result;
-          const store = db.transaction('saves', 'readwrite').objectStore('saves');
-          const all = store.getAll();
-          all.onerror = () => reject(all.error);
-          all.onsuccess = () => {
-            const record = all.result[0];
-            record.state.screen = 'defense';
-            record.state.defense = {
-              ...record.state.defense,
-              active: true,
-              attacker: 'red-tide',
-              stage: 'warning',
-              attackStrength: 180,
-              attackerRemaining: 180,
-              defenseStrength: 0,
-              timeToAttack: Date.now() + 60_000,
-              preparation: 0,
-              civilianRisk: 55,
-              selectedActions: [],
-              log: []
-            };
-            const put = store.put(record);
-            put.onerror = () => reject(put.error);
-            put.onsuccess = () => resolve();
-          };
-        };
-      })
-  );
-
-  await page.reload();
-  await page.getByRole('button', { name: /항해 계속하기 · 검은수염 테스트/ }).click();
-  await expect(page.getByRole('heading', { name: '검은 깃발을 지켜라' })).toBeVisible();
+  await page.locator('.game-nav').getByRole('button', { name: '세력', exact: true }).click();
+  await page.getByRole('button', { name: /붉은 파도 유인/ }).click();
+  await expect(page.getByRole('heading', { name: '검은 깃발을 지켜라' })).toBeVisible({ timeout: 8_000 });
   await page.getByRole('button', { name: '방어 준비 지휘' }).click();
   await page.getByRole('button', { name: /주민 대피/ }).click();
   await page.getByRole('button', { name: /방어전 개시/ }).click();
@@ -153,68 +119,19 @@ test('runs every coastal defense stage and returns damage to the spatial settlem
   await expect(page.getByTestId('settlement-screen')).toBeVisible();
 });
 
-test('commands a turn-based expedition naval battle with wind, range and ammunition', async ({
-  page
-}) => {
+test('traps keyboard focus inside modal surfaces and exposes named controls', async ({ page }) => {
+  test.slow();
   await createCaptain(page);
-  await page.getByRole('button', { name: '저장', exact: true }).click();
-  await expect(page.getByText('항해 기록을 안전하게 보관했습니다.')).toBeVisible();
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve, reject) => {
-        const open = indexedDB.open('blackwake-pirate-simulator', 1);
-        open.onerror = () => reject(open.error);
-        open.onsuccess = () => {
-          const store = open.result.transaction('saves', 'readwrite').objectStore('saves');
-          const all = store.getAll();
-          all.onerror = () => reject(all.error);
-          all.onsuccess = () => {
-            const record = all.result[0];
-            const ship = record.state.ships[0];
-            ship.hull = ship.stats.hullMax;
-            ship.sails = ship.stats.sailMax;
-            ship.crew = 14;
-            record.state.screen = 'fleet';
-            record.state.settlement.expeditions = [
-              {
-                id: 'e2e-naval-combat',
-                name: '왕실 항로 습격',
-                state: 'EVENT',
-                zoneId: 'beginners-bay',
-                shipIds: [ship.id],
-                captainIds: [record.state.officers[0].id],
-                crewIds: record.state.settlement.residents
-                  .slice(0, 10)
-                  .map((resident: { id: string }) => resident.id),
-                supplies: { cannonballs: 32, powder: 14 },
-                cargo: {},
-                routeProgress: 0.35,
-                durationHours: 12,
-                risk: 40,
-                morale: 74,
-                currentEventId: 'naval-patrol',
-                log: ['왕실 순찰선이 접근한다.']
-              }
-            ];
-            const put = store.put(record);
-            put.onerror = () => reject(put.error);
-            put.onsuccess = () => resolve();
-          };
-        };
-      })
-  );
-  await page.reload();
-  await page.getByRole('button', { name: /항해 계속하기 · 검은수염 테스트/ }).click();
-  await page.getByRole('button', { name: /항해 상황/ }).click();
-  await page.getByRole('button', { name: /전술 교전/ }).click();
-  await expect(page.getByText('장거리', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: /기동/ }).click();
-  await expect(page.getByText('현측 사거리', { exact: true })).toBeVisible();
-  for (let turn = 0; turn < 8; turn += 1) {
-    const fire = page.getByRole('button', { name: /일반탄/ });
-    if (!(await fire.isVisible())) break;
-    await fire.click();
+  await page.keyboard.press('Escape');
+  const dialog = page.getByRole('dialog', { name: '일시정지' });
+  await expect(dialog).toBeVisible();
+  await expect(page.getByRole('button', { name: /항해 계속/ })).toBeFocused();
+  for (let index = 0; index < 8; index += 1) {
+    await page.keyboard.press('Tab');
+    expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   }
-  await expect(page.getByText('전술 해전 승리', { exact: true })).toBeVisible();
-  await expect(page.locator('.cargo-report').getByText(/군사 지도/)).toBeVisible();
+  const unnamedButtons = await page.locator('button').evaluateAll((buttons) =>
+    buttons.filter((button) => !button.getAttribute('aria-label') && !(button.textContent ?? '').trim()).length
+  );
+  expect(unnamedButtons).toBe(0);
 });

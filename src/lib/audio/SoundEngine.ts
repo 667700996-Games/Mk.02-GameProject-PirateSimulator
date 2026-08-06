@@ -3,19 +3,35 @@ import type { GameSettings } from '$lib/domain/types';
 export type GameSound = 'cannon' | 'impact' | 'critical' | 'boarding' | 'coin' | 'ui';
 export type MusicMood = 'title' | 'haven' | 'freeport' | 'sea' | 'battle' | 'storm' | 'aftermath';
 
+const AUDIO_ASSETS = {
+  ocean: '/audio/ocean-loop.ogg',
+  harbor: '/audio/harbor-loop.ogg',
+  rain: '/audio/rain-loop.ogg',
+  cannon: '/audio/cannon-heavy.ogg',
+  impact: '/audio/hull-impact.ogg'
+} as const;
+type AudioAssetId = keyof typeof AUDIO_ASSETS;
+
 class SoundEngine {
   private context?: AudioContext;
   private master?: GainNode;
   private effects?: GainNode;
   private ambience?: GainNode;
   private music?: GainNode;
+  private compressor?: DynamicsCompressorNode;
+  private reverb?: ConvolverNode;
+  private reverbGain?: GainNode;
   private ambientSource?: AudioBufferSourceNode;
   private harborSource?: AudioBufferSourceNode;
+  private weatherSource?: AudioBufferSourceNode;
+  private weatherGain?: GainNode;
   private harborGain?: GainNode;
   private harborFilter?: BiquadFilterNode;
   private musicNodes: AudioScheduledSourceNode[] = [];
   private mood: MusicMood = 'title';
   private settings?: GameSettings;
+  private buffers = new Map<AudioAssetId, AudioBuffer>();
+  private assetsPromise?: Promise<void>;
 
   configure(settings: GameSettings): void {
     this.settings = settings;
@@ -31,8 +47,11 @@ class SoundEngine {
     this.configure(settings);
     if (!this.context) this.createContext();
     if (this.context?.state === 'suspended') await this.context.resume();
+    this.assetsPromise ??= this.loadAssets();
+    await this.assetsPromise;
     if (!this.ambientSource) this.startOceanAmbience();
     if (!this.harborSource) this.startHarborAmbience();
+    if (!this.weatherSource) this.startWeatherAmbience();
     if (!this.musicNodes.length) this.startMusic();
   }
 
@@ -49,12 +68,17 @@ class SoundEngine {
     const weatherLift = weather === 'storm' ? .18 : weather === 'rain' ? .08 : 0;
     this.harborGain.gain.setTargetAtTime(.04 + activity * .18 + weatherLift + Math.min(.12, fireCount * .04), now, .8);
     this.harborFilter.frequency.setTargetAtTime(480 + activity * 920 + weatherLift * 1200, now, .8);
+    this.weatherGain?.gain.setTargetAtTime(weather === 'storm' ? .46 : weather === 'rain' ? .28 : weather === 'fog' ? .035 : 0, now, 1.2);
   }
 
   play(sound: GameSound): void {
     if (!this.context || !this.effects || this.context.state !== 'running') return;
-    if (sound === 'cannon') this.cannon();
-    else if (sound === 'impact' || sound === 'critical') this.impact(sound === 'critical');
+    if (sound === 'cannon') {
+      if (!this.playSample('cannon', .92, .92 + Math.random() * .13)) this.cannon();
+    }
+    else if (sound === 'impact' || sound === 'critical') {
+      if (!this.playSample('impact', sound === 'critical' ? .9 : .58, sound === 'critical' ? .78 : .92 + Math.random() * .12)) this.impact(sound === 'critical');
+    }
     else if (sound === 'boarding') this.boarding();
     else this.chime(sound === 'coin' ? 620 : 360);
   }
@@ -65,11 +89,60 @@ class SoundEngine {
     this.effects = this.context.createGain();
     this.ambience = this.context.createGain();
     this.music = this.context.createGain();
+    this.compressor = this.context.createDynamicsCompressor();
+    this.compressor.threshold.value = -18;
+    this.compressor.knee.value = 18;
+    this.compressor.ratio.value = 5;
+    this.compressor.attack.value = .004;
+    this.compressor.release.value = .28;
+    this.reverb = this.context.createConvolver();
+    this.reverb.buffer = this.impulseBuffer(1.8, 2.6);
+    this.reverbGain = this.context.createGain();
+    this.reverbGain.gain.value = .13;
     this.effects.connect(this.master);
+    this.effects.connect(this.reverb).connect(this.reverbGain).connect(this.master);
     this.ambience.connect(this.master);
     this.music.connect(this.master);
-    this.master.connect(this.context.destination);
+    this.master.connect(this.compressor).connect(this.context.destination);
     this.configure(this.settings ?? ({ masterVolume: .8, effectsVolume: .8, ambienceVolume: .7 } as GameSettings));
+  }
+
+  private impulseBuffer(duration: number, decay: number): AudioBuffer {
+    const context = this.context!;
+    const buffer = context.createBuffer(2, Math.ceil(context.sampleRate * duration), context.sampleRate);
+    for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+      const data = buffer.getChannelData(channel);
+      for (let index = 0; index < data.length; index += 1) data[index] = (Math.random() * 2 - 1) * Math.pow(1 - index / data.length, decay);
+    }
+    return buffer;
+  }
+
+  private async loadAssets(): Promise<void> {
+    if (!this.context) return;
+    await Promise.all(Object.entries(AUDIO_ASSETS).map(async ([id, url]) => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) return;
+        this.buffers.set(id as AudioAssetId, await this.context!.decodeAudioData(await response.arrayBuffer()));
+      } catch {
+        // Runtime synthesis remains available when a browser cannot decode Ogg/Vorbis.
+      }
+    }));
+  }
+
+  private playSample(id: AudioAssetId, volume: number, rate = 1): boolean {
+    const buffer = this.buffers.get(id);
+    if (!buffer || !this.context || !this.effects) return false;
+    const source = this.context.createBufferSource();
+    const gain = this.context.createGain();
+    const pan = this.context.createStereoPanner();
+    source.buffer = buffer;
+    source.playbackRate.value = rate;
+    gain.gain.value = volume;
+    pan.pan.value = (Math.random() - .5) * .45;
+    source.connect(gain).connect(pan).connect(this.effects);
+    source.start();
+    return true;
   }
 
   private noiseBuffer(duration: number): AudioBuffer {
@@ -90,7 +163,7 @@ class SoundEngine {
     const source = context.createBufferSource();
     const filter = context.createBiquadFilter();
     const gain = context.createGain();
-    source.buffer = this.noiseBuffer(7);
+    source.buffer = this.buffers.get('ocean') ?? this.noiseBuffer(7);
     source.loop = true;
     filter.type = 'lowpass';
     filter.frequency.value = 720;
@@ -106,7 +179,7 @@ class SoundEngine {
     const source = context.createBufferSource();
     const filter = context.createBiquadFilter();
     const gain = context.createGain();
-    source.buffer = this.noiseBuffer(9);
+    source.buffer = this.buffers.get('harbor') ?? this.noiseBuffer(9);
     source.loop = true;
     filter.type = 'bandpass';
     filter.frequency.value = 620;
@@ -117,6 +190,20 @@ class SoundEngine {
     this.harborSource = source;
     this.harborGain = gain;
     this.harborFilter = filter;
+  }
+
+  private startWeatherAmbience(): void {
+    const buffer = this.buffers.get('rain');
+    if (!buffer || !this.context || !this.ambience) return;
+    const source = this.context.createBufferSource();
+    const gain = this.context.createGain();
+    source.buffer = buffer;
+    source.loop = true;
+    gain.gain.value = 0;
+    source.connect(gain).connect(this.ambience);
+    source.start();
+    this.weatherSource = source;
+    this.weatherGain = gain;
   }
 
   private startMusic(): void {

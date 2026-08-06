@@ -9,8 +9,9 @@ import {
 } from './construction';
 import { createInitialSettlement } from './initialState';
 import { findCachedPath, findPath, pathTravelCost, validatePlacement } from './island';
+import { transportCongestionMultiplier } from './logistics';
 import { scheduleLogistics } from './logistics';
-import { advanceSettlement } from './simulation';
+import { advanceSettlement, revealIslandFromServices, settlementWeatherAt } from './simulation';
 import { advanceShipConstruction, queueShipConstruction, SHIP_PLANS } from './shipbuilding';
 import {
   advanceExpeditions,
@@ -18,7 +19,8 @@ import {
   estimateExpedition,
   prepareExpedition,
   resolveExpeditionCombatTurn,
-  resolveExpeditionEvent
+  resolveExpeditionEvent,
+  EXPEDITION_EVENTS
 } from './expeditions';
 import { createNewGame } from '$lib/domain/initialState';
 import type { SettlementBuilding } from './types';
@@ -70,7 +72,32 @@ describe('settlement simulation', () => {
     );
     expect(first.tiles.some((tile) => tile.terrain === 'forest')).toBe(true);
     expect(first.tiles.some((tile) => tile.terrain === 'iron-vein')).toBe(true);
+    expect(first.tiles.some((tile) => tile.terrain === 'cave')).toBe(true);
+    expect(first.tiles.some((tile) => tile.terrain === 'wetland')).toBe(true);
+    expect(first.tiles.some((tile) => !tile.discovered)).toBe(true);
     expect(Math.max(...first.tiles.map((tile) => tile.elevation))).toBeGreaterThanOrEqual(4);
+  });
+
+  it('changes weather deterministically and reveals terrain from staffed watch services', () => {
+    const weatherSequence = Array.from({ length: 20 }, (_, index) => settlementWeatherAt(41, index * 360));
+    expect(new Set(weatherSequence).size).toBeGreaterThan(1);
+    expect(weatherSequence).toEqual(Array.from({ length: 20 }, (_, index) => settlementWeatherAt(41, index * 360)));
+    const state = createInitialSettlement(41, 1000);
+    const hiddenBefore = state.island.tiles.filter((tile) => !tile.discovered).length;
+    state.buildings.push({
+      id: 'survey-watchtower', definitionId: 'watchtower', x: 12, y: 6, rotation: 0,
+      level: 1, state: 'ACTIVE', constructionProgress: 1, constructionPriority: 3,
+      workers: [state.residents[0].id], inputInventory: {}, outputInventory: {},
+      reservedInventory: {}, recipeProgress: 0, condition: 100, fire: 0, paused: false,
+      createdAt: 1000
+    });
+    expect(revealIslandFromServices(state)).toBeGreaterThan(0);
+    expect(state.island.tiles.filter((tile) => !tile.discovered).length).toBeLessThan(hiddenBefore);
+  });
+
+  it('uses a data-driven expedition event deck with varied encounter kinds', () => {
+    expect(EXPEDITION_EVENTS.length).toBeGreaterThanOrEqual(12);
+    expect(new Set(EXPEDITION_EVENTS.map((event) => event.kind)).size).toBeGreaterThanOrEqual(5);
   });
 
   it('enforces terrain, elevation and occupied footprints during placement', () => {
@@ -127,6 +154,44 @@ describe('settlement simulation', () => {
     expect(first.path).toHaveLength(3);
     expect(first.hit).toBe(false);
     expect(second.hit).toBe(true);
+  });
+
+  it('routes around occupied buildings and refuses undiscovered shortcuts', () => {
+    const state = createInitialSettlement(9, 1000);
+    state.island = {
+      seed: 100,
+      width: 5,
+      height: 3,
+      tiles: Array.from({ length: 15 }, (_, index) => ({
+        x: index % 5,
+        y: Math.floor(index / 5),
+        terrain: 'plain' as const,
+        elevation: 0,
+        discovered: index !== 7,
+        fertility: 0
+      }))
+    };
+    const blocker: SettlementBuilding = {
+      id: 'blocked-house', definitionId: 'tent', x: 2, y: 0, rotation: 0, level: 1,
+      state: 'ACTIVE', constructionProgress: 1, constructionPriority: 3, workers: [],
+      inputInventory: {}, outputInventory: {}, reservedInventory: {}, recipeProgress: 0,
+      condition: 100, fire: 0, paused: false, createdAt: 1000
+    };
+    const path = findPath(state.island, { x: 0, y: 0 }, { x: 4, y: 0 }, [blocker]);
+    expect(path).not.toContainEqual({ x: 2, y: 0 });
+    expect(path).not.toContainEqual({ x: 2, y: 1 });
+    expect(path.length).toBeGreaterThan(5);
+  });
+
+  it('slows haulers when a narrow route is congested', () => {
+    const job = {
+      id: 'traffic-a', resourceId: 'logs' as const, amount: 2, sourceBuildingId: 'a', targetBuildingId: 'b',
+      state: 'DELIVERING' as const, priority: 50, path: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }], progress: 0, createdAt: 0
+    };
+    const light = new Map([['0,0', 1], ['1,0', 1], ['2,0', 1]]);
+    const crowded = new Map([['0,0', 5], ['1,0', 5], ['2,0', 5]]);
+    expect(transportCongestionMultiplier(job, light, [])).toBe(1);
+    expect(transportCongestionMultiplier(job, crowded, [])).toBeGreaterThan(1.5);
   });
 
   it('makes vertical infrastructure reduce actual travel time across elevation', () => {
@@ -268,7 +333,7 @@ describe('settlement simulation', () => {
     const initial = createInitialSettlement(19, 1000);
     const result = placeBuilding(initial, 'lumber-camp', 4, 8, 0, 1100);
     expect(result.ok).toBe(true);
-    const simulated = advanceMany(result.state, 150);
+    const simulated = advanceMany(result.state, 240);
     const lumberCamp = simulated.buildings.find((building) => building.id === result.buildingId)!;
     expect(lumberCamp.state).toBe('ACTIVE');
     expect(lumberCamp.workers.length).toBeGreaterThan(0);
@@ -643,5 +708,33 @@ describe('settlement simulation', () => {
     expect(settlement.expeditions[0].state).toBe('TRAVELING');
     expect(settlement.expeditions[0].cargo['military-maps']).toBe(1);
     expect(ships[0].hull).toBeLessThan(game.ships[0].hull);
+  });
+
+  it('persists crew deaths and non-flagship loss after a fleet defeat', () => {
+    const game = createNewGame(
+      {
+        captainName: '생존자', crewName: '부서진 돛', shipName: '기함', flagMark: '☠',
+        flagColor: '#111111', trait: 'admiral', difficulty: 'captain', seed: 91
+      },
+      1000
+    );
+    const escort = { ...structuredClone(game.ships[0]), id: 'escort-loss-test', name: '회색 돛', isFlagship: false };
+    const crewIds = game.settlement.residents.slice(0, 12).map((resident) => resident.id);
+    game.settlement.expeditions.push({
+      id: 'defeat-expedition', name: '실패한 돌파', state: 'COMBAT', zoneId: 'naval-patrol',
+      purpose: 'raid', shipIds: [game.ships[0].id, escort.id], captainIds: [game.officers[0].id],
+      crewIds, supplies: { cannonballs: 20, powder: 10 }, cargo: { spices: 10 }, routeProgress: 0.35,
+      durationHours: 12, risk: 88, morale: 42, currentEventId: 'naval-patrol', log: [],
+      combat: { turn: 2, playerHull: 3, playerHullMax: 200, enemyHull: 180, enemyHullMax: 180,
+        enemySails: 90, enemyMorale: 90, ammo: 20, windAngle: 10, range: 'far', repairCharges: 0, log: [] }
+    });
+    const residentCount = game.settlement.residents.length;
+    const result = resolveExpeditionCombatTurn(game.settlement, [...game.ships, escort], 'defeat-expedition', 'maneuver');
+    const expedition = result.settlement.expeditions[0];
+    expect(result.outcome).toBe('defeat');
+    expect(result.ships.some((ship) => ship.id === escort.id)).toBe(false);
+    expect(expedition.lostShipNames).toContain('회색 돛');
+    expect(expedition.casualties).toBeGreaterThan(0);
+    expect(result.settlement.residents.length).toBeLessThan(residentCount);
   });
 });

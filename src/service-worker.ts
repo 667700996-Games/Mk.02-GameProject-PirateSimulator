@@ -3,46 +3,62 @@
 import { build, files, version } from '$service-worker';
 
 const worker = self as unknown as ServiceWorkerGlobalScope;
-const cacheName = `blackwake-${version}`;
-const assets = [...build, ...files];
+const shellCache = `blackwake-shell-${version}`;
+const runtimeCache = `blackwake-runtime-${version}`;
+const shellAssets = [...new Set([...build, ...files])];
+const MAX_RUNTIME_ENTRIES = 80;
+
+async function trimRuntimeCache(): Promise<void> {
+  const cache = await caches.open(runtimeCache);
+  const keys = await cache.keys();
+  await Promise.all(keys.slice(0, Math.max(0, keys.length - MAX_RUNTIME_ENTRIES)).map((request) => cache.delete(request)));
+}
+
+async function cacheFirst(request: Request): Promise<Response> {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok && response.type === 'basic' && !request.headers.has('range')) {
+    const cache = await caches.open(runtimeCache);
+    await cache.put(request, response.clone());
+    void trimRuntimeCache();
+  }
+  return response;
+}
+
+async function navigationResponse(request: Request): Promise<Response> {
+  try {
+    const response = await fetch(request);
+    if (response.ok) return response;
+  } catch {
+    // The precached app shell below is the intentional offline fallback.
+  }
+  return (await caches.match('/index.html')) ?? (await caches.match('/')) ?? Response.error();
+}
 
 worker.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(assets)));
+  event.waitUntil(caches.open(shellCache).then((cache) => cache.addAll(shellAssets)));
   worker.skipWaiting();
 });
 
 worker.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key.startsWith('blackwake-') && key !== cacheName)
-            .map((key) => caches.delete(key))
-        )
-      )
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith('blackwake-') && ![shellCache, runtimeCache].includes(key)).map((key) => caches.delete(key))))
       .then(() => worker.clients.claim())
   );
 });
 
+worker.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') void worker.skipWaiting();
+});
+
 worker.addEventListener('fetch', (event) => {
-  if (
-    event.request.method !== 'GET' ||
-    new URL(event.request.url).origin !== worker.location.origin
-  )
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'GET' || url.origin !== worker.location.origin) return;
+  if (event.request.mode === 'navigate') {
+    event.respondWith(navigationResponse(event.request));
     return;
-  event.respondWith(
-    caches.match(event.request).then(
-      (cached) =>
-        cached ??
-        fetch(event.request)
-          .then((response) => {
-            if (response.ok)
-              caches.open(cacheName).then((cache) => cache.put(event.request, response.clone()));
-            return response;
-          })
-          .catch(() => caches.match('/'))
-    )
-  );
+  }
+  if (['script', 'style', 'font', 'image', 'audio'].includes(event.request.destination)) event.respondWith(cacheFirst(event.request));
 });

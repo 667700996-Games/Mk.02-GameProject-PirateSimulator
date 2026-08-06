@@ -443,6 +443,11 @@ export interface DefenseState {
   selectedActions?: string[];
   log?: string[];
   reward?: Partial<ResourceStock>;
+  losses?: {
+    wounded: number;
+    killed: number;
+    shipsLost: number;
+  };
 }
 
 export interface WorldState {
@@ -549,4 +554,5 @@ export interface SaveRecord {
   shipName: string;
   havenTier: number;
   state: GameState;
+  integrity?: string;
 }

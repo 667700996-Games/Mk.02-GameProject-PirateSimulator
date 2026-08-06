@@ -9,6 +9,42 @@ export type ExpeditionPurpose = 'explore' | 'raid' | 'trade' | 'rescue';
 export type ExpeditionChoice = 'cautious' | 'bold' | 'parley';
 export type ExpeditionCombatCommand = 'maneuver' | 'round-shot' | 'chain-shot' | 'grape-shot' | 'repair' | 'board' | 'retreat';
 
+export interface ExpeditionEventDefinition {
+  id: string;
+  title: string;
+  description: string;
+  kind: 'combat' | 'weather' | 'discovery' | 'social' | 'hazard';
+  phases: (1 | 2)[];
+}
+
+export const EXPEDITION_EVENTS: ExpeditionEventDefinition[] = [
+  { id: 'naval-patrol', title: '왕실 순찰선', description: '왕실 순찰함이 바람 위쪽에서 포문을 열며 접근한다.', kind: 'combat', phases: [1, 2] },
+  { id: 'merchant-sails', title: '정체를 숨긴 상선', description: '깃발을 내린 상선이 호위함과 거리를 유지한 채 항로를 가로지른다.', kind: 'combat', phases: [1] },
+  { id: 'royal-courier', title: '왕실 연락선', description: '암호문을 실은 빠른 연락선이 안개 가장자리로 달아난다.', kind: 'combat', phases: [2] },
+  { id: 'black-squall', title: '검은 돌풍', description: '검은 구름벽과 역풍이 함대의 진형을 갈라놓는다.', kind: 'weather', phases: [1, 2] },
+  { id: 'reef-labyrinth', title: '노래하는 암초', description: '수면 아래 암초가 조류에 울며 안전한 수로를 감춘다.', kind: 'hazard', phases: [1] },
+  { id: 'fever-ship', title: '열병선의 등불', description: '선원 없는 배에서 구조 신호와 기침 소리가 함께 들린다.', kind: 'hazard', phases: [1, 2] },
+  { id: 'smugglers-cove', title: '밀수업자의 비밀 만', description: '암호 깃발을 든 도선사가 숨겨진 교역소로 함대를 이끈다.', kind: 'social', phases: [1, 2] },
+  { id: 'mutiny-whispers', title: '해먹 아래의 속삭임', description: '배급과 전리품을 둘러싼 불만이 야간 당직 사이로 번진다.', kind: 'social', phases: [2] },
+  { id: 'distress-flare', title: '수평선의 구조 불빛', description: '불타는 잔해에서 생존자들이 조류에 휩쓸리고 있다.', kind: 'social', phases: [1, 2] },
+  { id: 'uncharted-island', title: '해도에 없는 섬', description: '지도에 없는 현무암 섬의 동굴에서 푸른 불빛이 새어 나온다.', kind: 'discovery', phases: [2] },
+  { id: 'floating-arsenal', title: '표류하는 군수 바지선', description: '끊어진 예인줄 끝에 왕실 화약과 포탄이 실린 바지선이 떠 있다.', kind: 'discovery', phases: [2] },
+  { id: 'leviathan-wake', title: '심해 괴수의 항적', description: '함대보다 거대한 그림자가 선저를 스치며 바다가 끓어오른다.', kind: 'hazard', phases: [2] }
+];
+
+export function expeditionEvent(id?: string): ExpeditionEventDefinition | undefined {
+  return EXPEDITION_EVENTS.find((event) => event.id === id);
+}
+
+function selectExpeditionEvent(expedition: StrategicExpedition, phase: 1 | 2): ExpeditionEventDefinition {
+  let candidates = EXPEDITION_EVENTS.filter((event) => event.phases.includes(phase));
+  if (expedition.zoneId === 'storm-reach') candidates = candidates.filter((event) => ['black-squall', 'reef-labyrinth', 'leviathan-wake', 'distress-flare'].includes(event.id));
+  else if (expedition.purpose === 'trade') candidates = candidates.filter((event) => event.kind !== 'combat' || event.id === 'merchant-sails');
+  else if (expedition.purpose === 'explore') candidates = candidates.filter((event) => event.kind !== 'combat' || event.id === 'royal-courier');
+  if (candidates.length === 0) candidates = EXPEDITION_EVENTS.filter((event) => event.phases.includes(phase));
+  return candidates[hashString(`${expedition.id}:${phase}:${expedition.zoneId}:${expedition.purpose}`) % candidates.length];
+}
+
 export interface ExpeditionEstimate {
   durationHours: number;
   risk: number;
@@ -91,6 +127,38 @@ function consumeSupplies(inventory: PartialSettlementInventory, supplies: Partia
   for (const [id, required] of Object.entries(supplies) as [SettlementResourceId, number][]) inventory[id] = Math.max(0, (inventory[id] ?? 0) - required);
 }
 
+function applyPermanentCrewLoss(settlement: SettlementSimulationState, expedition: StrategicExpedition, requested: number, salt: string): string[] {
+  const available = settlement.residents.filter((resident) => expedition.crewIds.includes(resident.id));
+  const count = Math.min(Math.max(0, requested), Math.max(0, available.length - 2));
+  if (count === 0) return [];
+  const offset = hashString(`${expedition.id}:${salt}`) % available.length;
+  const lost = Array.from({ length: count }, (_, index) => available[(offset + index) % available.length]);
+  const lostIds = new Set(lost.map((resident) => resident.id));
+  settlement.residents = settlement.residents.filter((resident) => !lostIds.has(resident.id));
+  expedition.crewIds = expedition.crewIds.filter((id) => !lostIds.has(id));
+  expedition.casualties = (expedition.casualties ?? 0) + lost.length;
+  for (const building of settlement.buildings) building.workers = building.workers.filter((id) => !lostIds.has(id));
+  for (const transport of settlement.transports) {
+    if (!transport.haulerId || !lostIds.has(transport.haulerId)) continue;
+    transport.haulerId = undefined;
+    transport.state = 'WAITING';
+    transport.progress = 0;
+  }
+  return lost.map((resident) => resident.name);
+}
+
+function loseFleetVessel(ships: Ship[], expedition: StrategicExpedition): string | undefined {
+  const candidates = ships
+    .filter((ship) => expedition.shipIds.includes(ship.id) && !ship.isFlagship)
+    .sort((a, b) => a.hull / a.stats.hullMax - b.hull / b.stats.hullMax);
+  const lost = candidates[0];
+  if (!lost) return undefined;
+  ships.splice(ships.findIndex((ship) => ship.id === lost.id), 1);
+  expedition.shipIds = expedition.shipIds.filter((id) => id !== lost.id);
+  expedition.lostShipNames = [...(expedition.lostShipNames ?? []), lost.name];
+  return lost.name;
+}
+
 function expeditionLoot(expedition: StrategicExpedition, state: SettlementSimulationState): PartialSettlementInventory {
   const random = mulberry32(hashString(expedition.id));
   const zone = ZONES[expedition.zoneId];
@@ -138,13 +206,15 @@ export function advanceExpeditions(
       const firstResolved = expedition.log.some((entry) => entry.startsWith('사건 1 해결'));
       const secondResolved = expedition.log.some((entry) => entry.startsWith('사건 2 해결'));
       if (expedition.routeProgress >= 0.32 && !firstResolved) {
+        const event = selectExpeditionEvent(expedition, 1);
         expedition.state = 'EVENT';
-        expedition.currentEventId = expedition.risk > 55 ? 'naval-patrol' : 'merchant-sails';
-        expedition.log.push(expedition.currentEventId === 'naval-patrol' ? '왕실 순찰함이 바람 위쪽에서 접근한다.' : '깃발을 내린 상선이 망원경에 잡혔다.');
+        expedition.currentEventId = event.id;
+        expedition.log.push(event.description);
       } else if (expedition.routeProgress >= 0.66 && !secondResolved) {
+        const event = selectExpeditionEvent(expedition, 2);
         expedition.state = 'EVENT';
-        expedition.currentEventId = expedition.zoneId === 'storm-reach' ? 'black-squall' : 'uncharted-island';
-        expedition.log.push(expedition.currentEventId === 'black-squall' ? '검은 돌풍이 함대를 집어삼킨다.' : '해도에 없는 섬에서 불빛이 보인다.');
+        expedition.currentEventId = event.id;
+        expedition.log.push(event.description);
       } else if (expedition.routeProgress >= 1) {
         const earned = expeditionLoot(expedition, settlement);
         for (const [id, cargo] of Object.entries(earned) as [SettlementResourceId, number][]) expedition.cargo[id] = (expedition.cargo[id] ?? 0) + cargo;
@@ -181,20 +251,37 @@ export function resolveExpeditionEvent(
   const expedition = settlement.expeditions.find((item) => item.id === expeditionId);
   if (!expedition || expedition.state !== 'EVENT') return { settlement: input, ships };
   const eventNumber = expedition.routeProgress < 0.6 ? 1 : 2;
+  const event = expeditionEvent(expedition.currentEventId);
   if (choice === 'cautious') {
-    expedition.routeProgress = Math.max(0, expedition.routeProgress - 0.04);
-    expedition.morale = Math.min(100, expedition.morale + 2);
-    expedition.log.push(`사건 ${eventNumber} 해결 · 돛을 줄이고 안전한 항로를 택했다.`);
+    expedition.routeProgress = Math.max(0, expedition.routeProgress - (event?.kind === 'weather' || event?.kind === 'hazard' ? 0.07 : 0.04));
+    expedition.morale = Math.min(100, expedition.morale + (event?.kind === 'social' ? 4 : 2));
+    expedition.log.push(`사건 ${eventNumber} 해결 · ${event?.kind === 'social' ? '선원들의 말을 듣고 질서를 회복했다.' : '돛을 줄이고 안전한 항로를 택했다.'}`);
   } else if (choice === 'bold') {
-    const damage = Math.max(3, Math.round(expedition.risk * 0.22));
+    const damageFactor = event?.kind === 'weather' || event?.kind === 'hazard' ? 0.3 : 0.2;
+    const damage = Math.max(3, Math.round(expedition.risk * damageFactor));
     for (const ship of nextShips.filter((item) => expedition.shipIds.includes(item.id))) ship.hull = Math.max(1, ship.hull - damage);
     expedition.cargo['royal-coins'] = (expedition.cargo['royal-coins'] ?? 0) + Math.ceil(expedition.risk * 0.8);
+    if (event?.kind === 'discovery') expedition.cargo['rare-blueprints'] = (expedition.cargo['rare-blueprints'] ?? 0) + 1;
+    if (event?.id === 'floating-arsenal') {
+      expedition.cargo.cannonballs = (expedition.cargo.cannonballs ?? 0) + 18;
+      expedition.cargo['powder-kegs'] = (expedition.cargo['powder-kegs'] ?? 0) + 4;
+    }
+    const casualtyNames = event && ['weather', 'hazard'].includes(event.kind) && expedition.risk >= 48
+      ? applyPermanentCrewLoss(settlement, expedition, Math.max(1, Math.floor(expedition.crewIds.length * 0.04)), `${event.id}:bold`)
+      : [];
     expedition.morale = Math.max(0, expedition.morale - 3);
-    expedition.log.push(`사건 ${eventNumber} 해결 · 위험을 돌파해 왕실 금화와 정보를 빼앗았다. 선체 피해 ${damage}.`);
+    expedition.log.push(`사건 ${eventNumber} 해결 · 위험을 돌파해 전리품과 정보를 확보했다. 선체 피해 ${damage}${casualtyNames.length ? `, 전사 ${casualtyNames.length}명` : ''}.`);
   } else {
-    expedition.cargo.spices = (expedition.cargo.spices ?? 0) + 3;
-    expedition.cargo.wine = (expedition.cargo.wine ?? 0) + 2;
-    expedition.log.push(`사건 ${eventNumber} 해결 · 거짓 깃발과 거래로 향신료와 포도주를 얻었다.`);
+    if (event?.kind === 'weather' || event?.kind === 'hazard') {
+      expedition.routeProgress = Math.max(0, expedition.routeProgress - 0.025);
+      expedition.cargo['navigation-tools'] = (expedition.cargo['navigation-tools'] ?? 0) + 1;
+      expedition.log.push(`사건 ${eventNumber} 해결 · 현지 도선사에게 금화를 약속하고 위험 수역을 빠져나왔다.`);
+    } else {
+      expedition.cargo.spices = (expedition.cargo.spices ?? 0) + 3;
+      expedition.cargo.wine = (expedition.cargo.wine ?? 0) + 2;
+      if (event?.id === 'distress-flare') expedition.morale = Math.min(100, expedition.morale + 8);
+      expedition.log.push(`사건 ${eventNumber} 해결 · 거짓 깃발과 협상으로 교역품과 현지 정보를 얻었다.`);
+    }
   }
   expedition.currentEventId = undefined;
   expedition.state = 'TRAVELING';
@@ -209,7 +296,7 @@ export function beginExpeditionCombat(
   const settlement = structuredClone(input);
   const nextShips = structuredClone(ships);
   const expedition = settlement.expeditions.find((item) => item.id === expeditionId);
-  if (!expedition || expedition.state !== 'EVENT' || !['naval-patrol', 'merchant-sails'].includes(expedition.currentEventId ?? '')) {
+  if (!expedition || expedition.state !== 'EVENT' || expeditionEvent(expedition.currentEventId)?.kind !== 'combat') {
     return { settlement: input, ships, ok: false, reason: '전술 해전을 시작할 수 있는 조우가 아닙니다.' };
   }
   const fleet = nextShips.filter((ship) => expedition.shipIds.includes(ship.id));
@@ -334,9 +421,12 @@ export function resolveExpeditionCombatTurn(
   combat.log.push(`적의 응사로 함대 선체 ${enemyDamage} 피해.`);
   combat.turn += 1;
   if (combat.playerHull <= combat.playerHullMax * 0.12) {
+    const lostVessel = loseFleetVessel(nextShips, expedition);
+    const lostCrew = applyPermanentCrewLoss(settlement, expedition, Math.max(1, Math.ceil(expedition.crewIds.length * (0.08 + expedition.risk / 500))), 'combat-defeat');
+    for (const id of Object.keys(expedition.cargo) as SettlementResourceId[]) expedition.cargo[id] = Math.floor((expedition.cargo[id] ?? 0) * 0.6);
     expedition.state = 'RETURNING'; expedition.routeProgress = 0; expedition.currentEventId = undefined; expedition.combat = undefined;
     expedition.morale = Math.max(0, expedition.morale - 18);
-    expedition.log.push('함대가 붕괴 직전에서 전장을 이탈했다.');
+    expedition.log.push(`함대가 붕괴 직전에서 전장을 이탈했다. ${lostVessel ? `${lostVessel} 침몰 · ` : ''}전사·실종 ${lostCrew.length}명 · 화물 40% 유실.`);
     return { settlement, ships: nextShips, outcome: 'defeat' };
   }
   if (combat.turn > 14) {

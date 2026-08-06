@@ -16,6 +16,6 @@
 
 <nav class="game-nav" aria-label="주요 화면">
   {#each items as item}
-    <button class:active={screen === item.screen} class="nav-item" onclick={() => onNavigate(item.screen)}><span>{item.icon}</span>{item.label}</button>
+    <button class:active={screen === item.screen} class="nav-item" aria-current={screen === item.screen ? 'page' : undefined} onclick={() => onNavigate(item.screen)}><span aria-hidden="true">{item.icon}</span>{item.label}</button>
   {/each}
 </nav>

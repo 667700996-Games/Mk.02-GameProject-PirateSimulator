@@ -49,13 +49,15 @@ export function createIslandMap(seed: number, width = 24, height = 18): IslandMa
         terrain = elevation >= 4 ? 'highland' : elevation >= 2 ? 'slope' : 'plain';
       }
       if (coastDistance < 0.72 && hash(seed + 19, x, y) > 0.66 && elevation < 3) terrain = 'forest';
+      if (coastDistance < 0.76 && coastDistance > 0.5 && elevation <= 1 && hash(seed + 29, x, y) > 0.91) terrain = 'wetland';
       if (coastDistance < 0.6 && hash(seed + 37, x, y) > 0.91) terrain = 'stone-deposit';
       if (coastDistance < 0.52 && hash(seed + 71, x, y) > 0.94) terrain = 'iron-vein';
       if (coastDistance < 0.5 && hash(seed + 101, x, y) > 0.965) terrain = 'copper-vein';
       if (elevation >= 3 && y > 4 && y < 9 && hash(seed + 83, x, y) > 0.72) terrain = 'cliff';
+      if (elevation >= 3 && hash(seed + 97, x, y) > 0.955) terrain = 'cave';
       if (coastDistance < 0.64 && hash(seed + 113, x, y) > 0.965) terrain = 'ravine';
       const resourceRemaining = ['forest', 'stone-deposit', 'iron-vein', 'copper-vein'].includes(terrain) ? 140 + Math.floor(hash(seed + 149, x, y) * 180) : undefined;
-      tiles.push({ x, y, terrain, elevation, discovered: distance < 0.9, fertility: terrain === 'plain' ? 60 + Math.floor(hash(seed + 7, x, y) * 35) : 0, resourceRemaining });
+      tiles.push({ x, y, terrain, elevation, discovered: distance < 0.62, fertility: terrain === 'plain' ? 60 + Math.floor(hash(seed + 7, x, y) * 35) : 0, resourceRemaining });
     }
   }
 
@@ -71,6 +73,8 @@ export function createIslandMap(seed: number, width = 24, height = 18): IslandMa
   set(16, 5, 'iron-vein', 3);
   for (let x = 8; x <= 13; x += 1) set(x, 6, 'cliff', 3);
   for (let x = 8; x <= 13; x += 1) set(x, 5, 'highland', 4);
+  set(18, 6, 'cave', 3);
+  set(5, 12, 'wetland', 0);
   return { seed, width, height, tiles };
 }
 
@@ -128,6 +132,7 @@ export function createInitialSettlement(seed: number, now = Date.now()): Settlem
     policies: { active: { loot: 'equal-shares', labor: 'free-labor', food: 'equal-rations', prisoners: 'ransom', diplomacy: 'smuggler-favor' } },
     threat: { active: false, source: 'red-tide', discovered: false, strength: 0, etaHours: 0, fleetDescription: '' },
     warnings: [],
+    residentUpdateCursor: 0,
     overlay: 'none',
     statistics: { produced: {}, consumed: {}, delivered: {}, lost: {}, completedBuildings: 0, cacheHits: 0, cacheMisses: 0 },
     tutorialStep: 0,

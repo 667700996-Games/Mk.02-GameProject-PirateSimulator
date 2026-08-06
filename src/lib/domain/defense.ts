@@ -7,15 +7,49 @@ import { spendSettlementResources } from '$lib/settlement/construction';
 import { creditGameResources, spendGameResources } from '$lib/settlement/economyBridge';
 import { settlementSummary } from '$lib/settlement/summary';
 import type { PartialSettlementInventory, SettlementSimulationState } from '$lib/settlement/types';
+import { createId } from './rng';
 
 export type PreparationAction = 'muster' | 'powder' | 'barricades' | 'evacuate';
 export type NavalAction = 'crossfire' | 'fleet-charge' | 'fire-ships';
 export type LandingAction = 'beach-ambush' | 'hold-walls' | 'counterattack';
 export type InteriorAction = 'last-stand' | 'powder-trap' | 'organized-retreat';
 
+export function lureRivalFleet(state: GameState, now = Date.now()): GameState {
+  if (state.defense.active || state.settlement.threat.active) return state;
+  const paid = spendGameResources(state, { gold: 80, rum: 4 });
+  if (!paid) return state;
+  return {
+    ...paid,
+    screen: 'haven',
+    previousScreen: state.screen,
+    haven: { ...paid.haven, raidThreat: 100 },
+    settlement: {
+      ...paid.settlement,
+      threat: { active: true, source: 'red-tide', discovered: true, strength: 92, etaHours: 0, fleetDescription: '유인 신호를 쫓는 붉은 파도 무장 브리그' }
+    },
+    toasts: [...paid.toasts.slice(-3), { id: createId('toast'), kind: 'danger', title: '검은 미끼 작전', detail: '럼주와 거짓 해도를 흘려 붉은 파도 함대를 방어 수역으로 유인했습니다.', createdAt: now }]
+  };
+}
+
+export function tickDefenseCountdown(state: GameState, realSeconds: number): GameState {
+  if (!state.defense.active || !['warning', 'preparation'].includes(state.defense.stage) || realSeconds <= 0) return state;
+  const timeToAttack = Math.max(0, state.defense.timeToAttack - realSeconds);
+  const counted = { ...state, defense: { ...state.defense, timeToAttack } };
+  if (timeToAttack > 0) return counted;
+  const prepared = counted.defense.stage === 'warning' ? beginDefensePreparation(counted) : counted;
+  const launched = launchDefense(prepared);
+  return {
+    ...launched,
+    defense: {
+      ...launched.defense,
+      log: [...(launched.defense.log ?? []), '준비 시간이 끝났다. 남은 수비대가 즉시 포문을 열었다.']
+    }
+  };
+}
+
 export function beginDefensePreparation(state: GameState): GameState {
   if (!state.defense.active || state.defense.stage !== 'warning') return state;
-  return { ...state, defense: { ...state.defense, stage: 'preparation', attackerRemaining: state.defense.attackStrength, preparation: 0, civilianRisk: 55, selectedActions: [], log: [...(state.defense.log ?? []), `${attackerName(state)} 함대가 만 입구로 접근한다.`] } };
+  return { ...state, defense: { ...state.defense, stage: 'preparation', attackerRemaining: state.defense.attackStrength, preparation: 0, civilianRisk: 55, selectedActions: [], losses: state.defense.losses ?? { wounded: 0, killed: 0, shipsLost: 0 }, log: [...(state.defense.log ?? []), `${attackerName(state)} 함대가 만 입구로 접근한다.`] } };
 }
 
 export function prepareDefense(state: GameState, action: PreparationAction): GameState {
@@ -85,13 +119,23 @@ export function resolveLandingStage(state: GameState, action: LandingAction, ran
   const damage = Math.max(5, Math.round(fighterPower * (.58 + random() * .35)));
   const attackerRemaining = Math.max(0, remaining - damage);
   const wallProtection = Math.min(.38, state.settlement.buildings.filter((building) => building.definitionId === 'fort-wall' && building.state === 'ACTIVE').reduce((sum, wall) => sum + wall.level * wall.condition / 2500, 0));
-  const casualties = Math.round(remaining * choice.casualty * (.18 + random() * .34) * (1 - wallProtection));
-  const injured = new Set(state.settlement.residents.filter((resident) => ['guard', 'gunner', 'raider'].includes(resident.job)).slice(0, casualties).map((resident) => resident.id));
-  const settlement = { ...state.settlement, residents: state.settlement.residents.map((resident) => injured.has(resident.id) ? { ...resident, health: Math.max(1, resident.health - 45), morale: Math.max(0, resident.morale - 12) } : resident) };
-  const haven = { ...state.haven, population: Math.max(1, state.haven.population - casualties), morale: clamp(state.haven.morale + (attackerRemaining <= 0 ? 8 : -6), 0, 100), populationByRole: { ...state.haven.populationByRole, fighters: Math.max(0, state.haven.populationByRole.fighters - casualties) } };
   const civilianRisk = clamp((state.defense.civilianRisk ?? 50) + choice.civilian, 0, 100);
-  if (attackerRemaining <= 0) return finishDefense({ ...state, settlement, haven, defense: { ...state.defense, attackerRemaining, civilianRisk, log: [...(state.defense.log ?? []), choice.label, '상륙대가 해변에서 무너졌다.'] } }, true);
-  return { ...state, settlement, haven, defense: { ...state.defense, stage: 'interior', attackerRemaining, civilianRisk, selectedActions: [...(state.defense.selectedActions ?? []), action], log: [...(state.defense.log ?? []), choice.label, '남은 적이 부두를 넘어 본거지 내부로 침투했다.'] } };
+  const casualties = Math.round(remaining * choice.casualty * (.18 + random() * .34) * (1 - wallProtection));
+  const fatalityRate = clamp(.08 + civilianRisk / 500, .08, .32);
+  const lossResult = applyResidentLosses(state.settlement, casualties, fatalityRate, random, true);
+  const settlement = lossResult.settlement;
+  const losses = mergeLosses(state, lossResult.wounded, lossResult.killed);
+  const haven = {
+    ...state.haven,
+    population: settlement.residents.length,
+    morale: clamp(state.haven.morale + (attackerRemaining <= 0 ? 8 : -6), 0, 100),
+    populationByRole: {
+      ...state.haven.populationByRole,
+      fighters: settlement.residents.filter((resident) => ['guard', 'gunner', 'raider'].includes(resident.job)).length
+    }
+  };
+  if (attackerRemaining <= 0) return finishDefense({ ...state, settlement, haven, defense: { ...state.defense, losses, attackerRemaining, civilianRisk, log: [...(state.defense.log ?? []), choice.label, '상륙대가 해변에서 무너졌다.'] } }, true);
+  return { ...state, settlement, haven, defense: { ...state.defense, losses, stage: 'interior', attackerRemaining, civilianRisk, selectedActions: [...(state.defense.selectedActions ?? []), action], log: [...(state.defense.log ?? []), choice.label, lossResult.killed > 0 ? `수비대 ${lossResult.killed}명이 전사하고 ${lossResult.wounded}명이 부상했다.` : `${lossResult.wounded}명의 수비대가 부상했다.`, '남은 적이 부두를 넘어 본거지 내부로 침투했다.'] } };
 }
 
 export function resolveInteriorStage(state: GameState, action: InteriorAction, random: () => number = Math.random): GameState {
@@ -108,15 +152,23 @@ export function resolveInteriorStage(state: GameState, action: InteriorAction, r
   const resourceDamage = victory ? Math.round(remaining * choice.damage * .2) : Math.round(remaining * choice.damage + 35);
   const civilianRisk = clamp((state.defense.civilianRisk ?? 50) + choice.civilian, 0, 100);
   const facilities = damageFacilities(state, victory ? Math.ceil(resourceDamage / 12) : Math.ceil(resourceDamage / 5));
-  const settlement = damageSettlementBuildings(state.settlement, victory ? Math.ceil(resourceDamage / 14) : Math.ceil(resourceDamage / 6));
+  let settlement = damageSettlementBuildings(state.settlement, victory ? Math.ceil(resourceDamage / 14) : Math.ceil(resourceDamage / 6));
+  const interiorCasualties = Math.min(
+    Math.max(0, settlement.residents.length - 1),
+    Math.round(remaining * (victory ? .025 : .075) * (0.45 + civilianRisk / 100))
+  );
+  const interiorLosses = applyResidentLosses(settlement, interiorCasualties, victory ? .12 : .28, random, false);
+  settlement = interiorLosses.settlement;
   const loss = { gold: Math.min(state.resources.gold, resourceDamage * 4), food: Math.min(state.resources.food, Math.ceil(resourceDamage * .45)), timber: Math.min(state.resources.timber, Math.ceil(resourceDamage * .3)), powder: Math.min(state.resources.powder, Math.ceil(resourceDamage * .12)) };
   const damagedState = { ...state, settlement };
   const paid = spendGameResources(damagedState, loss) ?? damagedState;
-  const prepared = { ...paid, haven: { ...paid.haven, facilities }, defense: { ...paid.defense, attackerRemaining: victory ? 0 : remaining, civilianRisk, log: [...(paid.defense.log ?? []), choice.label] } };
+  const losses = mergeLosses(paid, interiorLosses.wounded, interiorLosses.killed);
+  const prepared = { ...paid, haven: { ...paid.haven, population: settlement.residents.length, facilities }, defense: { ...paid.defense, losses, attackerRemaining: victory ? 0 : remaining, civilianRisk, log: [...(paid.defense.log ?? []), choice.label, interiorLosses.killed > 0 ? `내부 전투에서 ${interiorLosses.killed}명이 목숨을 잃었다.` : '주민 대피로 추가 사망을 피했다.'] } };
   return finishDefense(prepared, victory);
 }
 
 function finishDefense(state: GameState, victory: boolean): GameState {
+  const losses = state.defense.losses ?? { wounded: 0, killed: 0, shipsLost: 0 };
   let next: GameState = {
     ...state,
     defense: {
@@ -124,14 +176,63 @@ function finishDefense(state: GameState, victory: boolean): GameState {
       active: false,
       stage: 'resolved',
       outcome: victory ? 'victory' : 'defeat',
-      damage: victory ? ['해안 방어선 일부 손상', '부상자 치료 필요'] : ['창고 약탈', '시설 파손', '주민 이탈'],
+      damage: victory
+        ? ['해안 방어선 일부 손상', `부상 ${losses.wounded}명`, `전사 ${losses.killed}명`]
+        : ['창고 약탈', '시설 파손', `부상 ${losses.wounded}명 · 사망·이탈 ${losses.killed}명`],
       reward: victory ? { gold: Math.round(state.defense.attackStrength * 2.2), iron: Math.max(2, Math.round(state.defense.attackStrength / 35)) } : {}
     },
     haven: { ...state.haven, raidThreat: 0, morale: clamp(state.haven.morale + (victory ? 12 : -18), 0, 100), order: clamp(state.haven.order + (victory ? 6 : -14), 0, 100) },
-    captain: { ...state.captain, renown: state.captain.renown + (victory ? 18 : 0) }
+    captain: { ...state.captain, renown: state.captain.renown + (victory ? 18 : 0) },
+    flags: victory ? { ...state.flags, havenDefenseWon: true } : state.flags
   };
   if (victory) next = progressMissions(next, { kind: 'haven-defended', zoneId: 'beginners-bay' });
   return next;
+}
+
+function mergeLosses(state: GameState, wounded: number, killed: number): NonNullable<GameState['defense']['losses']> {
+  const current = state.defense.losses ?? { wounded: 0, killed: 0, shipsLost: 0 };
+  return { ...current, wounded: current.wounded + wounded, killed: current.killed + killed };
+}
+
+function applyResidentLosses(
+  input: SettlementSimulationState,
+  casualties: number,
+  fatalityRate: number,
+  random: () => number,
+  defendersOnly: boolean
+): { settlement: SettlementSimulationState; wounded: number; killed: number } {
+  if (casualties <= 0) return { settlement: input, wounded: 0, killed: 0 };
+  const settlement = structuredClone(input);
+  const away = new Set(
+    settlement.expeditions
+      .filter((expedition) => !['COMPLETED', 'LOST'].includes(expedition.state))
+      .flatMap((expedition) => expedition.crewIds)
+  );
+  const candidates = settlement.residents.filter((resident) =>
+    !away.has(resident.id) && (!defendersOnly || ['guard', 'gunner', 'raider'].includes(resident.job))
+  );
+  candidates.sort((a, b) => a.health - b.health || a.id.localeCompare(b.id));
+  const affected = candidates.slice(0, Math.min(casualties, candidates.length));
+  const killedIds = new Set<string>();
+  const injuredIds = new Set<string>();
+  for (const resident of affected) {
+    if (random() < fatalityRate && settlement.residents.length - killedIds.size > 1) killedIds.add(resident.id);
+    else injuredIds.add(resident.id);
+  }
+  settlement.residents = settlement.residents
+    .filter((resident) => !killedIds.has(resident.id))
+    .map((resident) => injuredIds.has(resident.id)
+      ? { ...resident, health: Math.max(1, resident.health - 45), morale: Math.max(0, resident.morale - 12), action: 'HEALING' as const }
+      : resident);
+  for (const building of settlement.buildings) building.workers = building.workers.filter((id) => !killedIds.has(id));
+  for (const transport of settlement.transports) {
+    if (transport.haulerId && killedIds.has(transport.haulerId)) {
+      transport.haulerId = undefined;
+      transport.state = 'WAITING';
+      transport.progress = 0;
+    }
+  }
+  return { settlement, wounded: injuredIds.size, killed: killedIds.size };
 }
 
 export function claimDefenseResult(state: GameState): GameState {

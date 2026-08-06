@@ -9,6 +9,8 @@ import { advanceSettlement } from '$lib/settlement/simulation';
 import { settlementLegacyHaven, settlementLegacyResources } from '$lib/settlement/summary';
 import { advanceShipConstruction } from '$lib/settlement/shipbuilding';
 import { advanceExpeditions } from '$lib/settlement/expeditions';
+import { tickDefenseCountdown } from './defense';
+import { evaluateCampaign } from './campaign';
 
 export function advanceSimulation(state: GameState, realSeconds: number, now = Date.now()): GameState {
   if (state.paused) return state;
@@ -88,5 +90,5 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
       toasts: [...next.toasts, { id: createId('toast'), kind: 'danger', title: '본거지 공격 경보', detail: '감시탑이 수평선 위의 적 함대를 발견했습니다.', createdAt: now }]
     };
   }
-  return next;
+  return evaluateCampaign(tickDefenseCountdown(next, realSeconds), now);
 }
