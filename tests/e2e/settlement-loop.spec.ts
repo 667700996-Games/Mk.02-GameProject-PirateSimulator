@@ -28,7 +28,12 @@ async function createSettlement(page: import('@playwright/test').Page): Promise<
     )
   ]);
   await page.getByRole('button', { name: /검은 깃발을 올린다/ }).click();
-  for (const response of await atlasResponses) expect(response.ok()).toBe(true);
+  for (const response of await atlasResponses) {
+    expect(
+      response.ok() || response.status() === 304,
+      `${response.url()} returned ${response.status()}`
+    ).toBe(true);
+  }
   await expect(page.getByTestId('settlement-screen')).toBeVisible();
   await expect(page.locator('.settlement-host canvas')).toBeVisible({ timeout: 15_000 });
 }

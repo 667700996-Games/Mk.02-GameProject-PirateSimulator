@@ -77,13 +77,14 @@ npm run preview
 - 미탐사 지형과 자원을 감추는 전장의 안개, 작업자가 배치된 감시탑·신호탑·정보망의 시간당 정찰
 - Phaser 3 아이소메트릭 렌더링, 절벽 측면, 파도, 해변 포말, 습지·동굴·협곡 실루엣, 날씨, 낮과 밤, 굴뚝 연기, 공사 가설물, 부두·포대 실루엣
 - 수면·암초·해변·평지·숲·경사·절벽·고지대·동굴·협곡·습지·3종 광맥까지 15개 지형을 빠짐없이 연결한 프로젝트 전용 아이소메트릭 표면 아틀라스
+- 초기 생존·항만 12종, 산업 9종, 주거·복지·군수·행정 9종을 합친 30종 전용 건물 본체 프레임과 건물별 다중 아틀라스 라우팅
 - 건설 비계·확장 도르래·2단계 보급 장식·3단계 요새 장식·피해 잔해·중단 현장을 실제 건물 외곽에 합성하는 6종 성장·상태 아틀라스
 - 지형·고도·점유 면적·해금 조건을 검사하는 회전형 건물 배치
 - 채집·가공·물류·주거·복지·함대·군사·행정·수직 기반시설 카테고리의 데이터 기반 건물 50종 이상
 - 기초·가공·생활·군수·고급·특수 전리품을 포함한 자원 69종과 확장 가능한 생산법 카탈로그
 - 출발지·도착지·예약 수량·A* 경로·운반자·픽업·배송 상태가 있는 실제 화물 작업과, 건물 점유·미탐사 구역·교량·혼잡·날씨를 반영하는 이동 비용
 - 생산 입력 부족, 출력 포화, 운반 대기, 인력 부족, 천연자원 고갈을 구분하는 병목 상태
-- 이름·계층·직업·집·직장·건강·사기·충성·피로·경험·욕구·행동·이동 경로를 가진 개별 주민과, 13개 행동별 보행·운반·작업·훈련·방어 미세 동작 및 상태 표식
+- 이름·계층·직업·집·직장·건강·사기·충성·피로·경험·욕구·행동·이동 경로를 가진 개별 주민, 8개 역할별 전·후면 프레임, 화면 이동 방향 전환과 13개 행동별 보행·운반·작업·훈련·방어 미세 동작 및 상태 표식
 - 화면 밖 주민 갱신 축소와 최대 표시 수 제한을 이용한 주민 LOD
 - 자동 노동 배치와 직업별 최소·최대 인원, 우선순위, 숙련자 우선 규칙
 - 시간별 식수·식량 소비, 주거 배치, 사기·충성 변화, 계층 상승과 조건부 이주
@@ -171,7 +172,7 @@ npm run validate    # check + lint + unit + build
 npm run test:coverage # 핵심 도메인 커버리지 임계치 검증
 ```
 
-자동 테스트는 지형 배치, 15종 지형 아틀라스, 6종 건물 성장·상태 아틀라스, 13개 주민 행동 모션, 실제 PNG 응답, 점유·미탐사 경로, 혼잡, 수직 이동 비용, 공사 자재 운송, 건설 완료, 예약 화물 보호, 시설 확장, 생산·욕구·복지·계층 상승, 통치 정책, 함선 건조, 원정 사건과 영구 손실, 임무·보상의 단일 경제, 실시간 기함 출격과 함선 아틀라스, 방어 카운트다운·사상자, 캠페인 승리, 저장 v1→v4 마이그레이션·무결성·복구를 검증합니다. 현재 20개 파일의 Vitest 81개와 5개 브라우저/기기 프로젝트의 Playwright 45개가 품질 게이트에 포함됩니다. GitHub Actions는 타입·린트·상향된 커버리지·빌드·전체 브라우저 행렬을 강제합니다.
+자동 테스트는 지형 배치, 15종 지형 아틀라스, 30종 건물 본체 라우팅, 6종 건물 성장·상태 아틀라스, 8개 주민 역할의 전·후면 방향 전환, 13개 주민 행동 모션, 실제 PNG 응답, 점유·미탐사 경로, 혼잡, 수직 이동 비용, 공사 자재 운송, 건설 완료, 예약 화물 보호, 시설 확장, 생산·욕구·복지·계층 상승, 통치 정책, 함선 건조, 원정 사건과 영구 손실, 임무·보상의 단일 경제, 실시간 기함 출격과 함선 아틀라스, 방어 카운트다운·사상자, 캠페인 승리, 저장 v1→v4 마이그레이션·무결성·복구를 검증합니다. 현재 20개 파일의 Vitest 84개와 5개 브라우저/기기 프로젝트의 Playwright 45개가 품질 게이트에 포함됩니다. GitHub Actions는 타입·린트·상향된 커버리지·빌드·전체 브라우저 행렬을 강제합니다.
 
 ## 웹 앱·접근성
 
@@ -186,4 +187,4 @@ npm run test:coverage # 핵심 도메인 커버리지 임계치 검증
 
 ## 원본 아트
 
-타이틀과 본거지 키 아트는 이 프로젝트를 위해 만든 원본 자산인 [`static/art/pirate-haven-keyart.png`](static/art/pirate-haven-keyart.png)를 재사용합니다. 군도 해도는 이 세계관을 위해 새로 제작한 [`static/art/archipelago-command-map.webp`](static/art/archipelago-command-map.webp)입니다. 아이소메트릭 건물과 주민은 [`static/art/settlement/`](static/art/settlement/), 지형은 [`static/art/settlement/terrain-surfaces-atlas-v2.png`](static/art/settlement/terrain-surfaces-atlas-v2.png), 건물 성장·상태 장식은 [`static/art/settlement/building-progression-overlays-atlas.png`](static/art/settlement/building-progression-overlays-atlas.png), 9개 함선 등급은 [`static/art/naval/fleet-classes-atlas.png`](static/art/naval/fleet-classes-atlas.png)의 프로젝트 전용 아틀라스를 사용합니다. 절벽 측면, 자원·환경 실루엣, 물류선, 날씨, 주민 미세 동작, 항적, 포연, 피격·화재·침수·침몰 효과는 CSS와 Phaser 코드로 절차 렌더링합니다. 자산 생성·편집 프롬프트와 처리 근거는 [`docs/art-generation-provenance.md`](docs/art-generation-provenance.md)에 기록했습니다. 특정 상용 게임의 이미지·UI·명칭을 복제하지 않습니다.
+타이틀과 본거지 키 아트는 이 프로젝트를 위해 만든 원본 자산인 [`static/art/pirate-haven-keyart.png`](static/art/pirate-haven-keyart.png)를 재사용합니다. 군도 해도는 이 세계관을 위해 새로 제작한 [`static/art/archipelago-command-map.webp`](static/art/archipelago-command-map.webp)입니다. 아이소메트릭 건물과 주민은 [`static/art/settlement/`](static/art/settlement/) 아래의 핵심·산업·사회 건물 본체와 주민 전·후면 아틀라스, 지형은 [`static/art/settlement/terrain-surfaces-atlas-v2.png`](static/art/settlement/terrain-surfaces-atlas-v2.png), 건물 성장·상태 장식은 [`static/art/settlement/building-progression-overlays-atlas.png`](static/art/settlement/building-progression-overlays-atlas.png), 9개 함선 등급은 [`static/art/naval/fleet-classes-atlas.png`](static/art/naval/fleet-classes-atlas.png)의 프로젝트 전용 아틀라스를 사용합니다. 절벽 측면, 자원·환경 실루엣, 물류선, 날씨, 주민 미세 동작, 항적, 포연, 피격·화재·침수·침몰 효과는 CSS와 Phaser 코드로 절차 렌더링합니다. 자산 생성·편집 프롬프트와 처리 근거는 [`docs/art-generation-provenance.md`](docs/art-generation-provenance.md)에 기록했습니다. 특정 상용 게임의 이미지·UI·명칭을 복제하지 않습니다.

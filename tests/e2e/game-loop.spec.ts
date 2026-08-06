@@ -1,5 +1,15 @@
 import { expect, test } from '@playwright/test';
 
+function expectPngResponse(response: import('@playwright/test').Response): void {
+  expect(
+    response.ok() || response.status() === 304,
+    `${response.url()} returned ${response.status()}`
+  ).toBe(true);
+  if (response.status() !== 304) {
+    expect(response.headers()['content-type']).toContain('image/png');
+  }
+}
+
 async function createCaptain(page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: '새로운 전설 시작' }).click();
@@ -62,8 +72,7 @@ test('creates a pirate settlement and opens every core management surface', asyn
   const terrainAtlasResponse = page.waitForResponse((response) => response.url().endsWith('/art/settlement/terrain-surfaces-atlas-v2.png'));
   await createCaptain(page);
   const terrainAtlas = await terrainAtlasResponse;
-  expect(terrainAtlas.ok()).toBe(true);
-  expect(terrainAtlas.headers()['content-type']).toContain('image/png');
+  expectPngResponse(terrainAtlas);
   if (!(await page.getByRole('heading', { name: '도시 건설' }).isVisible())) {
     await page.getByRole('button', { name: '건설 메뉴 열기' }).click();
   }
@@ -109,8 +118,7 @@ test('launches the restored flagship into the class-specific real-time naval the
   const atlasResponse = page.waitForResponse((response) => response.url().endsWith('/art/naval/fleet-classes-atlas.png'));
   await sortie.click();
   const atlas = await atlasResponse;
-  expect(atlas.ok()).toBe(true);
-  expect(atlas.headers()['content-type']).toContain('image/png');
+  expectPngResponse(atlas);
 
   await expect(page.getByTestId('sea-screen')).toBeVisible();
   await expect(page.locator('[data-testid="naval-canvas-host"] canvas')).toBeVisible({ timeout: 15_000 });
