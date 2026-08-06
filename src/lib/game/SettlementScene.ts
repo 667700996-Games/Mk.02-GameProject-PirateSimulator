@@ -1,8 +1,17 @@
 import Phaser from 'phaser';
 import { BUILDINGS, SETTLEMENT_RESOURCES } from '$lib/settlement/catalog';
+import type { BuildingDefinition } from '$lib/settlement/catalog';
 import { buildingCells, tileAt, validatePlacement } from '$lib/settlement/island';
 import type { SettlementBuilding, SettlementBuildingId, SettlementOverlay, SettlementSimulationState, TerrainType } from '$lib/settlement/types';
 import type { GameSettings } from '$lib/domain/types';
+import {
+  CORE_BUILDING_ART,
+  CORE_BUILDING_ATLAS_DATA,
+  CORE_BUILDING_ATLAS_IMAGE,
+  CORE_BUILDING_ATLAS_KEY,
+  coreBuildingDisplayHeight,
+  type CoreBuildingArt
+} from './settlementArt';
 
 export interface SettlementSceneBridge {
   getState: () => SettlementSimulationState;
@@ -43,6 +52,7 @@ export class SettlementScene extends Phaser.Scene {
   private overlayLayer!: Phaser.GameObjects.Container;
   private weatherLayer!: Phaser.GameObjects.Container;
   private preview!: Phaser.GameObjects.Graphics;
+  private previewSprite!: Phaser.GameObjects.Image;
   private buildTool?: SettlementBuildingId;
   private movingBuildingId?: string;
   private rotation: 0 | 1 | 2 | 3 = 0;
@@ -66,6 +76,12 @@ export class SettlementScene extends Phaser.Scene {
     this.snapshot = this.bridge.getState();
   }
 
+  preload(): void {
+    if (!this.textures.exists(CORE_BUILDING_ATLAS_KEY)) {
+      this.load.atlas(CORE_BUILDING_ATLAS_KEY, CORE_BUILDING_ATLAS_IMAGE, CORE_BUILDING_ATLAS_DATA);
+    }
+  }
+
   create(): void {
     this.cameras.main.setBackgroundColor('#041820');
     this.cameras.main.setBounds(0, 0, 2200, 1450);
@@ -77,6 +93,7 @@ export class SettlementScene extends Phaser.Scene {
     this.overlayLayer = this.add.container(0, 0).setDepth(300);
     this.weatherLayer = this.add.container(0, 0).setDepth(500);
     this.preview = this.add.graphics().setDepth(450);
+    this.previewSprite = this.add.image(0, 0, CORE_BUILDING_ATLAS_KEY, 'wreckage').setDepth(451).setVisible(false);
     this.drawOceanAtmosphere();
     this.drawTerrain();
     this.drawDynamicLayers(true);
@@ -229,6 +246,12 @@ export class SettlementScene extends Phaser.Scene {
     const scale = Math.max(0.85, Math.min(1.5, (width + height) / 3));
     const container = this.add.container(point.x, point.y - 12).setDepth(100 + building.x + building.y);
     const selected = building.id === this.selectedBuildingId;
+    const texturedArt = CORE_BUILDING_ART[building.definitionId];
+    if (texturedArt && this.textures.exists(CORE_BUILDING_ATLAS_KEY)) {
+      this.drawTexturedBuilding(container, building, definition, texturedArt, selected);
+      this.buildingLayer.add(container);
+      return;
+    }
     const shadow = this.add.ellipse(2, 14, 48 * scale, 18 * scale, 0x031013, 0.6);
     const baseColor = CATEGORY_COLORS[definition.category];
     const wallColor = building.state === 'DAMAGED' ? 0x4b403a : building.state === 'BURNING' ? 0x70382e : baseColor;
@@ -321,6 +344,104 @@ export class SettlementScene extends Phaser.Scene {
       container.add(warning);
     }
     this.buildingLayer.add(container);
+  }
+
+  private drawTexturedBuilding(
+    container: Phaser.GameObjects.Container,
+    building: SettlementBuilding,
+    definition: BuildingDefinition,
+    art: CoreBuildingArt,
+    selected: boolean
+  ): void {
+    const levelScale = 1 + Math.min(0.14, Math.max(0, building.level - 1) * 0.035);
+    const displayWidth = art.displayWidth * levelScale;
+    const displayHeight = coreBuildingDisplayHeight({ ...art, displayWidth });
+    const spriteY = art.offsetY ?? 12;
+    const isBlueprint = building.state === 'PLANNED';
+    const isConstructing = building.state === 'CONSTRUCTING' || building.state === 'UPGRADING';
+
+    const shadow = this.add.ellipse(2, 17, displayWidth * 0.64, Math.max(16, displayWidth * 0.18), 0x020b0d, 0.62);
+    container.add(shadow);
+
+    if (selected) {
+      const selectionGlow = this.add.ellipse(0, 14, displayWidth * 0.82, Math.max(30, displayWidth * 0.32), 0xd8b35f, 0.14)
+        .setStrokeStyle(3, 0xf5d17e, 0.95);
+      container.add(selectionGlow);
+      if (!this.bridge.getSettings().reducedMotion) {
+        this.dynamicTweenTargets.push(selectionGlow);
+        this.tweens.add({ targets: selectionGlow, alpha: { from: 0.08, to: 0.24 }, scaleX: { from: 0.96, to: 1.04 }, duration: 920, yoyo: true, repeat: -1 });
+      }
+    }
+
+    const sprite = this.add.image(0, spriteY, CORE_BUILDING_ATLAS_KEY, art.frame)
+      .setOrigin(0.5, art.originY ?? 0.88)
+      .setDisplaySize(displayWidth, displayHeight)
+      .setAlpha(isBlueprint ? 0.42 : isConstructing ? 0.76 : 1)
+      .setFlipX(building.rotation === 1 || building.rotation === 2);
+
+    if (building.state === 'DAMAGED') sprite.setTint(0x8b7565);
+    else if (building.state === 'BURNING') sprite.setTint(0xbd6a45);
+    else if (building.state === 'BLOCKED' || building.state === 'PAUSED') sprite.setTint(0x8c9691);
+    container.add(sprite);
+
+    if (building.level > 1 && !isBlueprint) {
+      const upgradeGlow = this.add.ellipse(0, 10, displayWidth * 0.54, Math.max(14, displayWidth * 0.12), 0xe0b765, 0.07 + building.level * 0.015);
+      const pennantPole = this.add.rectangle(displayWidth * 0.22, -displayHeight * 0.48, 2, 28, 0x3c2a20, 0.92);
+      const pennant = this.add.triangle(displayWidth * 0.22 + 8, -displayHeight * 0.58, 0, 0, 17, 5, 0, 10, 0xa94c3e, 0.94);
+      container.add([upgradeGlow, pennantPole, pennant]);
+    }
+
+    if (isBlueprint || isConstructing) {
+      const scaffoldHeight = Math.max(44, displayHeight * 0.45);
+      for (let scaffold = -1; scaffold <= 1; scaffold += 1) {
+        const post = this.add.rectangle(scaffold * displayWidth * 0.25, 2 - scaffold * 2, 3, scaffoldHeight, 0xb18a52, 0.9);
+        const brace = this.add.rectangle(scaffold * displayWidth * 0.2, -8, displayWidth * 0.42, 3, 0x8f693f, 0.8).setRotation(scaffold * 0.34);
+        container.add([post, brace]);
+      }
+      const progress = Phaser.Math.Clamp(building.constructionProgress, 0, 1);
+      const trackWidth = Math.min(82, displayWidth * 0.62);
+      const track = this.add.rectangle(0, 27, trackWidth, 8, 0x081317, 0.92).setStrokeStyle(1, 0xd9b66b, 0.72);
+      const fill = this.add.rectangle(-trackWidth / 2 + 2, 27, Math.max(2, (trackWidth - 4) * progress), 4, building.state === 'UPGRADING' ? 0x70bad0 : 0xe0b25c, 1).setOrigin(0, 0.5);
+      container.add([track, fill]);
+    }
+
+    if (definition.category === 'processing' && building.state === 'ACTIVE' && !building.statusReason) {
+      const smoke = this.add.circle(displayWidth * 0.12, -displayHeight * 0.47, 6, 0xc8c1ae, 0.26);
+      container.add(smoke);
+      if (!this.bridge.getSettings().reducedMotion) {
+        this.dynamicTweenTargets.push(smoke);
+        this.tweens.add({ targets: smoke, y: smoke.y - 30, x: smoke.x + 9, alpha: 0, scale: 1.9, duration: 2500, repeat: -1 });
+      }
+    }
+
+    if (building.definitionId === 'campfire' && building.state === 'ACTIVE') {
+      const glow = this.add.circle(0, -4, 16, 0xf3a64d, 0.18).setBlendMode(Phaser.BlendModes.ADD);
+      container.add(glow);
+      if (!this.bridge.getSettings().reducedMotion) {
+        this.dynamicTweenTargets.push(glow);
+        this.tweens.add({ targets: glow, alpha: { from: 0.1, to: 0.3 }, scale: { from: 0.86, to: 1.12 }, duration: 420, yoyo: true, repeat: -1 });
+      }
+    }
+
+    if (building.state === 'BURNING') {
+      for (let index = 0; index < 3; index += 1) {
+        const fire = this.add.triangle((index - 1) * 16, -24 - (index % 2) * 9, -8, 10, 0, -14, 8, 10, index === 1 ? 0xffc052 : 0xef642d, 0.94);
+        container.add(fire);
+        if (!this.bridge.getSettings().reducedMotion) {
+          this.dynamicTweenTargets.push(fire);
+          this.tweens.add({ targets: fire, scaleX: { from: 0.72, to: 1.24 }, scaleY: { from: 0.9, to: 1.15 }, alpha: { from: 0.7, to: 1 }, duration: 220 + index * 55, yoyo: true, repeat: -1 });
+        }
+      }
+    }
+
+    if (building.statusReason) {
+      const isBlocked = building.state === 'BLOCKED';
+      const warning = this.add.container(displayWidth * 0.28, -displayHeight * 0.52);
+      const badge = this.add.circle(0, 0, 11, isBlocked ? 0x8e382d : 0x72522a, 0.98).setStrokeStyle(2, 0xf4cf7e, 0.92);
+      const mark = this.add.text(0, -1, isBlocked ? '!' : '…', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff1c4' }).setOrigin(0.5);
+      warning.add([badge, mark]);
+      container.add(warning);
+    }
   }
 
   private drawResidents(): void {
@@ -539,11 +660,13 @@ export class SettlementScene extends Phaser.Scene {
 
   private drawPreview(): void {
     this.preview?.clear();
+    this.previewSprite?.setVisible(false).clearTint();
     if ((!this.buildTool && !this.movingBuildingId) || !this.hoverTile || !this.preview) return;
     const moving = this.movingBuildingId ? this.snapshot.buildings.find((item) => item.id === this.movingBuildingId) : undefined;
     const definitionId = this.buildTool ?? moving?.definitionId;
     if (!definitionId) return;
-    const validation = validatePlacement(this.snapshot.island, this.snapshot.buildings, definitionId, this.hoverTile.x, this.hoverTile.y, moving?.rotation ?? this.rotation, moving?.id);
+    const previewRotation = moving?.rotation ?? this.rotation;
+    const validation = validatePlacement(this.snapshot.island, this.snapshot.buildings, definitionId, this.hoverTile.x, this.hoverTile.y, previewRotation, moving?.id);
     const color = validation.valid ? 0x62d39d : 0xe45549;
     this.preview.lineStyle(3, color, 0.95).fillStyle(color, 0.18);
     for (const cell of validation.cells) {
@@ -551,6 +674,20 @@ export class SettlementScene extends Phaser.Scene {
       if (!tile) continue;
       const point = this.iso(cell.x, cell.y, tile.elevation);
       this.preview.fillPoints(this.diamond(point), true).strokePoints(this.diamond(point), true);
+    }
+    const art = CORE_BUILDING_ART[definitionId];
+    const originTile = tileAt(this.snapshot.island, this.hoverTile.x, this.hoverTile.y);
+    if (art && originTile && this.previewSprite) {
+      const point = this.iso(this.hoverTile.x, this.hoverTile.y, originTile.elevation);
+      this.previewSprite
+        .setTexture(CORE_BUILDING_ATLAS_KEY, art.frame)
+        .setOrigin(0.5, art.originY ?? 0.88)
+        .setDisplaySize(art.displayWidth, coreBuildingDisplayHeight(art))
+        .setPosition(point.x, point.y + (art.offsetY ?? 12) - 12)
+        .setFlipX(previewRotation === 1 || previewRotation === 2)
+        .setAlpha(validation.valid ? 0.65 : 0.5)
+        .setTint(validation.valid ? 0x97f2c2 : 0xff7d6f)
+        .setVisible(true);
     }
   }
 }
