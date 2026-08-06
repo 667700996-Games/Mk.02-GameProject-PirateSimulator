@@ -124,6 +124,101 @@ Constraints: exactly nine buildings in the specified order; each cell contains o
 Avoid: duplicated silhouettes, modern machinery, fantasy magic, bright mobile-game cartoon colors, photorealism, top-down camera, front-facing elevation, mismatched perspectives, floating parts, black background, transparent checkerboard, borders, dividers, grid lines, magenta fringe, tiny unreadable clutter.
 ```
 
+## 8종 생산·생활 시설 본체 아틀라스
+
+- 프로젝트 자산: `static/art/settlement/livelihood-service-buildings-atlas.png`
+- 프레임 정의: `static/art/settlement/livelihood-service-buildings-atlas.json`
+- 최종 생성 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-1f8de8a6-d866-4b43-9c47-1784d447b231.png`
+- 생성 방식: 내장 이미지 생성 도구 `stylized-concept`
+- 참조 이미지: `static/art/settlement/core-buildings-atlas.png` — 스타일·시점·재질 참조 전용
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 4×2 고정 프레임, 지정 순서 8종, 크롭·셀 중첩·인물·선박·마젠타 잔여 없음
+
+### 최종 생성 프롬프트
+
+```text
+Use case: stylized-concept
+Asset type: production isometric industry, livelihood and service-building sprite atlas for a browser-based 2.5D pirate settlement management game
+Input images: Image 1 is a style reference only. Match its premium hand-painted stylized realism, fixed orthographic isometric camera, salt-worn timber, dark stone, slate-blue roofs, aged brass, compact readable silhouettes and upper-left warm daylight. Do not edit, trace or reproduce any complete building from Image 1.
+Primary request: create exactly eight complete isolated pirate-settlement structures arranged in a precise 4-column by 2-row contact sheet.
+
+Required order:
+Row 1, left to right:
+1. HUNTER HUT — compact highland timber hunting cabin with a slate lean-to roof, covered skinning rack holding only bundled hides, antler-shaped timber pegs, closed meat-smoking box, rope snares and stacked firewood; no animal bodies.
+2. COMMUNAL COOKHOUSE — broad open-sided pirate kitchen with stone hearths, enclosed copper cooking pots, smoke hood, long preparation tables, stacked bowls, sealed food barrels and a serving counter; no food piles or people.
+3. WEAVER WORKSHOP — two-story timber textile workshop with large covered hand loom visible through an open work bay, spinning wheels, rope-twisting frame, folded neutral cloth bolts and drying lines contained under the roof; no loose fabric outside the cell.
+4. POWDER WORKSHOP — isolated reinforced stone-and-timber black-powder workshop with lightning rods, sand buckets, heavy blast shutters, enclosed mixing drums, a separated roofed charcoal shed and restrained hazard-red painted trim without symbols; no exposed powder or fire.
+Row 2, left to right:
+5. AMMUNITION WORKSHOP — low fortified shot-casting shop with stone casting floor, roofed smelting nook, iron molds, cooling racks filled with neat dark cannonballs, reinforced doors and a small covered loading platform; no flame or smoke outside the structure.
+6. GAMBLING DEN — crooked but elegant timber gaming house with a deep covered porch, shuttered amber windows, aged brass lanterns, restrained black-crimson fabric bunting, dice-cup and card-table silhouettes visible only inside; no written signs or people.
+7. BATHHOUSE — clean stone-and-timber communal bathhouse with copper water tank, enclosed boiler chimney, tiled roof vents, covered washing veranda, drainage channels contained in the foundation and folded towels under the roof; no water pool outside and no people.
+8. BOUNTY BOARD — compact roofed civic notice pavilion with a large layered blank parchment board, wax-seal shapes without text, two locked document chests, lanterns, hitching rail and a small raised timber platform; no readable writing, portraits or human figures.
+
+Scene/backdrop: every cell must use one perfectly flat uniform solid #ff00ff chroma-key background for local background removal. No ground plane, cast shadow, contact shadow, gradient, vignette, texture, reflection or lighting variation in the background.
+Style/medium: premium hand-painted 2.5D strategy-game structure sprites, original Dark Pirate Maritime Command art direction, production-ready rather than concept sketches.
+Composition/framing: exact fixed orthographic isometric camera matching Image 1; exactly 4 equal columns and 2 equal rows; one structure centered in each cell; identical orientation and consistent game scale; every object fully contained with generous magenta padding; lowest point of every bottom-row object at least 22 pixels above the canvas edge; silhouettes readable when downscaled to about 150 pixels wide.
+Lighting/mood: restrained warm upper-left daylight and cool lower-right ambient occlusion contained within physical objects; high material readability.
+Color palette: weathered umber timber, charcoal and gray stone, slate-blue shingles, beige canvas, aged iron, oxidized copper and brass, restrained black-crimson fabric and tiny warm amber enclosed-window accents. Do not use magenta or pink inside any structure.
+Materials/textures: readable wood grain, chipped masonry, worn shingles, rope fiber, iron straps, copper patina, canvas wear and practical pirate-made repairs.
+Constraints: exactly eight structures in the specified order; one complete self-contained structure per cell; no people, animals, ships, terrain tiles, water, roads, scenery, readable labels, icons, letters, numbers, logos or watermark; no smoke, flame, glow, rope, fabric or effect beyond the physical sprite boundary; no overlap between cells; no cropping.
+Avoid: duplicated silhouettes, modern machinery, fantasy magic, bright mobile-game cartoon colors, photorealism, top-down camera, front-facing elevation, mismatched perspectives, floating parts, black background, transparent checkerboard, borders, dividers, grid lines, magenta fringe, tiny unreadable clutter.
+```
+
+## 8종 공공·훈련·방어 시설 본체 아틀라스
+
+- 프로젝트 자산: `static/art/settlement/civic-defense-buildings-atlas.png`
+- 프레임 정의: `static/art/settlement/civic-defense-buildings-atlas.json`
+- 최초 생성 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-b749680b-0365-4239-8315-b859409a3940.png`
+- 최종 편집 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-f750d98a-bba7-40b6-9a1d-0410f7a955d4.png`
+- 생성 방식: 내장 이미지 생성 도구 `stylized-concept` 후 `precise-object-edit`
+- 참조 이미지: `static/art/settlement/core-buildings-atlas.png` — 스타일·시점·재질 참조 전용
+- 폴백 생성기: 사용하지 않음
+- 편집 근거: 최초 결과의 하단 두 번째 신호탑 깃대가 행 경계를 침범해 신호탑 전체를 아래로 이동하고 비운 영역만 동일 크로마 배경으로 복원
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 4×2 고정 프레임, 지정 순서 8종, 크롭·셀 중첩·인물·선박·마젠타 잔여 없음
+
+### 최초 생성 프롬프트
+
+```text
+Use case: stylized-concept
+Asset type: production isometric civic, training and defense-building sprite atlas for a browser-based 2.5D pirate settlement management game
+Input images: Image 1 is a style reference only. Match its premium hand-painted stylized realism, fixed orthographic isometric camera, salt-worn timber, dark stone, slate-blue roofs, aged brass, compact readable silhouettes and upper-left warm daylight. Do not edit, trace or reproduce any complete building from Image 1.
+Primary request: create exactly eight complete isolated pirate-settlement structures arranged in a precise 4-column by 2-row contact sheet.
+
+Required order:
+Row 1, left to right:
+1. PIRATE ARENA — compact octagonal timber-and-stone fighting arena with a clear empty sand floor, low ring fence, tiered spectator benches, four black-crimson banner poles, weapon racks and one covered entry gate; no people, bodies, blood or active combat.
+2. FESTIVAL SQUARE — raised civic celebration plaza with a broad timber dance platform, central unlit brazier, covered musicians' dais with no musicians, garland poles, barrel tables and restrained black-crimson bunting; no people, food, text or loose effects.
+3. CREW TRAINING YARD — fortified open training compound with empty sparring ring, climbing rig, target dummies, cutlass racks, cannon-drill carriage without a cannon blast, covered instructor platform and perimeter palisade; no people.
+4. FORT WALL — long heavy defensive wall segment built from dark stone and salt-worn timber, crenellated parapet, timber fighting platform, one reinforced closed gate, iron braces and two complete end towers; isolated segment with no terrain and no attackers.
+Row 2, left to right:
+5. GUARD POST — compact fortified watch kiosk on a raised timber platform with narrow slate roof, small covered gate, bell, weapon rack, lantern and waist-high palisade; no guard.
+6. SIGNAL TOWER — tall highland timber-and-stone signal tower with broad braced base, enclosed stair tower, upper observation deck, large unlit iron signal basket, folded signal flags secured to the mast and lightning rod; no smoke, flame or people.
+7. PIRATE COUNCIL — grand three-wing timber-and-stone council hall around a small open central deck, large slate roofs, round assembly chamber, restrained black-crimson banners without symbols, brass bell and broad steps; no throne, text or people.
+8. INTELLIGENCE NETWORK — discreet two-story chart-and-cipher house with shuttered windows, roof lookout cupola, covered side entrance, locked map chests, pigeon loft with no birds, antenna-like flag mast and blank route-board slats; no readable maps, symbols or people.
+
+Scene/backdrop: every cell must use one perfectly flat uniform solid #ff00ff chroma-key background for local background removal. No ground plane, cast shadow, contact shadow, gradient, vignette, texture, reflection or lighting variation in the background.
+Style/medium: premium hand-painted 2.5D strategy-game structure sprites, original Dark Pirate Maritime Command art direction, production-ready rather than concept sketches.
+Composition/framing: exact fixed orthographic isometric camera matching Image 1; exactly 4 equal columns and 2 equal rows; one structure centered in each cell; identical orientation and consistent game scale; every object fully contained with generous magenta padding; lowest point of every bottom-row object at least 22 pixels above the canvas edge; the arena, festival square, training yard and fort wall must remain completely within their cells; the signal tower must have ample clearance above its mast; silhouettes readable when downscaled to about 150 pixels wide.
+Lighting/mood: restrained warm upper-left daylight and cool lower-right ambient occlusion contained within physical objects; high material readability.
+Color palette: weathered umber timber, charcoal and gray stone, slate-blue shingles, aged iron, oxidized brass, beige canvas, restrained black-crimson fabric and tiny warm amber enclosed-window accents. Do not use magenta or pink inside any structure.
+Materials/textures: readable wood grain, chipped masonry, worn shingles, rope fiber, iron straps, canvas wear and practical pirate-made repairs.
+Constraints: exactly eight structures in the specified order; one complete self-contained structure per cell; no people, animals, ships, terrain tiles, water, roads, scenery, readable labels, icons, letters, numbers, logos or watermark; no smoke, flame, glow, flag, cable or effect beyond the physical sprite boundary; no overlap between cells; no cropping.
+Avoid: duplicated silhouettes, modern machinery, fantasy castles or magic, bright mobile-game cartoon colors, photorealism, top-down camera, front-facing elevation, mismatched perspectives, floating parts, black background, transparent checkerboard, borders, dividers, grid lines, magenta fringe, tiny unreadable clutter.
+```
+
+### 신호탑 위치 정밀 편집 프롬프트
+
+```text
+Use case: precise-object-edit
+Input image: edit the provided 4-column by 2-row civic and defense building atlas.
+Primary request: modify only the SIGNAL TOWER in row 2 column 2. Move the entire signal-tower sprite, including its basket, mast, folded flags, roof, base and every connected pixel, exactly 52 pixels downward so its highest physical point sits safely below the horizontal row boundary at y=512. Keep its scale, design, perspective, materials, colors, lighting and proportions unchanged.
+Reconstruct the vacated area above it with the exact same perfectly flat uniform #ff00ff chroma background. Keep at least 22 pixels of flat magenta padding below its lowest point.
+Preserve every other pixel and every other structure exactly as in the input image. Do not redraw, restyle, resize, crop, shift or alter row 1, row 2 columns 1, 3 or 4, or any other background area.
+Constraints: output remains exactly 1536 by 1024 pixels; exact 4-by-2 arrangement; no borders or dividers; no new people, objects, shadows, text, logos or effects; no structure may cross a cell boundary.
+```
+
 ## 9종 사회·복지·군수·행정 건물 본체 아틀라스
 
 - 프로젝트 자산: `static/art/settlement/society-buildings-atlas.png`

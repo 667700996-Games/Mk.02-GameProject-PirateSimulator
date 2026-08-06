@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { BUILDINGS } from '$lib/settlement/catalog';
 import {
+  CIVIC_DEFENSE_BUILDING_ATLAS_DATA,
+  CIVIC_DEFENSE_BUILDING_ATLAS_IMAGE,
+  CIVIC_DEFENSE_BUILDING_ATLAS_KEY,
   CORE_BUILDING_ART,
   CORE_BUILDING_ATLAS_DATA,
   CORE_BUILDING_ATLAS_IMAGE,
@@ -10,6 +14,9 @@ import {
   LOGISTICS_FLEET_BUILDING_ATLAS_DATA,
   LOGISTICS_FLEET_BUILDING_ATLAS_IMAGE,
   LOGISTICS_FLEET_BUILDING_ATLAS_KEY,
+  LIVELIHOOD_SERVICE_BUILDING_ATLAS_DATA,
+  LIVELIHOOD_SERVICE_BUILDING_ATLAS_IMAGE,
+  LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY,
   SOCIETY_BUILDING_ATLAS_DATA,
   SOCIETY_BUILDING_ATLAS_IMAGE,
   SOCIETY_BUILDING_ATLAS_KEY,
@@ -59,11 +66,27 @@ const TEXTURED_BUILDINGS = [
   'cliff-platform',
   'dry-dock',
   'supply-depot',
-  'cannon-foundry'
+  'cannon-foundry',
+  'hunter-hut',
+  'cookhouse',
+  'weaver',
+  'powder-workshop',
+  'ammunition-workshop',
+  'gambling-den',
+  'bathhouse',
+  'bounty-board',
+  'arena',
+  'festival-square',
+  'training-yard',
+  'fort-wall',
+  'guard-post',
+  'signal-tower',
+  'pirate-council',
+  'intelligence-network'
 ] as const;
 
 describe('settlement building art', () => {
-  it('covers 42 settlement buildings with unique atlas and frame pairs', () => {
+  it('covers all 58 settlement building types with unique atlas and frame pairs', () => {
     const frames = TEXTURED_BUILDINGS.map((id) => {
       const art = CORE_BUILDING_ART[id];
       return art ? `${buildingAtlasKey(art)}:${art.frame}` : undefined;
@@ -71,7 +94,8 @@ describe('settlement building art', () => {
 
     expect(frames.every(Boolean)).toBe(true);
     expect(new Set(frames).size).toBe(TEXTURED_BUILDINGS.length);
-    expect(TEXTURED_BUILDINGS).toHaveLength(42);
+    expect(TEXTURED_BUILDINGS).toHaveLength(58);
+    expect([...TEXTURED_BUILDINGS].sort()).toEqual(Object.keys(BUILDINGS).sort());
   });
 
   it('provides valid gameplay display dimensions and public atlas URLs', () => {
@@ -90,6 +114,10 @@ describe('settlement building art', () => {
     expect(SOCIETY_BUILDING_ATLAS_DATA).toMatch(/^\/art\/settlement\/.*\.json$/);
     expect(LOGISTICS_FLEET_BUILDING_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
     expect(LOGISTICS_FLEET_BUILDING_ATLAS_DATA).toMatch(/^\/art\/settlement\/.*\.json$/);
+    expect(LIVELIHOOD_SERVICE_BUILDING_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
+    expect(LIVELIHOOD_SERVICE_BUILDING_ATLAS_DATA).toMatch(/^\/art\/settlement\/.*\.json$/);
+    expect(CIVIC_DEFENSE_BUILDING_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
+    expect(CIVIC_DEFENSE_BUILDING_ATLAS_DATA).toMatch(/^\/art\/settlement\/.*\.json$/);
   });
 
   it('routes each building set to its dedicated atlas', () => {
@@ -104,7 +132,9 @@ describe('settlement building art', () => {
       [CORE_BUILDING_ATLAS_KEY]: 12,
       [INDUSTRY_BUILDING_ATLAS_KEY]: 9,
       [SOCIETY_BUILDING_ATLAS_KEY]: 9,
-      [LOGISTICS_FLEET_BUILDING_ATLAS_KEY]: 12
+      [LOGISTICS_FLEET_BUILDING_ATLAS_KEY]: 12,
+      [LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY]: 8,
+      [CIVIC_DEFENSE_BUILDING_ATLAS_KEY]: 8
     });
   });
 });

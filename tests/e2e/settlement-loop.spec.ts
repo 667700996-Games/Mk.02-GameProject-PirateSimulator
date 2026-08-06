@@ -21,6 +21,12 @@ async function createSettlement(page: import('@playwright/test').Page): Promise<
       response.url().endsWith('/art/settlement/logistics-fleet-buildings-atlas.png')
     ),
     page.waitForResponse((response) =>
+      response.url().endsWith('/art/settlement/livelihood-service-buildings-atlas.png')
+    ),
+    page.waitForResponse((response) =>
+      response.url().endsWith('/art/settlement/civic-defense-buildings-atlas.png')
+    ),
+    page.waitForResponse((response) =>
       response.url().endsWith('/art/settlement/resident-roles-atlas.png')
     ),
     page.waitForResponse((response) =>

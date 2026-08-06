@@ -16,6 +16,14 @@ export const LOGISTICS_FLEET_BUILDING_ATLAS_KEY = 'settlement-logistics-fleet-bu
 export const LOGISTICS_FLEET_BUILDING_ATLAS_IMAGE = '/art/settlement/logistics-fleet-buildings-atlas.png';
 export const LOGISTICS_FLEET_BUILDING_ATLAS_DATA = '/art/settlement/logistics-fleet-buildings-atlas.json';
 export const LOGISTICS_FLEET_BUILDING_FRAME_RATIO = 341 / 384;
+export const LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY = 'settlement-livelihood-service-buildings';
+export const LIVELIHOOD_SERVICE_BUILDING_ATLAS_IMAGE = '/art/settlement/livelihood-service-buildings-atlas.png';
+export const LIVELIHOOD_SERVICE_BUILDING_ATLAS_DATA = '/art/settlement/livelihood-service-buildings-atlas.json';
+export const LIVELIHOOD_SERVICE_BUILDING_FRAME_RATIO = 512 / 384;
+export const CIVIC_DEFENSE_BUILDING_ATLAS_KEY = 'settlement-civic-defense-buildings';
+export const CIVIC_DEFENSE_BUILDING_ATLAS_IMAGE = '/art/settlement/civic-defense-buildings-atlas.png';
+export const CIVIC_DEFENSE_BUILDING_ATLAS_DATA = '/art/settlement/civic-defense-buildings-atlas.json';
+export const CIVIC_DEFENSE_BUILDING_FRAME_RATIO = 512 / 384;
 
 export interface CoreBuildingArt {
   frame: string;
@@ -68,7 +76,23 @@ export const CORE_BUILDING_ART: Partial<Record<SettlementBuildingId, CoreBuildin
   'cliff-platform': { frame: 'cliff-platform', displayWidth: 168, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
   'dry-dock': { frame: 'dry-dock', displayWidth: 206, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
   'supply-depot': { frame: 'supply-depot', displayWidth: 184, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
-  'cannon-foundry': { frame: 'cannon-foundry', displayWidth: 186, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO }
+  'cannon-foundry': { frame: 'cannon-foundry', displayWidth: 186, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
+  'hunter-hut': { frame: 'hunter-hut', displayWidth: 144, atlasKey: LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY, frameRatio: LIVELIHOOD_SERVICE_BUILDING_FRAME_RATIO },
+  cookhouse: { frame: 'cookhouse', displayWidth: 164, atlasKey: LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY, frameRatio: LIVELIHOOD_SERVICE_BUILDING_FRAME_RATIO },
+  weaver: { frame: 'weaver', displayWidth: 164, atlasKey: LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY, frameRatio: LIVELIHOOD_SERVICE_BUILDING_FRAME_RATIO },
+  'powder-workshop': { frame: 'powder-workshop', displayWidth: 170, atlasKey: LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY, frameRatio: LIVELIHOOD_SERVICE_BUILDING_FRAME_RATIO },
+  'ammunition-workshop': { frame: 'ammunition-workshop', displayWidth: 168, atlasKey: LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY, frameRatio: LIVELIHOOD_SERVICE_BUILDING_FRAME_RATIO },
+  'gambling-den': { frame: 'gambling-den', displayWidth: 164, atlasKey: LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY, frameRatio: LIVELIHOOD_SERVICE_BUILDING_FRAME_RATIO },
+  bathhouse: { frame: 'bathhouse', displayWidth: 168, atlasKey: LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY, frameRatio: LIVELIHOOD_SERVICE_BUILDING_FRAME_RATIO },
+  'bounty-board': { frame: 'bounty-board', displayWidth: 126, atlasKey: LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY, frameRatio: LIVELIHOOD_SERVICE_BUILDING_FRAME_RATIO },
+  arena: { frame: 'arena', displayWidth: 194, atlasKey: CIVIC_DEFENSE_BUILDING_ATLAS_KEY, frameRatio: CIVIC_DEFENSE_BUILDING_FRAME_RATIO },
+  'festival-square': { frame: 'festival-square', displayWidth: 180, atlasKey: CIVIC_DEFENSE_BUILDING_ATLAS_KEY, frameRatio: CIVIC_DEFENSE_BUILDING_FRAME_RATIO },
+  'training-yard': { frame: 'training-yard', displayWidth: 188, atlasKey: CIVIC_DEFENSE_BUILDING_ATLAS_KEY, frameRatio: CIVIC_DEFENSE_BUILDING_FRAME_RATIO },
+  'fort-wall': { frame: 'fort-wall', displayWidth: 200, atlasKey: CIVIC_DEFENSE_BUILDING_ATLAS_KEY, frameRatio: CIVIC_DEFENSE_BUILDING_FRAME_RATIO },
+  'guard-post': { frame: 'guard-post', displayWidth: 132, atlasKey: CIVIC_DEFENSE_BUILDING_ATLAS_KEY, frameRatio: CIVIC_DEFENSE_BUILDING_FRAME_RATIO },
+  'signal-tower': { frame: 'signal-tower', displayWidth: 126, atlasKey: CIVIC_DEFENSE_BUILDING_ATLAS_KEY, frameRatio: CIVIC_DEFENSE_BUILDING_FRAME_RATIO },
+  'pirate-council': { frame: 'pirate-council', displayWidth: 202, atlasKey: CIVIC_DEFENSE_BUILDING_ATLAS_KEY, frameRatio: CIVIC_DEFENSE_BUILDING_FRAME_RATIO },
+  'intelligence-network': { frame: 'intelligence-network', displayWidth: 168, atlasKey: CIVIC_DEFENSE_BUILDING_ATLAS_KEY, frameRatio: CIVIC_DEFENSE_BUILDING_FRAME_RATIO }
 };
 
 export function coreBuildingDisplayHeight(art: CoreBuildingArt): number {
