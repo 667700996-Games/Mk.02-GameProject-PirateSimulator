@@ -1581,6 +1581,10 @@ p {
   gap: 0.5rem;
   pointer-events: none;
 }
+.game-shell.sea-mode .toast-stack {
+  bottom: calc(var(--game-nav-height, 58px) + 190px);
+  width: min(310px, calc(100vw - 36px));
+}
 .toast {
   position: relative;
   pointer-events: auto;
@@ -1769,6 +1773,10 @@ p {
     right: 12px;
     bottom: calc(var(--game-nav-height, 58px) + 12px);
     width: auto;
+  }
+  .game-shell.sea-mode .toast-stack {
+    top: calc(var(--game-header-height, 58px) + 172px);
+    bottom: auto;
   }
   .haven-screen {
     min-height: 780px;

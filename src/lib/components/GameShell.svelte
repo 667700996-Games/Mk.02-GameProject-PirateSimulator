@@ -82,7 +82,7 @@
   });
 </script>
 
-<div class:no-footer={game.screen === 'settings'} class="game-shell">
+<div class:no-footer={game.screen === 'settings'} class:sea-mode={game.screen === 'sailing'} class="game-shell">
   <a class="skip-link" href="#game-content">게임 내용으로 건너뛰기</a>
   <GameHeader {game} {saving} onSave={() => gameSession.saveCurrent()} onSettings={() => navigate('settings')} />
   <main class="main-viewport" id="game-content" tabindex="-1">

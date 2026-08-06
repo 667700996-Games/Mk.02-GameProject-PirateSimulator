@@ -113,7 +113,7 @@ export class SeaScene extends Phaser.Scene {
     this.playerMotion = { x: 1280, y: 1180, heading: -0.18, speed: 0, sailSetting: 0.26 };
     this.playerVisual = this.createShipVisual(this.player, this.playerMotion.x, this.playerMotion.y, false);
     if (this.enemy) {
-      this.enemyMotion = { x: 1880, y: 920, heading: 2.7, speed: this.enemy.stats.speedMax * 0.52, sailSetting: 0.86 };
+      this.enemyMotion = { x: 1760, y: 1120, heading: 2.7, speed: this.enemy.stats.speedMax * 0.52, sailSetting: 0.86 };
       this.enemyVisual = this.createShipVisual(this.enemy, this.enemyMotion.x, this.enemyMotion.y, true);
     }
     this.cameras.main.startFollow(this.playerVisual.container, true, 0.07, 0.07);
