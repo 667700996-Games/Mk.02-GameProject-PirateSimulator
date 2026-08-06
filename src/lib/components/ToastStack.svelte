@@ -2,35 +2,35 @@
   import { onDestroy } from 'svelte';
   import type { ToastMessage } from '$lib/domain/types';
   let { toasts, onDismiss } = $props<{ toasts: ToastMessage[]; onDismiss: (id: string) => void }>();
-  const timers = new Map<string, number>();
+  const timers: Record<string, number> = Object.create(null) as Record<string, number>;
 
   function dismiss(id: string): void {
-    const timer = timers.get(id);
+    const timer = timers[id];
     if (timer !== undefined) window.clearTimeout(timer);
-    timers.delete(id);
+    delete timers[id];
     onDismiss(id);
   }
 
   $effect(() => {
     const visibleIds = new Set(toasts.map((toast: ToastMessage) => toast.id));
     for (const toast of toasts) {
-      if (timers.has(toast.id)) continue;
+      if (timers[toast.id] !== undefined) continue;
       const timer = window.setTimeout(
         () => dismiss(toast.id),
         toast.kind === 'danger' ? 7000 : 4200
       );
-      timers.set(toast.id, timer);
+      timers[toast.id] = timer;
     }
-    for (const [id, timer] of timers) {
+    for (const [id, timer] of Object.entries(timers)) {
       if (visibleIds.has(id)) continue;
       window.clearTimeout(timer);
-      timers.delete(id);
+      delete timers[id];
     }
   });
 
   onDestroy(() => {
-    for (const timer of timers.values()) window.clearTimeout(timer);
-    timers.clear();
+    for (const timer of Object.values(timers)) window.clearTimeout(timer);
+    for (const id of Object.keys(timers)) delete timers[id];
   });
 </script>
 
