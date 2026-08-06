@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
+  RESIDENT_ATLAS_DATA,
+  RESIDENT_ATLAS_IMAGE,
+  RESIDENT_ATLAS_KEY,
   RESIDENT_ACTION_VISUALS,
   RESIDENT_JOB_ART,
+  RESIDENT_REAR_ATLAS_DATA,
+  RESIDENT_REAR_ATLAS_IMAGE,
+  RESIDENT_REAR_ATLAS_KEY,
   residentActivityGlyph,
   residentActivityPose,
+  residentAtlasKey,
   residentArtFrame,
   residentCrowdOffset,
-  residentDisplaySize
+  residentDisplaySize,
+  residentFacingForMovement
 } from './residentArt';
 import { JOB_NAMES } from '$lib/settlement/catalog';
 
@@ -25,6 +33,24 @@ describe('settlement resident art', () => {
       expect(size.width).toBeGreaterThanOrEqual(34);
       expect(size.height).toBeGreaterThan(44);
     }
+  });
+
+  it('selects front and rear atlases from stable screen-space movement', () => {
+    expect(residentAtlasKey('front')).toBe(RESIDENT_ATLAS_KEY);
+    expect(residentAtlasKey('rear')).toBe(RESIDENT_REAR_ATLAS_KEY);
+    expect(residentFacingForMovement(-0.19, 'front')).toBe('rear');
+    expect(residentFacingForMovement(0.19, 'rear')).toBe('front');
+    expect(residentFacingForMovement(-0.1, 'front')).toBe('front');
+    expect(residentFacingForMovement(0.1, 'rear')).toBe('rear');
+  });
+
+  it('publishes both directional atlases from the settlement art path', () => {
+    for (const path of [
+      RESIDENT_ATLAS_IMAGE,
+      RESIDENT_ATLAS_DATA,
+      RESIDENT_REAR_ATLAS_IMAGE,
+      RESIDENT_REAR_ATLAS_DATA
+    ]) expect(path).toMatch(/^\/art\/settlement\/.*\.(png|json)$/);
   });
 
   it('assigns stable bounded crowd spacing without changing simulation coordinates', () => {

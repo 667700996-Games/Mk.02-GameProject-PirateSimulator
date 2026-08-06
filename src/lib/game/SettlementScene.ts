@@ -9,6 +9,13 @@ import {
   CORE_BUILDING_ATLAS_DATA,
   CORE_BUILDING_ATLAS_IMAGE,
   CORE_BUILDING_ATLAS_KEY,
+  INDUSTRY_BUILDING_ATLAS_DATA,
+  INDUSTRY_BUILDING_ATLAS_IMAGE,
+  INDUSTRY_BUILDING_ATLAS_KEY,
+  SOCIETY_BUILDING_ATLAS_DATA,
+  SOCIETY_BUILDING_ATLAS_IMAGE,
+  SOCIETY_BUILDING_ATLAS_KEY,
+  buildingAtlasKey,
   coreBuildingDisplayHeight,
   type CoreBuildingArt
 } from './settlementArt';
@@ -23,11 +30,17 @@ import {
   RESIDENT_ATLAS_DATA,
   RESIDENT_ATLAS_IMAGE,
   RESIDENT_ATLAS_KEY,
+  RESIDENT_REAR_ATLAS_DATA,
+  RESIDENT_REAR_ATLAS_IMAGE,
+  RESIDENT_REAR_ATLAS_KEY,
   residentActivityGlyph,
   residentActivityPose,
+  residentAtlasKey,
   residentArtFrame,
   residentCrowdOffset,
-  residentDisplaySize
+  residentDisplaySize,
+  residentFacingForMovement,
+  type ResidentFacing
 } from './residentArt';
 import {
   TERRAIN_ART,
@@ -99,6 +112,8 @@ export class SettlementScene extends Phaser.Scene {
       shadow: Phaser.GameObjects.Ellipse;
       cargo: Phaser.GameObjects.Text;
       lastWorldX: number;
+      lastWorldY: number;
+      facing: ResidentFacing;
       action: ResidentAction;
       phase: number;
     }
@@ -115,11 +130,20 @@ export class SettlementScene extends Phaser.Scene {
     if (!this.textures.exists(CORE_BUILDING_ATLAS_KEY)) {
       this.load.atlas(CORE_BUILDING_ATLAS_KEY, CORE_BUILDING_ATLAS_IMAGE, CORE_BUILDING_ATLAS_DATA);
     }
+    if (!this.textures.exists(INDUSTRY_BUILDING_ATLAS_KEY)) {
+      this.load.atlas(INDUSTRY_BUILDING_ATLAS_KEY, INDUSTRY_BUILDING_ATLAS_IMAGE, INDUSTRY_BUILDING_ATLAS_DATA);
+    }
+    if (!this.textures.exists(SOCIETY_BUILDING_ATLAS_KEY)) {
+      this.load.atlas(SOCIETY_BUILDING_ATLAS_KEY, SOCIETY_BUILDING_ATLAS_IMAGE, SOCIETY_BUILDING_ATLAS_DATA);
+    }
     if (!this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) {
       this.load.atlas(BUILDING_PROGRESSION_ATLAS_KEY, BUILDING_PROGRESSION_ATLAS_IMAGE, BUILDING_PROGRESSION_ATLAS_DATA);
     }
     if (!this.textures.exists(RESIDENT_ATLAS_KEY)) {
       this.load.atlas(RESIDENT_ATLAS_KEY, RESIDENT_ATLAS_IMAGE, RESIDENT_ATLAS_DATA);
+    }
+    if (!this.textures.exists(RESIDENT_REAR_ATLAS_KEY)) {
+      this.load.atlas(RESIDENT_REAR_ATLAS_KEY, RESIDENT_REAR_ATLAS_IMAGE, RESIDENT_REAR_ATLAS_DATA);
     }
     if (!this.textures.exists(TERRAIN_ATLAS_KEY)) {
       this.load.atlas(TERRAIN_ATLAS_KEY, TERRAIN_ATLAS_IMAGE, TERRAIN_ATLAS_DATA);
@@ -323,7 +347,7 @@ export class SettlementScene extends Phaser.Scene {
     const container = this.add.container(point.x, point.y - 12).setDepth(100 + building.x + building.y);
     const selected = building.id === this.selectedBuildingId;
     const texturedArt = CORE_BUILDING_ART[building.definitionId];
-    if (texturedArt && this.textures.exists(CORE_BUILDING_ATLAS_KEY)) {
+    if (texturedArt && this.textures.exists(buildingAtlasKey(texturedArt))) {
       this.drawTexturedBuilding(container, building, definition, texturedArt, selected);
       this.buildingLayer.add(container);
       return;
@@ -452,7 +476,7 @@ export class SettlementScene extends Phaser.Scene {
       }
     }
 
-    const sprite = this.add.image(0, spriteY, CORE_BUILDING_ATLAS_KEY, art.frame)
+    const sprite = this.add.image(0, spriteY, buildingAtlasKey(art), art.frame)
       .setOrigin(0.5, art.originY ?? 0.88)
       .setDisplaySize(displayWidth, displayHeight)
       .setAlpha(isBlueprint ? 0.42 : isConstructing ? 0.76 : 1)
@@ -587,9 +611,10 @@ export class SettlementScene extends Phaser.Scene {
       const phase = ([...resident.id].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 29) / 29 * Math.PI * 2;
       let object = this.residentObjects.get(resident.id);
       if (!object) {
+        const facing: ResidentFacing = 'front';
         const container = this.add.container(point.x, point.y - 5);
         const shadow = this.add.ellipse(0, 2, 17, 6, 0x020a0c, 0.62);
-        const sprite = this.add.image(0, 0, RESIDENT_ATLAS_KEY, frame)
+        const sprite = this.add.image(0, 0, residentAtlasKey(facing), frame)
           .setOrigin(0.5, 0.93)
           .setDisplaySize(displaySize.width, displaySize.height);
         const cargo = this.add.text(11, -32, '', {
@@ -603,15 +628,20 @@ export class SettlementScene extends Phaser.Scene {
         }).setOrigin(0.5);
         container.add([shadow, sprite, cargo]);
         this.residentLayer.add(container);
-        object = { container, sprite, shadow, cargo, lastWorldX: point.x, action: resident.action, phase };
+        object = { container, sprite, shadow, cargo, lastWorldX: point.x, lastWorldY: point.y, facing, action: resident.action, phase };
         this.residentObjects.set(resident.id, object);
       }
-      if (object.sprite.frame.name !== frame) object.sprite.setFrame(frame);
-      object.sprite.setDisplaySize(displaySize.width, displaySize.height).clearTint();
       object.action = resident.action;
       const deltaX = point.x - object.lastWorldX;
+      const deltaY = point.y - object.lastWorldY;
+      object.facing = residentFacingForMovement(deltaY, object.facing);
+      const atlasKey = residentAtlasKey(object.facing);
+      if (object.sprite.texture.key !== atlasKey) object.sprite.setTexture(atlasKey, frame);
+      else if (object.sprite.frame.name !== frame) object.sprite.setFrame(frame);
+      object.sprite.setDisplaySize(displaySize.width, displaySize.height).clearTint();
       if (Math.abs(deltaX) > 0.18) object.sprite.setFlipX(deltaX < 0);
       object.lastWorldX = point.x;
+      object.lastWorldY = point.y;
       object.container.setVisible(true).setPosition(point.x, point.y - 5).setDepth(210 + renderX + renderY);
       object.sprite.setAlpha(resident.action === 'SLEEPING' ? 0.68 : 1);
       if (resident.health < 30) object.sprite.setTint(0xd17a6c);
@@ -824,7 +854,7 @@ export class SettlementScene extends Phaser.Scene {
     if (art && originTile && this.previewSprite) {
       const point = this.iso(this.hoverTile.x, this.hoverTile.y, originTile.elevation);
       this.previewSprite
-        .setTexture(CORE_BUILDING_ATLAS_KEY, art.frame)
+        .setTexture(buildingAtlasKey(art), art.frame)
         .setOrigin(0.5, art.originY ?? 0.88)
         .setDisplaySize(art.displayWidth, coreBuildingDisplayHeight(art))
         .setPosition(point.x, point.y + (art.offsetY ?? 12) - 12)
