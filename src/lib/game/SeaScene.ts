@@ -113,11 +113,12 @@ export class SeaScene extends Phaser.Scene {
     this.playerMotion = { x: 1280, y: 1180, heading: -0.18, speed: 0, sailSetting: 0.26 };
     this.playerVisual = this.createShipVisual(this.player, this.playerMotion.x, this.playerMotion.y, false);
     if (this.enemy) {
-      this.enemyMotion = { x: 1760, y: 1120, heading: 2.7, speed: this.enemy.stats.speedMax * 0.52, sailSetting: 0.86 };
+      const compactTheatre = this.scale.width < 700;
+      this.enemyMotion = { x: compactTheatre ? 1510 : 1760, y: compactTheatre ? 1040 : 1120, heading: 2.7, speed: this.enemy.stats.speedMax * 0.52, sailSetting: 0.86 };
       this.enemyVisual = this.createShipVisual(this.enemy, this.enemyMotion.x, this.enemyMotion.y, true);
     }
     this.cameras.main.startFollow(this.playerVisual.container, true, 0.07, 0.07);
-    this.cameras.main.setZoom(0.92);
+    this.cameras.main.setZoom(this.scale.width < 700 ? 0.62 : this.scale.width < 1000 ? 0.78 : 0.92);
     this.createWeather();
     this.bindControls();
     this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _objects: unknown[], _dx: number, dy: number) => {
