@@ -831,7 +831,7 @@
   }
   .city-identity small {
     color: var(--ink-faint);
-    font-size: 0.6rem;
+    font-size: var(--text-caption);
   }
   .city-metric {
     display: grid;
@@ -855,7 +855,7 @@
   .city-metric small {
     align-self: start;
     color: var(--ink-faint);
-    font-size: 0.56rem;
+    font-size: var(--text-caption);
     white-space: nowrap;
   }
   .speed-control {
@@ -884,7 +884,7 @@
     left: 1rem;
     top: 88px;
     bottom: 76px;
-    width: 318px;
+    width: 340px;
     padding: 1rem;
     background: linear-gradient(145deg, #071a1ef2, #041114f5);
     backdrop-filter: blur(12px);
@@ -931,7 +931,7 @@
     color: var(--brass);
   }
   .category-tabs button small {
-    font-size: 0.55rem;
+    font-size: var(--text-caption);
   }
   .category-tabs button.active {
     border-color: var(--line);
@@ -982,7 +982,7 @@
     display: block;
   }
   .building-option small {
-    font-size: 0.57rem;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -995,7 +995,7 @@
     position: absolute;
     right: 0.4rem;
     top: 0.3rem;
-    font-size: 0.5rem;
+    font-size: var(--text-caption);
     color: #df956e;
   }
   .compact-cost {
@@ -1005,7 +1005,7 @@
   }
   .compact-cost i {
     font-style: normal;
-    font-size: 0.55rem;
+    font-size: var(--text-caption);
     color: #cbb579;
   }
   .compact-cost i.missing {
@@ -1017,7 +1017,7 @@
     right: 1rem;
     bottom: 0.55rem;
     color: var(--ink-faint);
-    font-size: 0.58rem;
+    font-size: var(--text-caption);
   }
   .build-help kbd {
     border: 1px solid var(--line);
@@ -1030,7 +1030,7 @@
     z-index: 11;
     right: 1rem;
     top: 88px;
-    width: 326px;
+    width: 352px;
     max-height: calc(100% - 164px);
     padding: 1rem;
     background: linear-gradient(145deg, #071a1ef3, #041114f7);
@@ -1050,7 +1050,7 @@
     color: var(--ink-muted);
     padding: 0.7rem 0.25rem;
     cursor: pointer;
-    font-size: 0.62rem;
+    font-size: var(--text-caption);
   }
   .inspector-tabs button.active {
     background: #203633;
@@ -1064,7 +1064,7 @@
     height: 18px;
     border-radius: 50%;
     background: #243637;
-    font-size: 0.55rem;
+    font-size: 0.6875rem;
   }
   .inspector-tabs span.urgent {
     background: #9d4038;
@@ -1093,7 +1093,7 @@
     padding: 0.55rem;
     border: 1px solid #4a665f;
     background: #15302e;
-    font-size: 0.62rem;
+    font-size: var(--text-caption);
   }
   .state-banner.blocked {
     border-color: #934f42;
@@ -1117,7 +1117,7 @@
   .inspector-grid small {
     display: block;
     color: var(--ink-faint);
-    font-size: 0.56rem;
+    font-size: var(--text-caption);
   }
   .inspector-grid b {
     font-size: 0.85rem;
@@ -1134,7 +1134,7 @@
     padding: 0.45rem;
     background: #061518;
     border: 1px solid var(--line-soft);
-    font-size: 0.56rem;
+    font-size: var(--text-caption);
   }
   .priority-control > div {
     display: flex;
@@ -1190,7 +1190,7 @@
     display: grid;
     grid-template-columns: 18px 1fr auto;
     align-items: center;
-    font-size: 0.62rem;
+    font-size: var(--text-caption);
     padding: 0.35rem;
     background: #07181b;
   }
@@ -1220,7 +1220,7 @@
     display: block;
   }
   .stat-summary small {
-    font-size: 0.48rem;
+    font-size: var(--text-caption);
     color: var(--ink-faint);
   }
   .flow-table {
@@ -1235,7 +1235,7 @@
     align-items: center;
     padding: 0.4rem;
     background: #061518;
-    font-size: 0.52rem;
+    font-size: var(--text-caption);
   }
   .flow-table header {
     color: var(--ink-faint);
@@ -1248,7 +1248,7 @@
     color: var(--brass-light);
   }
   .analysis-note {
-    font-size: 0.57rem;
+    font-size: var(--text-caption);
     line-height: 1.5;
     color: var(--ink-muted);
     border-left: 2px solid var(--brass);
@@ -1273,7 +1273,7 @@
     flex-wrap: wrap;
     justify-content: center;
     gap: 0.5rem;
-    font-size: 0.55rem;
+    font-size: var(--text-caption);
     color: var(--ink-faint);
   }
   .terrain {
@@ -1324,7 +1324,7 @@
   }
   .warning-list small {
     color: var(--ink-muted);
-    font-size: 0.6rem;
+    font-size: var(--text-caption);
     margin-top: 0.2rem;
   }
   .all-clear {
@@ -1380,7 +1380,7 @@
     color: var(--ink-muted);
     padding: 0.42rem 0.58rem;
     cursor: pointer;
-    font-size: 0.62rem;
+    font-size: var(--text-caption);
   }
   .overlay-toolbar button span {
     color: var(--brass);

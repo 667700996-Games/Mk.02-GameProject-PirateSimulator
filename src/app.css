@@ -34,6 +34,8 @@
   --line: rgba(199, 168, 105, 0.26);
   --line-soft: rgba(193, 211, 204, 0.13);
   --shadow: 0 24px 80px rgba(0, 0, 0, 0.52);
+  --text-caption: 0.75rem;
+  --text-meta: 0.8125rem;
 }
 
 * {
@@ -658,7 +660,7 @@ p {
 }
 .header-stat small {
   color: var(--ink-faint);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -668,7 +670,7 @@ p {
   gap: 0.5rem;
 }
 .save-pulse {
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   color: var(--success);
   min-width: 44px;
 }
@@ -691,15 +693,30 @@ p {
   border-top: 1px solid var(--line);
 }
 .nav-item {
+  position: relative;
   min-width: 102px;
   border: 0;
-  border-top: 2px solid transparent;
   color: var(--ink-muted);
   background: transparent;
   padding: 0.55rem 0.75rem;
   cursor: pointer;
   font-size: 0.76rem;
   font-weight: 700;
+  transition: color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+.nav-item::before {
+  content: '';
+  position: absolute;
+  top: -0.45rem;
+  left: 0.75rem;
+  right: 0.75rem;
+  height: 3px;
+  opacity: 0;
+  transform: scaleX(0.38);
+  transform-origin: center;
+  background: linear-gradient(90deg, transparent, var(--brass-light) 22% 78%, transparent);
+  box-shadow: 0 0 14px rgba(224, 196, 137, 0.66);
+  transition: opacity 150ms ease, transform 180ms ease;
 }
 .nav-item span {
   display: block;
@@ -710,8 +727,16 @@ p {
 .nav-item:hover,
 .nav-item.active {
   color: var(--ink);
-  border-color: var(--brass);
   background: rgba(193, 153, 82, 0.06);
+}
+.nav-item:hover::before,
+.nav-item.active::before {
+  opacity: 1;
+  transform: scaleX(1);
+}
+.nav-item.active span {
+  color: var(--brass-light);
+  filter: drop-shadow(0 0 6px rgba(224, 196, 137, 0.35));
 }
 
 /* Haven */
@@ -1427,6 +1452,7 @@ p {
   border: 1px solid var(--line);
   box-shadow: 0 16px 40px #0008;
   animation: toast-in 0.25s ease-out;
+  overflow: hidden;
 }
 .toast.success {
   border-left: 3px solid var(--success);
@@ -1444,6 +1470,17 @@ p {
 .toast small {
   display: block;
   color: var(--ink-muted);
+  line-height: 1.45;
+}
+.toast-lifetime {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--brass), var(--brass-light));
+  animation: toast-lifetime var(--toast-life, 4200ms) linear forwards;
 }
 .toast-dismiss {
   position: absolute;
@@ -1470,6 +1507,19 @@ p {
   from {
     opacity: 0;
     transform: translateX(20px);
+  }
+}
+@keyframes toast-lifetime {
+  to {
+    transform: scaleX(0);
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-lifetime {
+    animation: none;
+    opacity: 0.55;
   }
 }
 
