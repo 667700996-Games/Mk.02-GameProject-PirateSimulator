@@ -1,0 +1,27 @@
+{
+  "frames": {
+    "deep-water": { "frame": { "x": 145, "y": 59, "w": 370, "h": 181 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 370, "h": 181 }, "sourceSize": { "w": 370, "h": 181 } },
+    "reef": { "frame": { "x": 584, "y": 59, "w": 368, "h": 181 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 368, "h": 181 }, "sourceSize": { "w": 368, "h": 181 } },
+    "beach": { "frame": { "x": 1019, "y": 59, "w": 367, "h": 181 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 367, "h": 181 }, "sourceSize": { "w": 367, "h": 181 } },
+    "coast": { "frame": { "x": 145, "y": 243, "w": 370, "h": 183 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 370, "h": 183 }, "sourceSize": { "w": 370, "h": 183 } },
+    "plain": { "frame": { "x": 584, "y": 243, "w": 368, "h": 183 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 368, "h": 183 }, "sourceSize": { "w": 368, "h": 183 } },
+    "forest": { "frame": { "x": 1019, "y": 243, "w": 367, "h": 183 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 367, "h": 183 }, "sourceSize": { "w": 367, "h": 183 } },
+    "slope": { "frame": { "x": 145, "y": 425, "w": 370, "h": 184 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 370, "h": 184 }, "sourceSize": { "w": 370, "h": 184 } },
+    "cliff": { "frame": { "x": 584, "y": 425, "w": 368, "h": 184 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 368, "h": 184 }, "sourceSize": { "w": 368, "h": 184 } },
+    "highland": { "frame": { "x": 1019, "y": 425, "w": 367, "h": 184 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 367, "h": 184 }, "sourceSize": { "w": 367, "h": 184 } },
+    "cave": { "frame": { "x": 145, "y": 614, "w": 370, "h": 182 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 370, "h": 182 }, "sourceSize": { "w": 370, "h": 182 } },
+    "ravine": { "frame": { "x": 584, "y": 614, "w": 368, "h": 182 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 368, "h": 182 }, "sourceSize": { "w": 368, "h": 182 } },
+    "wetland": { "frame": { "x": 1019, "y": 614, "w": 367, "h": 182 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 367, "h": 182 }, "sourceSize": { "w": 367, "h": 182 } },
+    "stone-deposit": { "frame": { "x": 145, "y": 801, "w": 370, "h": 174 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 370, "h": 174 }, "sourceSize": { "w": 370, "h": 174 } },
+    "iron-vein": { "frame": { "x": 584, "y": 801, "w": 368, "h": 174 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 368, "h": 174 }, "sourceSize": { "w": 368, "h": 174 } },
+    "copper-vein": { "frame": { "x": 1019, "y": 801, "w": 367, "h": 174 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 367, "h": 174 }, "sourceSize": { "w": 367, "h": 174 } }
+  },
+  "meta": {
+    "app": "Mk.02-GameProject-PirateSimulator",
+    "version": "2",
+    "image": "terrain-surfaces-atlas-v2.png",
+    "format": "RGBA8888",
+    "size": { "w": 1536, "h": 1024 },
+    "scale": "1"
+  }
+}

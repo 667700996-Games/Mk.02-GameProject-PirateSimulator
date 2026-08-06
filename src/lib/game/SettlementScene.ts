@@ -20,6 +20,13 @@ import {
   residentCrowdOffset,
   residentDisplaySize
 } from './residentArt';
+import {
+  TERRAIN_ART,
+  TERRAIN_ATLAS_DATA,
+  TERRAIN_ATLAS_IMAGE,
+  TERRAIN_ATLAS_KEY,
+  terrainDepletionTint
+} from './terrainArt';
 
 export interface SettlementSceneBridge {
   getState: () => SettlementSimulationState;
@@ -98,6 +105,9 @@ export class SettlementScene extends Phaser.Scene {
     }
     if (!this.textures.exists(RESIDENT_ATLAS_KEY)) {
       this.load.atlas(RESIDENT_ATLAS_KEY, RESIDENT_ATLAS_IMAGE, RESIDENT_ATLAS_DATA);
+    }
+    if (!this.textures.exists(TERRAIN_ATLAS_KEY)) {
+      this.load.atlas(TERRAIN_ATLAS_KEY, TERRAIN_ATLAS_IMAGE, TERRAIN_ATLAS_DATA);
     }
   }
 
@@ -182,7 +192,8 @@ export class SettlementScene extends Phaser.Scene {
     this.terrainSignature = signature;
     this.terrainLayer.removeAll(true);
     const graphics = this.add.graphics();
-    for (const tile of [...this.snapshot.island.tiles].sort((a, b) => (a.x + a.y) - (b.x + b.y))) {
+    const sortedTiles = [...this.snapshot.island.tiles].sort((a, b) => (a.x + a.y) - (b.x + b.y));
+    for (const tile of sortedTiles) {
       const point = this.iso(tile.x, tile.y, tile.elevation);
       if (tile.elevation > 0 && !['deep-water', 'reef'].includes(tile.terrain)) {
         graphics.fillStyle(0x252f2c, 1);
@@ -192,13 +203,34 @@ export class SettlementScene extends Phaser.Scene {
       }
       const color = tile.discovered ? TERRAIN_COLORS[tile.terrain] : 0x0a2025;
       graphics.fillStyle(color, 1).fillPoints(this.diamond(point), true);
-      graphics.lineStyle(
-        1,
-        tile.discovered ? (tile.terrain === 'deep-water' ? 0x17414b : 0x071a18) : 0x15353a,
-        tile.discovered && tile.terrain === 'deep-water' ? 0.2 : 0.42
-      ).strokePoints(this.diamond(point), true);
+      if (!tile.discovered) graphics.lineStyle(1, 0x15353a, 0.42).strokePoints(this.diamond(point), true);
     }
     this.terrainLayer.add(graphics);
+
+    if (this.textures.exists(TERRAIN_ATLAS_KEY)) {
+      for (const tile of sortedTiles) {
+        if (!tile.discovered) continue;
+        const point = this.iso(tile.x, tile.y, tile.elevation);
+        const art = TERRAIN_ART[tile.terrain];
+        const surface = this.add.image(point.x, point.y, TERRAIN_ATLAS_KEY, art.frame)
+          .setOrigin(0.5)
+          .setDisplaySize(TILE_W + 8, TILE_H + 7)
+          .setAlpha(art.alpha)
+          .setFlipX((tile.x * 17 + tile.y * 31 + this.snapshot.island.seed) % 2 === 0);
+        const depletionTint = terrainDepletionTint(tile.resourceRemaining);
+        if (depletionTint !== undefined && ['stone-deposit', 'iron-vein', 'copper-vein'].includes(tile.terrain)) surface.setTint(depletionTint);
+        this.terrainLayer.add(surface);
+      }
+
+      const grid = this.add.graphics();
+      for (const tile of sortedTiles) {
+        if (!tile.discovered) continue;
+        const point = this.iso(tile.x, tile.y, tile.elevation);
+        grid.lineStyle(1, tile.terrain === 'deep-water' ? 0x87b5b8 : 0x101d19, tile.terrain === 'deep-water' ? 0.08 : 0.18)
+          .strokePoints(this.diamond(point), true);
+      }
+      this.terrainLayer.add(grid);
+    }
     for (const tile of this.snapshot.island.tiles) {
       // Hidden cells deliberately reveal neither terrain nor resource silhouettes.
       if (!tile.discovered) continue;
