@@ -12,6 +12,13 @@ import {
   coreBuildingDisplayHeight,
   type CoreBuildingArt
 } from './settlementArt';
+import {
+  RESIDENT_ATLAS_DATA,
+  RESIDENT_ATLAS_IMAGE,
+  RESIDENT_ATLAS_KEY,
+  residentArtFrame,
+  residentDisplaySize
+} from './residentArt';
 
 export interface SettlementSceneBridge {
   getState: () => SettlementSimulationState;
@@ -67,7 +74,15 @@ export class SettlementScene extends Phaser.Scene {
   private buildingSignature = '';
   private overlaySignature = '';
   private terrainSignature = '';
-  private residentObjects = new Map<string, { container: Phaser.GameObjects.Container; body: Phaser.GameObjects.Rectangle; cargo: Phaser.GameObjects.Text }>();
+  private residentObjects = new Map<
+    string,
+    {
+      container: Phaser.GameObjects.Container;
+      sprite: Phaser.GameObjects.Image;
+      cargo: Phaser.GameObjects.Text;
+      lastWorldX: number;
+    }
+  >();
 
   constructor() { super('settlement'); }
 
@@ -79,6 +94,9 @@ export class SettlementScene extends Phaser.Scene {
   preload(): void {
     if (!this.textures.exists(CORE_BUILDING_ATLAS_KEY)) {
       this.load.atlas(CORE_BUILDING_ATLAS_KEY, CORE_BUILDING_ATLAS_IMAGE, CORE_BUILDING_ATLAS_DATA);
+    }
+    if (!this.textures.exists(RESIDENT_ATLAS_KEY)) {
+      this.load.atlas(RESIDENT_ATLAS_KEY, RESIDENT_ATLAS_IMAGE, RESIDENT_ATLAS_DATA);
     }
   }
 
@@ -460,19 +478,44 @@ export class SettlementScene extends Phaser.Scene {
       const tile = tileAt(this.snapshot.island, Math.round(resident.position.x), Math.round(resident.position.y));
       const point = this.iso(resident.position.x, resident.position.y, tile?.elevation ?? 0);
       if (point.x < camera.worldView.x - 80 || point.x > camera.worldView.right + 80 || point.y < camera.worldView.y - 80 || point.y > camera.worldView.bottom + 80) continue;
-      const color = resident.job === 'hauler' ? 0xd7ad64 : resident.job === 'builder' ? 0xb9764f : resident.tier === 'officer' ? 0xdfd2ad : 0x93aca0;
+      const frame = residentArtFrame(resident.job, resident.tier);
+      const displaySize = residentDisplaySize(frame);
       let object = this.residentObjects.get(resident.id);
       if (!object) {
-        const container = this.add.container(point.x, point.y - 8);
-        const body = this.add.rectangle(0, 1, 5, 10, color);
-        const cargo = this.add.text(5, -11, '', { fontSize: '10px', color: '#f2d28e', stroke: '#071414', strokeThickness: 2 });
-        container.add([this.add.ellipse(0, 6, 10, 4, 0x031013, 0.6), this.add.circle(0, -5, 3.2, 0xc9aa83), body, cargo]);
+        const container = this.add.container(point.x, point.y - 5);
+        const shadow = this.add.ellipse(0, 2, 17, 6, 0x020a0c, 0.62);
+        const sprite = this.add.image(0, 0, RESIDENT_ATLAS_KEY, frame)
+          .setOrigin(0.5, 0.93)
+          .setDisplaySize(displaySize.width, displaySize.height);
+        const cargo = this.add.text(11, -32, '', {
+          fontFamily: 'sans-serif',
+          fontSize: '10px',
+          color: '#ffe0a1',
+          backgroundColor: '#07171be6',
+          stroke: '#071414',
+          strokeThickness: 2,
+          padding: { x: 3, y: 2 }
+        }).setOrigin(0.5);
+        container.add([shadow, sprite, cargo]);
         this.residentLayer.add(container);
-        object = { container, body, cargo };
+        object = { container, sprite, cargo, lastWorldX: point.x };
         this.residentObjects.set(resident.id, object);
       }
-      object.container.setVisible(true).setPosition(point.x, point.y - 8).setDepth(210 + resident.position.x + resident.position.y);
-      object.body.setFillStyle(color);
+      if (object.sprite.frame.name !== frame) object.sprite.setFrame(frame);
+      object.sprite.setDisplaySize(displaySize.width, displaySize.height).clearTint();
+      const deltaX = point.x - object.lastWorldX;
+      if (Math.abs(deltaX) > 0.18) object.sprite.setFlipX(deltaX < 0);
+      object.lastWorldX = point.x;
+      const inMotion = ['MOVING', 'HAULING', 'BOARDING', 'FIREFIGHTING', 'DEFENDING'].includes(resident.action);
+      const phase = [...resident.id].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 13;
+      const bob = inMotion && !this.bridge.getSettings().reducedMotion
+        ? Math.sin(this.snapshot.simulationMinutes * 0.32 + phase) * 1.25
+        : 0;
+      object.container.setVisible(true).setPosition(point.x, point.y - 5 + bob).setDepth(210 + resident.position.x + resident.position.y);
+      object.sprite.setAlpha(resident.action === 'SLEEPING' ? 0.68 : 1);
+      if (resident.health < 30) object.sprite.setTint(0xd17a6c);
+      else if (resident.action === 'FIREFIGHTING') object.sprite.setTint(0xffd28a);
+      else if (resident.action === 'DEFENDING') object.sprite.setTint(0xe3c47e);
       object.cargo.setText('');
       if (resident.action === 'HAULING') {
         const job = this.snapshot.transports.find((item) => item.haulerId === resident.id && item.state === 'DELIVERING');
