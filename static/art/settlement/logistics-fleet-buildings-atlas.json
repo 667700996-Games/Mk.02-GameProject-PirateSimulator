@@ -1,0 +1,24 @@
+{
+  "frames": {
+    "local-storage": { "frame": { "x": 0, "y": 0, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "distribution-depot": { "frame": { "x": 384, "y": 0, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "dock-warehouse": { "frame": { "x": 768, "y": 0, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "cargo-lift": { "frame": { "x": 1152, "y": 0, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "zipline-post": { "frame": { "x": 0, "y": 341, "w": 384, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 342 }, "sourceSize": { "w": 384, "h": 342 } },
+    "bridge": { "frame": { "x": 384, "y": 341, "w": 384, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 342 }, "sourceSize": { "w": 384, "h": 342 } },
+    "stairs": { "frame": { "x": 768, "y": 341, "w": 384, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 342 }, "sourceSize": { "w": 384, "h": 342 } },
+    "ramp": { "frame": { "x": 1152, "y": 341, "w": 384, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 342 }, "sourceSize": { "w": 384, "h": 342 } },
+    "cliff-platform": { "frame": { "x": 0, "y": 683, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "dry-dock": { "frame": { "x": 384, "y": 683, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "supply-depot": { "frame": { "x": 768, "y": 683, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } },
+    "cannon-foundry": { "frame": { "x": 1152, "y": 683, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } }
+  },
+  "meta": {
+    "app": "Mk.02-GameProject-PirateSimulator",
+    "version": "1.0",
+    "image": "logistics-fleet-buildings-atlas.png",
+    "format": "RGBA8888",
+    "size": { "w": 1536, "h": 1024 },
+    "scale": "1"
+  }
+}

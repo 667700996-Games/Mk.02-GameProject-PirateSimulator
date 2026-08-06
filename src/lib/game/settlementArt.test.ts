@@ -7,6 +7,9 @@ import {
   INDUSTRY_BUILDING_ATLAS_DATA,
   INDUSTRY_BUILDING_ATLAS_IMAGE,
   INDUSTRY_BUILDING_ATLAS_KEY,
+  LOGISTICS_FLEET_BUILDING_ATLAS_DATA,
+  LOGISTICS_FLEET_BUILDING_ATLAS_IMAGE,
+  LOGISTICS_FLEET_BUILDING_ATLAS_KEY,
   SOCIETY_BUILDING_ATLAS_DATA,
   SOCIETY_BUILDING_ATLAS_IMAGE,
   SOCIETY_BUILDING_ATLAS_KEY,
@@ -44,11 +47,23 @@ const TEXTURED_BUILDINGS = [
   'infirmary',
   'powder-magazine',
   'captains-lodge',
-  'expedition-office'
+  'expedition-office',
+  'local-storage',
+  'distribution-depot',
+  'dock-warehouse',
+  'cargo-lift',
+  'zipline-post',
+  'bridge',
+  'stairs',
+  'ramp',
+  'cliff-platform',
+  'dry-dock',
+  'supply-depot',
+  'cannon-foundry'
 ] as const;
 
 describe('settlement building art', () => {
-  it('covers 30 settlement buildings with unique atlas and frame pairs', () => {
+  it('covers 42 settlement buildings with unique atlas and frame pairs', () => {
     const frames = TEXTURED_BUILDINGS.map((id) => {
       const art = CORE_BUILDING_ART[id];
       return art ? `${buildingAtlasKey(art)}:${art.frame}` : undefined;
@@ -56,7 +71,7 @@ describe('settlement building art', () => {
 
     expect(frames.every(Boolean)).toBe(true);
     expect(new Set(frames).size).toBe(TEXTURED_BUILDINGS.length);
-    expect(TEXTURED_BUILDINGS).toHaveLength(30);
+    expect(TEXTURED_BUILDINGS).toHaveLength(42);
   });
 
   it('provides valid gameplay display dimensions and public atlas URLs', () => {
@@ -73,9 +88,11 @@ describe('settlement building art', () => {
     expect(INDUSTRY_BUILDING_ATLAS_DATA).toMatch(/^\/art\/settlement\/.*\.json$/);
     expect(SOCIETY_BUILDING_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
     expect(SOCIETY_BUILDING_ATLAS_DATA).toMatch(/^\/art\/settlement\/.*\.json$/);
+    expect(LOGISTICS_FLEET_BUILDING_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
+    expect(LOGISTICS_FLEET_BUILDING_ATLAS_DATA).toMatch(/^\/art\/settlement\/.*\.json$/);
   });
 
-  it('routes the core, industry and society building sets to their own atlases', () => {
+  it('routes each building set to its dedicated atlas', () => {
     const atlasCounts = TEXTURED_BUILDINGS.reduce<Record<string, number>>((counts, id) => {
       const art = CORE_BUILDING_ART[id]!;
       const key = buildingAtlasKey(art);
@@ -86,7 +103,8 @@ describe('settlement building art', () => {
     expect(atlasCounts).toEqual({
       [CORE_BUILDING_ATLAS_KEY]: 12,
       [INDUSTRY_BUILDING_ATLAS_KEY]: 9,
-      [SOCIETY_BUILDING_ATLAS_KEY]: 9
+      [SOCIETY_BUILDING_ATLAS_KEY]: 9,
+      [LOGISTICS_FLEET_BUILDING_ATLAS_KEY]: 12
     });
   });
 });

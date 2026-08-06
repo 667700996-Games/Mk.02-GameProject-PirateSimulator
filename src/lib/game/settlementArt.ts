@@ -12,6 +12,10 @@ export const SOCIETY_BUILDING_ATLAS_KEY = 'settlement-society-buildings';
 export const SOCIETY_BUILDING_ATLAS_IMAGE = '/art/settlement/society-buildings-atlas.png';
 export const SOCIETY_BUILDING_ATLAS_DATA = '/art/settlement/society-buildings-atlas.json';
 export const SOCIETY_BUILDING_FRAME_RATIO = 1;
+export const LOGISTICS_FLEET_BUILDING_ATLAS_KEY = 'settlement-logistics-fleet-buildings';
+export const LOGISTICS_FLEET_BUILDING_ATLAS_IMAGE = '/art/settlement/logistics-fleet-buildings-atlas.png';
+export const LOGISTICS_FLEET_BUILDING_ATLAS_DATA = '/art/settlement/logistics-fleet-buildings-atlas.json';
+export const LOGISTICS_FLEET_BUILDING_FRAME_RATIO = 341 / 384;
 
 export interface CoreBuildingArt {
   frame: string;
@@ -52,7 +56,19 @@ export const CORE_BUILDING_ART: Partial<Record<SettlementBuildingId, CoreBuildin
   infirmary: { frame: 'infirmary', displayWidth: 168, atlasKey: SOCIETY_BUILDING_ATLAS_KEY, frameRatio: SOCIETY_BUILDING_FRAME_RATIO },
   'powder-magazine': { frame: 'powder-magazine', displayWidth: 158, atlasKey: SOCIETY_BUILDING_ATLAS_KEY, frameRatio: SOCIETY_BUILDING_FRAME_RATIO },
   'captains-lodge': { frame: 'captains-lodge', displayWidth: 186, atlasKey: SOCIETY_BUILDING_ATLAS_KEY, frameRatio: SOCIETY_BUILDING_FRAME_RATIO },
-  'expedition-office': { frame: 'expedition-office', displayWidth: 178, atlasKey: SOCIETY_BUILDING_ATLAS_KEY, frameRatio: SOCIETY_BUILDING_FRAME_RATIO }
+  'expedition-office': { frame: 'expedition-office', displayWidth: 178, atlasKey: SOCIETY_BUILDING_ATLAS_KEY, frameRatio: SOCIETY_BUILDING_FRAME_RATIO },
+  'local-storage': { frame: 'local-storage', displayWidth: 128, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
+  'distribution-depot': { frame: 'distribution-depot', displayWidth: 170, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
+  'dock-warehouse': { frame: 'dock-warehouse', displayWidth: 186, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
+  'cargo-lift': { frame: 'cargo-lift', displayWidth: 144, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
+  'zipline-post': { frame: 'zipline-post', displayWidth: 120, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
+  bridge: { frame: 'bridge', displayWidth: 178, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
+  stairs: { frame: 'stairs', displayWidth: 136, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
+  ramp: { frame: 'ramp', displayWidth: 162, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
+  'cliff-platform': { frame: 'cliff-platform', displayWidth: 168, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
+  'dry-dock': { frame: 'dry-dock', displayWidth: 206, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
+  'supply-depot': { frame: 'supply-depot', displayWidth: 184, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO },
+  'cannon-foundry': { frame: 'cannon-foundry', displayWidth: 186, atlasKey: LOGISTICS_FLEET_BUILDING_ATLAS_KEY, frameRatio: LOGISTICS_FLEET_BUILDING_FRAME_RATIO }
 };
 
 export function coreBuildingDisplayHeight(art: CoreBuildingArt): number {

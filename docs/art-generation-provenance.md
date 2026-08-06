@@ -217,3 +217,49 @@ Color palette/materials: preserve role-specific weathered cream, brown, ochre, d
 Constraints: exactly eight rear-facing residents in the specified order; no front-facing faces, no extra people, no duplicate roles, no scenery, buildings, terrain, labels, icons, letters, numbers, logos or watermark; no shadow or effect outside physical bodies and equipment; no overlap between cells; no cropping.
 Avoid: front or side-only poses, looking over the shoulder, inconsistent body scale, modern clothing, fantasy armor, bright cartoon colors, photorealism, floating equipment, malformed hands, missing tools, black background, transparent checkerboard, borders, dividers, grid lines, magenta fringe.
 ```
+
+## 12종 물류·수직 기반시설·함대 건물 본체 아틀라스
+
+- 프로젝트 자산: `static/art/settlement/logistics-fleet-buildings-atlas.png`
+- 프레임 정의: `static/art/settlement/logistics-fleet-buildings-atlas.json`
+- 최종 생성 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-52f771bf-71dc-49f2-b7c0-e1aaf602db5d.png`
+- 생성 방식: 내장 이미지 생성 도구 `stylized-concept`
+- 참조 이미지: `static/art/settlement/core-buildings-atlas.png` — 스타일·시점·재질 참조 전용
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 4×3 고정 프레임, 지정 순서 12종, 크롭·셀 중첩·인물·선박·마젠타 잔여 없음
+
+### 최종 생성 프롬프트
+
+```text
+Use case: stylized-concept
+Asset type: production isometric logistics, vertical-infrastructure and fleet-building sprite atlas for a browser-based 2.5D pirate settlement management game
+Input images: Image 1 is a style reference only. Match its premium hand-painted stylized realism, fixed orthographic isometric camera, salt-worn timber, dark stone, slate-blue roofs, aged brass, compact readable silhouettes and upper-left warm daylight. Do not edit, trace or reproduce any complete building from Image 1.
+Primary request: create exactly twelve complete isolated pirate-settlement structures arranged in a precise 4-column by 3-row contact sheet.
+
+Required order:
+Row 1, left to right:
+1. LOCAL STORAGE — compact one-story timber cache with raised plank floor, salt-stained canvas awning, closed crates, tied sacks, two barrels and a small covered loading porch; modest neighborhood scale.
+2. DISTRIBUTION DEPOT — broad logistics sorting hall with two loading bays, roofed central dispatch platform, handcarts, labeled-by-shape crate groups with no written text, rope hoist and route-board frame with blank wooden slats.
+3. DOCK WAREHOUSE — large coastal warehouse on heavy timber pilings with stone footing, wide cargo doors, crane beam, stacked sealed crates and barrels, short loading jetty; no water or ship.
+4. CARGO LIFT — tall cliff freight elevator mechanism with two self-contained timber platforms at visibly different heights, reinforced tower frame, large pulley wheels, thick rope, counterweight cage and loading deck; no cliff or terrain.
+Row 2, left to right:
+5. ZIPLINE POST — high timber cargo-zipline anchor tower with braced feet, pulley head, winding drum, hanging closed cargo basket and two short taut cable ends that stop inside the cell; single station only.
+6. WOODEN BRIDGE — elongated reinforced timber bridge span with plank deck, rope handrails, four stone-and-timber end abutments and under-deck braces; isolated complete bridge with no river, ravine or terrain.
+7. CLIFF STAIRS — compact switchback timber-and-stone stair structure with two landings, railings, support trestles and clear lower and upper entrances; freestanding vertical connector, no cliff.
+8. CARGO RAMP — broad reinforced wooden handcart ramp with shallow incline, side rails, cross braces, wheel guides and small stone footings; visibly different from stairs and bridge, no cart.
+Row 3, left to right:
+9. CLIFF PLATFORM — wide elevated timber work platform on deep braced stilts with rope railings, anchor bolts, winch, stacked planks and one access ladder; no cliff face and no complete building.
+10. DRY DOCK — large empty stone-and-timber ship repair basin with open slipway, side scaffolds, capstan, crane derrick and pump house; absolutely no ship, water or people.
+11. FLEET SUPPLY DEPOT — fortified coastal provisioning hall with broad loading canopy, sealed hardtack crates, water casks, powder-safe lockers, rope coils and a short loading deck; no ship, no loose explosives.
+12. CANNON FOUNDRY — heavy stone naval gun foundry with tall soot-dark chimney, enclosed furnace glow, overhead casting gantry, cannon-mold trench and two finished unmarked iron cannon barrels on timber stands; no smoke outside the sprite.
+
+Scene/backdrop: every cell must use one perfectly flat uniform solid #ff00ff chroma-key background for local background removal. No ground plane, cast shadow, contact shadow, gradient, vignette, texture, reflection or lighting variation in the background.
+Style/medium: premium hand-painted 2.5D strategy-game structure sprites, original Dark Pirate Maritime Command art direction, production-ready rather than concept sketches.
+Composition/framing: exact fixed orthographic isometric camera matching Image 1; exactly 4 equal columns and 3 equal rows; one structure centered in each cell; identical orientation and consistent game scale; every object fully contained with generous magenta padding; lowest point of every bottom-row object at least 18 pixels above the canvas edge; long bridge, ramp and dry dock must remain inside their own cells; silhouettes readable when downscaled to about 150 pixels wide.
+Lighting/mood: restrained warm upper-left daylight and cool lower-right ambient occlusion contained within physical objects; high material readability.
+Color palette: weathered umber timber, charcoal and gray stone, slate-blue shingles, beige canvas, aged iron, oxidized brass, restrained black-crimson fabric and tiny warm amber window or enclosed furnace accents. Do not use magenta or pink inside any structure.
+Materials/textures: readable wood grain, chipped masonry, worn shingles, rope fiber, iron straps, pulley wheels, canvas wear and practical pirate-made repairs.
+Constraints: exactly twelve structures in the specified order; each cell contains one complete self-contained structure; no people, ships, animals, terrain tiles, water, roads, scenery, written labels, icons, letters, numbers, logos or watermark; no smoke, fire, glow, cable or effect beyond the physical sprite boundary; no overlap between cells; no cropping.
+Avoid: duplicated silhouettes, modern machinery, fantasy magic, bright mobile-game cartoon colors, photorealism, top-down camera, front-facing elevation, mismatched perspectives, floating parts, black background, transparent checkerboard, borders, dividers, grid lines, magenta fringe, tiny unreadable clutter.
+```
