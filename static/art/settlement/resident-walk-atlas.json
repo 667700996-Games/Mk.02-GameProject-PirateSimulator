@@ -1,0 +1,36 @@
+{
+  "frames": {
+    "laborer-walk-0": { "frame": { "x": 0, "y": 0, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "hauler-walk-0": { "frame": { "x": 192, "y": 0, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "builder-walk-0": { "frame": { "x": 384, "y": 0, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "logger-walk-0": { "frame": { "x": 576, "y": 0, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "fisher-walk-0": { "frame": { "x": 768, "y": 0, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "shipwright-walk-0": { "frame": { "x": 960, "y": 0, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "guard-walk-0": { "frame": { "x": 1152, "y": 0, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "officer-walk-0": { "frame": { "x": 1344, "y": 0, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "laborer-walk-1": { "frame": { "x": 0, "y": 341, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "hauler-walk-1": { "frame": { "x": 192, "y": 341, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "builder-walk-1": { "frame": { "x": 384, "y": 341, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "logger-walk-1": { "frame": { "x": 576, "y": 341, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "fisher-walk-1": { "frame": { "x": 768, "y": 341, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "shipwright-walk-1": { "frame": { "x": 960, "y": 341, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "guard-walk-1": { "frame": { "x": 1152, "y": 341, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "officer-walk-1": { "frame": { "x": 1344, "y": 341, "w": 192, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 341 }, "sourceSize": { "w": 192, "h": 341 } },
+    "laborer-walk-2": { "frame": { "x": 0, "y": 682, "w": 192, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 342 }, "sourceSize": { "w": 192, "h": 342 } },
+    "hauler-walk-2": { "frame": { "x": 192, "y": 682, "w": 192, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 342 }, "sourceSize": { "w": 192, "h": 342 } },
+    "builder-walk-2": { "frame": { "x": 384, "y": 682, "w": 192, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 342 }, "sourceSize": { "w": 192, "h": 342 } },
+    "logger-walk-2": { "frame": { "x": 576, "y": 682, "w": 192, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 342 }, "sourceSize": { "w": 192, "h": 342 } },
+    "fisher-walk-2": { "frame": { "x": 768, "y": 682, "w": 192, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 342 }, "sourceSize": { "w": 192, "h": 342 } },
+    "shipwright-walk-2": { "frame": { "x": 960, "y": 682, "w": 192, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 342 }, "sourceSize": { "w": 192, "h": 342 } },
+    "guard-walk-2": { "frame": { "x": 1152, "y": 682, "w": 192, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 342 }, "sourceSize": { "w": 192, "h": 342 } },
+    "officer-walk-2": { "frame": { "x": 1344, "y": 682, "w": 192, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 342 }, "sourceSize": { "w": 192, "h": 342 } }
+  },
+  "meta": {
+    "app": "Mk.02-GameProject-PirateSimulator",
+    "version": "1.0",
+    "image": "resident-walk-front-atlas.png",
+    "format": "RGBA8888",
+    "size": { "w": 1536, "h": 1024 },
+    "scale": "1"
+  }
+}
