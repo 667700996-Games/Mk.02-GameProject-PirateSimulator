@@ -159,7 +159,11 @@ function advanceConstruction(
   indexes: SimulationIndexes
 ): void {
   const builders = state.residents.filter(
-    (resident) => resident.job === 'builder' && resident.health > 20
+    (resident) =>
+      resident.job === 'builder' &&
+      resident.health > 20 &&
+      !resident.activityAction &&
+      !indexes.deployedResidentIds.has(resident.id)
   );
   const allocatedBuilders = new Set(
     state.buildings
@@ -204,7 +208,11 @@ function advanceConstruction(
       .map((id) => indexes.residentsById.get(id))
       .filter(
         (resident): resident is Resident =>
-          !!resident && resident.job === 'builder' && resident.health > 20
+          !!resident &&
+          resident.job === 'builder' &&
+          resident.health > 20 &&
+          !resident.activityAction &&
+          !indexes.deployedResidentIds.has(resident.id)
       );
     if (assignedBuilders.length === 0) {
       assignedBuilders = builders

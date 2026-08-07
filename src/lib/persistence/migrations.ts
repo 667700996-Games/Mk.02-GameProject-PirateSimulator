@@ -261,6 +261,8 @@ function validateSettlement(state: GameState): void {
       throw new SaveMigrationError('주민 주거 참조가 손상되었습니다.');
     if (resident.workplaceId && !buildingIds.has(resident.workplaceId))
       throw new SaveMigrationError('주민 근무지 참조가 손상되었습니다.');
+    if (Boolean(resident.activityAction) !== Boolean(resident.activityTargetId))
+      throw new SaveMigrationError('주민 활동 예약 데이터가 불완전합니다.');
     if (resident.activityTargetId && !buildingIds.has(resident.activityTargetId))
       throw new SaveMigrationError('주민 활동 목적지 참조가 손상되었습니다.');
     assertFinite(resident.actionUntil, '주민 행동 종료 시각', 0, Number.MAX_SAFE_INTEGER);

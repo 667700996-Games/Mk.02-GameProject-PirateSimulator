@@ -378,6 +378,13 @@ describe('settlement simulation', () => {
     expect(completedTent.state).toBe('ACTIVE');
     expect(completedTent.level).toBe(2);
     expect(completedTent.upgradeMaterialsCommitted).toBe(false);
+
+    const tierThree = beginBuildingUpgrade(upgraded, tent.id);
+    expect(tierThree.ok).toBe(true);
+    const completedTierThree = advanceMany(tierThree.state, 160);
+    const finalTent = completedTierThree.buildings.find((building) => building.id === tent.id)!;
+    expect(finalTent.state).toBe('ACTIVE');
+    expect(finalTent.level).toBe(3);
   });
 
   it('runs gathering recipes only after construction, staffing and real storage output exist', () => {
@@ -668,6 +675,18 @@ describe('settlement simulation', () => {
     expect(prepared.ok).toBe(true);
     state = prepared.state;
     let ships = game.ships;
+    ({ settlement: state, ships } = advanceExpeditions(state, ships, 1, 1999));
+    const boardingPositions = new Map(
+      state.residents
+        .filter((resident) => crew.some((member) => member.id === resident.id))
+        .map((resident) => [resident.id, { ...resident.position }])
+    );
+    state = advanceSettlement(state, 1);
+    for (const crewMember of crew) {
+      const resident = state.residents.find((person) => person.id === crewMember.id)!;
+      expect(resident.action).toBe('BOARDING');
+      expect(resident.position).toEqual(boardingPositions.get(crewMember.id));
+    }
     for (let guard = 0; guard < 20 && state.expeditions[0].state !== 'EVENT'; guard += 1) {
       const advanced = advanceExpeditions(state, ships, 45, 2000 + guard);
       state = advanced.settlement;

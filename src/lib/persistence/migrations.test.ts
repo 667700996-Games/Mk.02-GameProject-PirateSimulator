@@ -135,8 +135,14 @@ describe('save migrations', () => {
   it('rejects negative inventory and broken cross references', () => {
     const game = createNewGame(
       {
-        captainName: '교차 검증', crewName: '장부단', shipName: '정상 참조', flagMark: '□',
-        flagColor: '#222222', trait: 'architect', difficulty: 'story', seed: 6
+        captainName: '교차 검증',
+        crewName: '장부단',
+        shipName: '정상 참조',
+        flagMark: '□',
+        flagColor: '#222222',
+        trait: 'architect',
+        difficulty: 'story',
+        seed: 6
       },
       1000
     );
@@ -145,12 +151,34 @@ describe('save migrations', () => {
 
     const broken = createNewGame(
       {
-        captainName: '교차 검증', crewName: '장부단', shipName: '깨진 참조', flagMark: '□',
-        flagColor: '#222222', trait: 'architect', difficulty: 'story', seed: 7
+        captainName: '교차 검증',
+        crewName: '장부단',
+        shipName: '깨진 참조',
+        flagMark: '□',
+        flagColor: '#222222',
+        trait: 'architect',
+        difficulty: 'story',
+        seed: 7
       },
       1000
     );
     broken.settlement.residents[0].homeId = 'missing-home';
     expect(() => migrateGameState(broken)).toThrow('주거 참조');
+
+    const incompleteActivity = createNewGame(
+      {
+        captainName: '교차 검증',
+        crewName: '장부단',
+        shipName: '불완전 예약',
+        flagMark: '□',
+        flagColor: '#222222',
+        trait: 'architect',
+        difficulty: 'story',
+        seed: 8
+      },
+      1000
+    );
+    incompleteActivity.settlement.residents[0].activityAction = 'HEALING';
+    expect(() => migrateGameState(incompleteActivity)).toThrow('활동 예약');
   });
 });
