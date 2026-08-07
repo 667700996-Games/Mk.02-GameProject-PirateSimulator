@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BUILDINGS } from '$lib/settlement/catalog';
 import {
+  BUILDING_ATLAS_SOURCES,
   CIVIC_DEFENSE_BUILDING_ATLAS_DATA,
   CIVIC_DEFENSE_BUILDING_ATLAS_IMAGE,
   CIVIC_DEFENSE_BUILDING_ATLAS_KEY,
@@ -21,6 +22,7 @@ import {
   SOCIETY_BUILDING_ATLAS_IMAGE,
   SOCIETY_BUILDING_ATLAS_KEY,
   buildingAtlasKey,
+  buildingAtlasKeysForIds,
   coreBuildingDisplayHeight
 } from './settlementArt';
 
@@ -136,5 +138,33 @@ describe('settlement building art', () => {
       [LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY]: 8,
       [CIVIC_DEFENSE_BUILDING_ATLAS_KEY]: 8
     });
+  });
+
+  it('selects only the core atlas at a fresh settlement and adds atlases on demand', () => {
+    expect(buildingAtlasKeysForIds(['wreckage', 'campfire', 'tent'])).toEqual([
+      CORE_BUILDING_ATLAS_KEY
+    ]);
+    expect(
+      buildingAtlasKeysForIds([
+        'wreckage',
+        'quarry',
+        'tavern',
+        'local-storage',
+        'hunter-hut',
+        'signal-tower'
+      ])
+    ).toEqual([
+      CORE_BUILDING_ATLAS_KEY,
+      INDUSTRY_BUILDING_ATLAS_KEY,
+      SOCIETY_BUILDING_ATLAS_KEY,
+      LOGISTICS_FLEET_BUILDING_ATLAS_KEY,
+      LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY,
+      CIVIC_DEFENSE_BUILDING_ATLAS_KEY
+    ]);
+    expect(Object.keys(BUILDING_ATLAS_SOURCES)).toHaveLength(6);
+    for (const source of Object.values(BUILDING_ATLAS_SOURCES)) {
+      expect(source.image).toMatch(/^\/art\/settlement\/.*\.png$/);
+      expect(source.data).toMatch(/^\/art\/settlement\/.*\.json$/);
+    }
   });
 });

@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
 
+const DEFERRED_BUILDING_ATLASES = [
+  'industry-buildings-atlas.png',
+  'society-buildings-atlas.png',
+  'logistics-fleet-buildings-atlas.png',
+  'livelihood-service-buildings-atlas.png',
+  'civic-defense-buildings-atlas.png'
+] as const;
+
 async function createSettlement(page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: '새로운 전설 시작' }).click();
@@ -10,21 +18,6 @@ async function createSettlement(page: import('@playwright/test').Page): Promise<
   const atlasResponses = Promise.all([
     page.waitForResponse((response) =>
       response.url().endsWith('/art/settlement/core-buildings-atlas.png')
-    ),
-    page.waitForResponse((response) =>
-      response.url().endsWith('/art/settlement/industry-buildings-atlas.png')
-    ),
-    page.waitForResponse((response) =>
-      response.url().endsWith('/art/settlement/society-buildings-atlas.png')
-    ),
-    page.waitForResponse((response) =>
-      response.url().endsWith('/art/settlement/logistics-fleet-buildings-atlas.png')
-    ),
-    page.waitForResponse((response) =>
-      response.url().endsWith('/art/settlement/livelihood-service-buildings-atlas.png')
-    ),
-    page.waitForResponse((response) =>
-      response.url().endsWith('/art/settlement/civic-defense-buildings-atlas.png')
     ),
     page.waitForResponse((response) =>
       response.url().endsWith('/art/settlement/resident-roles-atlas.png')
@@ -45,6 +38,12 @@ async function createSettlement(page: import('@playwright/test').Page): Promise<
   }
   await expect(page.getByTestId('settlement-screen')).toBeVisible();
   await expect(page.locator('.settlement-host canvas')).toBeVisible({ timeout: 15_000 });
+  const initialResources = await page.evaluate(() =>
+    performance.getEntriesByType('resource').map((entry) => entry.name)
+  );
+  for (const atlas of DEFERRED_BUILDING_ATLASES) {
+    expect(initialResources.some((url) => url.endsWith(`/art/settlement/${atlas}`))).toBe(false);
+  }
 }
 
 test('places a terrain-bound building and runs its physical construction flow', async ({
@@ -52,9 +51,24 @@ test('places a terrain-bound building and runs its physical construction flow', 
 }, testInfo) => {
   test.slow();
   await createSettlement(page);
-  if (!(await page.getByTestId('build-water-collector').isVisible())) {
+  const buildPanel = page.getByTestId('build-panel');
+  if (!(await buildPanel.getByRole('heading', { name: '도시 건설' }).isVisible())) {
     await page.getByRole('button', { name: '건설 메뉴 열기' }).click();
   }
+  await buildPanel.getByRole('button', { name: /물류/ }).click();
+  const logisticsAtlasResponse = page.waitForResponse((response) =>
+    response.url().endsWith('/art/settlement/logistics-fleet-buildings-atlas.png')
+  );
+  await page.getByTestId('build-local-storage').click();
+  const logisticsAtlas = await logisticsAtlasResponse;
+  expect(
+    logisticsAtlas.ok() || logisticsAtlas.status() === 304,
+    `${logisticsAtlas.url()} returned ${logisticsAtlas.status()}`
+  ).toBe(true);
+  if (!(await buildPanel.getByRole('heading', { name: '도시 건설' }).isVisible())) {
+    await page.getByRole('button', { name: '건설 메뉴 열기' }).click();
+  }
+  await buildPanel.getByRole('button', { name: /채집/ }).click();
   await page.getByTestId('build-water-collector').click();
   if ((page.viewportSize()?.width ?? 1280) > 760) {
     await page.getByRole('button', { name: '건설 메뉴 닫기' }).click();

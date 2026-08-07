@@ -5,27 +5,13 @@ import { buildingCells, tileAt, validatePlacement } from '$lib/settlement/island
 import type { ResidentAction, SettlementBuilding, SettlementBuildingId, SettlementOverlay, SettlementSimulationState, TerrainType } from '$lib/settlement/types';
 import type { GameSettings } from '$lib/domain/types';
 import {
-  CIVIC_DEFENSE_BUILDING_ATLAS_DATA,
-  CIVIC_DEFENSE_BUILDING_ATLAS_IMAGE,
-  CIVIC_DEFENSE_BUILDING_ATLAS_KEY,
+  BUILDING_ATLAS_SOURCES,
   CORE_BUILDING_ART,
-  CORE_BUILDING_ATLAS_DATA,
-  CORE_BUILDING_ATLAS_IMAGE,
   CORE_BUILDING_ATLAS_KEY,
-  INDUSTRY_BUILDING_ATLAS_DATA,
-  INDUSTRY_BUILDING_ATLAS_IMAGE,
-  INDUSTRY_BUILDING_ATLAS_KEY,
-  LOGISTICS_FLEET_BUILDING_ATLAS_DATA,
-  LOGISTICS_FLEET_BUILDING_ATLAS_IMAGE,
-  LOGISTICS_FLEET_BUILDING_ATLAS_KEY,
-  LIVELIHOOD_SERVICE_BUILDING_ATLAS_DATA,
-  LIVELIHOOD_SERVICE_BUILDING_ATLAS_IMAGE,
-  LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY,
-  SOCIETY_BUILDING_ATLAS_DATA,
-  SOCIETY_BUILDING_ATLAS_IMAGE,
-  SOCIETY_BUILDING_ATLAS_KEY,
   buildingAtlasKey,
+  buildingAtlasKeysForIds,
   coreBuildingDisplayHeight,
+  type BuildingAtlasKey,
   type CoreBuildingArt
 } from './settlementArt';
 import {
@@ -113,6 +99,8 @@ export class SettlementScene extends Phaser.Scene {
   private buildingSignature = '';
   private overlaySignature = '';
   private terrainSignature = '';
+  private loadingBuildingAtlases = new Set<BuildingAtlasKey>();
+  private runtimeAtlasCompletionArmed = false;
   private residentObjects = new Map<
     string,
     {
@@ -136,24 +124,10 @@ export class SettlementScene extends Phaser.Scene {
   }
 
   preload(): void {
-    if (!this.textures.exists(CORE_BUILDING_ATLAS_KEY)) {
-      this.load.atlas(CORE_BUILDING_ATLAS_KEY, CORE_BUILDING_ATLAS_IMAGE, CORE_BUILDING_ATLAS_DATA);
-    }
-    if (!this.textures.exists(INDUSTRY_BUILDING_ATLAS_KEY)) {
-      this.load.atlas(INDUSTRY_BUILDING_ATLAS_KEY, INDUSTRY_BUILDING_ATLAS_IMAGE, INDUSTRY_BUILDING_ATLAS_DATA);
-    }
-    if (!this.textures.exists(SOCIETY_BUILDING_ATLAS_KEY)) {
-      this.load.atlas(SOCIETY_BUILDING_ATLAS_KEY, SOCIETY_BUILDING_ATLAS_IMAGE, SOCIETY_BUILDING_ATLAS_DATA);
-    }
-    if (!this.textures.exists(LOGISTICS_FLEET_BUILDING_ATLAS_KEY)) {
-      this.load.atlas(LOGISTICS_FLEET_BUILDING_ATLAS_KEY, LOGISTICS_FLEET_BUILDING_ATLAS_IMAGE, LOGISTICS_FLEET_BUILDING_ATLAS_DATA);
-    }
-    if (!this.textures.exists(LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY)) {
-      this.load.atlas(LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY, LIVELIHOOD_SERVICE_BUILDING_ATLAS_IMAGE, LIVELIHOOD_SERVICE_BUILDING_ATLAS_DATA);
-    }
-    if (!this.textures.exists(CIVIC_DEFENSE_BUILDING_ATLAS_KEY)) {
-      this.load.atlas(CIVIC_DEFENSE_BUILDING_ATLAS_KEY, CIVIC_DEFENSE_BUILDING_ATLAS_IMAGE, CIVIC_DEFENSE_BUILDING_ATLAS_DATA);
-    }
+    this.queueBuildingAtlases(
+      buildingAtlasKeysForIds(this.snapshot.buildings.map((building) => building.definitionId)),
+      false
+    );
     if (!this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) {
       this.load.atlas(BUILDING_PROGRESSION_ATLAS_KEY, BUILDING_PROGRESSION_ATLAS_IMAGE, BUILDING_PROGRESSION_ATLAS_DATA);
     }
@@ -169,6 +143,7 @@ export class SettlementScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.loadingBuildingAtlases.clear();
     this.cameras.main.setBackgroundColor('#041820');
     this.cameras.main.setBounds(0, 0, 2200, 1450);
     this.cameras.main.centerOn(1080, 620);
@@ -199,6 +174,10 @@ export class SettlementScene extends Phaser.Scene {
   public syncSnapshot(snapshot: SettlementSimulationState): void {
     this.snapshot = snapshot;
     if (!this.scene.isActive()) return;
+    this.queueBuildingAtlases(
+      buildingAtlasKeysForIds(snapshot.buildings.map((building) => building.definitionId)),
+      true
+    );
     this.drawDynamicLayers();
   }
 
@@ -206,13 +185,40 @@ export class SettlementScene extends Phaser.Scene {
     this.buildTool = definitionId;
     this.movingBuildingId = undefined;
     this.rotation = 0;
+    if (definitionId) this.queueBuildingAtlases(buildingAtlasKeysForIds([definitionId]), true);
     this.drawPreview();
   }
 
   public setMoveTool(buildingId?: string): void {
     this.buildTool = undefined;
     this.movingBuildingId = buildingId;
+    const building = this.snapshot.buildings.find((item) => item.id === buildingId);
+    if (building) this.queueBuildingAtlases(buildingAtlasKeysForIds([building.definitionId]), true);
     this.drawPreview();
+  }
+
+  private queueBuildingAtlases(keys: Iterable<BuildingAtlasKey>, startNow: boolean): void {
+    let queued = false;
+    for (const key of keys) {
+      if (this.textures.exists(key) || this.loadingBuildingAtlases.has(key)) continue;
+      const source = BUILDING_ATLAS_SOURCES[key];
+      this.loadingBuildingAtlases.add(key);
+      this.load.atlas(key, source.image, source.data);
+      queued = true;
+    }
+    if (!startNow || !queued) return;
+    if (!this.runtimeAtlasCompletionArmed) {
+      this.runtimeAtlasCompletionArmed = true;
+      this.load.once(Phaser.Loader.Events.COMPLETE, () => {
+        this.runtimeAtlasCompletionArmed = false;
+        this.loadingBuildingAtlases.clear();
+        if (!this.scene.isActive()) return;
+        this.buildingSignature = '';
+        this.drawDynamicLayers(true);
+        this.drawPreview();
+      });
+    }
+    if (!this.load.isLoading()) this.load.start();
   }
 
   public rotateBuildTool(): void {
@@ -869,7 +875,7 @@ export class SettlementScene extends Phaser.Scene {
     }
     const art = CORE_BUILDING_ART[definitionId];
     const originTile = tileAt(this.snapshot.island, this.hoverTile.x, this.hoverTile.y);
-    if (art && originTile && this.previewSprite) {
+    if (art && originTile && this.previewSprite && this.textures.exists(buildingAtlasKey(art))) {
       const point = this.iso(this.hoverTile.x, this.hoverTile.y, originTile.elevation);
       this.previewSprite
         .setTexture(buildingAtlasKey(art), art.frame)

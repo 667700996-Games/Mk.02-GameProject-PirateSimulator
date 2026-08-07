@@ -25,10 +25,21 @@ export const CIVIC_DEFENSE_BUILDING_ATLAS_IMAGE = '/art/settlement/civic-defense
 export const CIVIC_DEFENSE_BUILDING_ATLAS_DATA = '/art/settlement/civic-defense-buildings-atlas.json';
 export const CIVIC_DEFENSE_BUILDING_FRAME_RATIO = 512 / 384;
 
+export const BUILDING_ATLAS_SOURCES = {
+  [CORE_BUILDING_ATLAS_KEY]: { image: CORE_BUILDING_ATLAS_IMAGE, data: CORE_BUILDING_ATLAS_DATA },
+  [INDUSTRY_BUILDING_ATLAS_KEY]: { image: INDUSTRY_BUILDING_ATLAS_IMAGE, data: INDUSTRY_BUILDING_ATLAS_DATA },
+  [SOCIETY_BUILDING_ATLAS_KEY]: { image: SOCIETY_BUILDING_ATLAS_IMAGE, data: SOCIETY_BUILDING_ATLAS_DATA },
+  [LOGISTICS_FLEET_BUILDING_ATLAS_KEY]: { image: LOGISTICS_FLEET_BUILDING_ATLAS_IMAGE, data: LOGISTICS_FLEET_BUILDING_ATLAS_DATA },
+  [LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY]: { image: LIVELIHOOD_SERVICE_BUILDING_ATLAS_IMAGE, data: LIVELIHOOD_SERVICE_BUILDING_ATLAS_DATA },
+  [CIVIC_DEFENSE_BUILDING_ATLAS_KEY]: { image: CIVIC_DEFENSE_BUILDING_ATLAS_IMAGE, data: CIVIC_DEFENSE_BUILDING_ATLAS_DATA }
+} as const;
+
+export type BuildingAtlasKey = keyof typeof BUILDING_ATLAS_SOURCES;
+
 export interface CoreBuildingArt {
   frame: string;
   displayWidth: number;
-  atlasKey?: string;
+  atlasKey?: BuildingAtlasKey;
   frameRatio?: number;
   originY?: number;
   offsetY?: number;
@@ -99,6 +110,15 @@ export function coreBuildingDisplayHeight(art: CoreBuildingArt): number {
   return art.displayWidth * (art.frameRatio ?? CORE_BUILDING_FRAME_RATIO);
 }
 
-export function buildingAtlasKey(art: CoreBuildingArt): string {
+export function buildingAtlasKey(art: CoreBuildingArt): BuildingAtlasKey {
   return art.atlasKey ?? CORE_BUILDING_ATLAS_KEY;
+}
+
+export function buildingAtlasKeysForIds(ids: Iterable<SettlementBuildingId>): BuildingAtlasKey[] {
+  const keys = new Set<BuildingAtlasKey>([CORE_BUILDING_ATLAS_KEY]);
+  for (const id of ids) {
+    const art = CORE_BUILDING_ART[id];
+    if (art) keys.add(buildingAtlasKey(art));
+  }
+  return [...keys];
 }
