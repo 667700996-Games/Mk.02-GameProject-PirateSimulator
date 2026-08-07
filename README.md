@@ -85,7 +85,7 @@ npm run preview
 - 기초·가공·생활·군수·고급·특수 전리품을 포함한 자원 69종과 확장 가능한 생산법 카탈로그
 - 출발지·도착지·예약 수량·A* 경로·운반자·픽업·배송 상태가 있는 실제 화물 작업과, 건물 점유·미탐사 구역·교량·혼잡·날씨를 반영하는 이동 비용
 - 생산 입력 부족, 출력 포화, 운반 대기, 인력 부족, 천연자원 고갈을 구분하는 병목 상태
-- 이름·계층·직업·집·직장·건강·사기·충성·피로·경험·욕구·행동·이동 경로를 가진 개별 주민, 8개 역할별 전·후면 프레임, 화면 이동 방향 전환과 13개 행동별 보행·운반·작업·훈련·방어 미세 동작 및 상태 표식
+- 이름·계층·직업·집·직장·건강·사기·충성·피로·경험·욕구·행동·이동 경로를 가진 개별 주민, 8개 역할별 전·후면 3프레임 보행 아틀라스, 좌우 반전을 결합한 네 대각선 방향, 프레임 독립 위치 보간과 13개 행동별 운반·작업·훈련·방어 미세 동작 및 상태 표식
 - 화면 밖 주민 갱신 축소와 최대 표시 수 제한을 이용한 주민 LOD
 - 자동 노동 배치와 직업별 최소·최대 인원, 우선순위, 숙련자 우선 규칙
 - 시간별 식수·식량 소비, 주거 배치, 사기·충성 변화, 계층 상승과 조건부 이주
@@ -158,6 +158,7 @@ Svelte는 고밀도 관리 UI를 담당하고 Phaser는 공간 표현과 포인�
 - 정적 지형과 동적 건물·주민·오버레이 레이어 분리
 - 날씨 서명 기반 재생성과 동적 Phaser tween 정리로 장시간 누적 방지
 - 건물·오버레이 더티 서명, 주민 표시 객체 풀, 품질 단계별 주민·날씨·파도 밀도 제어
+- 주민 보행은 정지용 별도 텍스처를 중복 적재하지 않고 3프레임 아틀라스의 중립 자세를 공유하며, 주민별 위상 분산과 화면 안 객체만의 프레임 교체로 동시 보행의 기계적인 반복과 불필요한 갱신을 줄임
 - 정착지 첫 진입에는 핵심 1단계 건물 아틀라스만 적재하고, 저장 도시에 이미 존재하거나 건설 도감·시설 확장에서 요구된 건물군과 단계 아틀라스만 내려받습니다. 신규 정착지 기준 PNG 약 14.41MiB와 디코딩 텍스처 약 42MiB를 초기 경로에서 유예합니다.
 - Svelte 관리 UI와 Phaser 렌더 스냅샷 분리로 캔버스 프레임과 상태 갱신 격리
 - 저장 데이터 정규화와 IndexedDB 비동기 기록
@@ -175,7 +176,7 @@ npm run validate    # check + lint + unit + build
 npm run test:coverage # 핵심 도메인 커버리지 임계치 검증
 ```
 
-자동 테스트는 지형 배치, 15종 지형 아틀라스, 카탈로그와 일대일 대응하는 58종 건물 본체 라우팅, 핵심 건물의 1→2→3단계 전용 본체 교체, 6종 건물 성장·상태 아틀라스, 요구 기반 건물 아틀라스 적재, 8개 주민 역할의 전·후면 방향 전환, 13개 주민 행동 모션, 실제 PNG 응답, 점유·미탐사 경로, 혼잡, 수직 이동 비용, 공사 자재 운송, 건설 완료, 예약 화물 보호, 시설 확장, 생산·욕구·복지·계층 상승, 통치 정책, 함선 건조, 원정 사건과 영구 손실, 임무·보상의 단일 경제, 실시간 기함 출격과 함선 아틀라스, 방어 카운트다운·사상자, 캠페인 승리, 동일 탭 세션 복구, 저장 v1→v4 마이그레이션·무결성·복구를 검증합니다. 현재 21개 파일의 Vitest 88개와 5개 브라우저/기기 프로젝트의 Playwright 55개가 품질 게이트에 포함됩니다. GitHub Actions는 타입·린트·상향된 커버리지·빌드·전체 브라우저 행렬을 강제합니다.
+자동 테스트는 지형 배치, 15종 지형 아틀라스, 카탈로그와 일대일 대응하는 58종 건물 본체 라우팅, 핵심 건물의 1→2→3단계 전용 본체 교체, 6종 건물 성장·상태 아틀라스, 요구 기반 건물 아틀라스 적재, 8개 주민 역할의 전·후면 3프레임 보행과 네 대각선 방향 전환, 13개 주민 행동 모션, 실제 PNG 응답, 점유·미탐사 경로, 혼잡, 수직 이동 비용, 공사 자재 운송, 건설 완료, 예약 화물 보호, 시설 확장, 생산·욕구·복지·계층 상승, 통치 정책, 함선 건조, 원정 사건과 영구 손실, 임무·보상의 단일 경제, 실시간 기함 출격과 함선 아틀라스, 방어 카운트다운·사상자, 캠페인 승리, 동일 탭 세션 복구, 저장 v1→v4 마이그레이션·무결성·복구를 검증합니다. 현재 21개 파일의 Vitest 89개와 5개 브라우저/기기 프로젝트의 Playwright 55개가 품질 게이트에 포함됩니다. GitHub Actions는 타입·린트·상향된 커버리지·빌드·전체 브라우저 행렬을 강제합니다.
 
 ## 웹 앱·접근성
 
@@ -190,4 +191,4 @@ npm run test:coverage # 핵심 도메인 커버리지 임계치 검증
 
 ## 원본 아트
 
-타이틀과 본거지 키 아트는 이 프로젝트를 위해 만든 원본 자산인 [`static/art/pirate-haven-keyart.png`](static/art/pirate-haven-keyart.png)를 재사용합니다. 군도 해도는 이 세계관을 위해 새로 제작한 [`static/art/archipelago-command-map.webp`](static/art/archipelago-command-map.webp)입니다. 아이소메트릭 건물과 주민은 [`static/art/settlement/`](static/art/settlement/) 아래의 핵심·산업·사회·물류·수직 기반시설·함대 건물 본체와 주민 전·후면 아틀라스를 사용하며, 핵심 확장 외형은 [`core-buildings-tier2-atlas.png`](static/art/settlement/core-buildings-tier2-atlas.png)와 [`core-buildings-tier3-atlas.png`](static/art/settlement/core-buildings-tier3-atlas.png)로 분리했습니다. 지형은 [`terrain-surfaces-atlas-v2.png`](static/art/settlement/terrain-surfaces-atlas-v2.png), 건물 성장·상태 장식은 [`building-progression-overlays-atlas.png`](static/art/settlement/building-progression-overlays-atlas.png), 9개 함선 등급은 [`fleet-classes-atlas.png`](static/art/naval/fleet-classes-atlas.png)의 프로젝트 전용 아틀라스를 사용합니다. 절벽 측면, 자원·환경 실루엣, 물류선, 날씨, 주민 미세 동작, 항적, 포연, 피격·화재·침수·침몰 효과는 CSS와 Phaser 코드로 절차 렌더링합니다. 자산 생성·편집 프롬프트와 처리 근거는 [`docs/art-generation-provenance.md`](docs/art-generation-provenance.md)에 기록했습니다. 특정 상용 게임의 이미지·UI·명칭을 복제하지 않습니다.
+타이틀과 본거지 키 아트는 이 프로젝트를 위해 만든 원본 자산인 [`static/art/pirate-haven-keyart.png`](static/art/pirate-haven-keyart.png)를 재사용합니다. 군도 해도는 이 세계관을 위해 새로 제작한 [`static/art/archipelago-command-map.webp`](static/art/archipelago-command-map.webp)입니다. 아이소메트릭 건물과 주민은 [`static/art/settlement/`](static/art/settlement/) 아래의 핵심·산업·사회·물류·수직 기반시설·함대 건물 본체와 주민 전·후면 3프레임 보행 아틀라스를 사용하며, 핵심 확장 외형은 [`core-buildings-tier2-atlas.png`](static/art/settlement/core-buildings-tier2-atlas.png)와 [`core-buildings-tier3-atlas.png`](static/art/settlement/core-buildings-tier3-atlas.png)로 분리했습니다. 지형은 [`terrain-surfaces-atlas-v2.png`](static/art/settlement/terrain-surfaces-atlas-v2.png), 건물 성장·상태 장식은 [`building-progression-overlays-atlas.png`](static/art/settlement/building-progression-overlays-atlas.png), 주민 보행은 [`resident-walk-front-atlas.png`](static/art/settlement/resident-walk-front-atlas.png)와 [`resident-walk-rear-atlas.png`](static/art/settlement/resident-walk-rear-atlas.png), 9개 함선 등급은 [`fleet-classes-atlas.png`](static/art/naval/fleet-classes-atlas.png)의 프로젝트 전용 아틀라스를 사용합니다. 절벽 측면, 자원·환경 실루엣, 물류선, 날씨, 주민의 행동별 미세 동작, 항적, 포연, 피격·화재·침수·침몰 효과는 CSS와 Phaser 코드로 절차 렌더링합니다. 자산 생성·편집 프롬프트와 처리 근거는 [`docs/art-generation-provenance.md`](docs/art-generation-provenance.md)에 기록했습니다. 특정 상용 게임의 이미지·UI·명칭을 복제하지 않습니다.

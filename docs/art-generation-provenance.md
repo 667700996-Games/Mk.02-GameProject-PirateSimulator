@@ -124,6 +124,86 @@ Constraints: exactly nine buildings in the specified order; each cell contains o
 Avoid: duplicated silhouettes, modern machinery, fantasy magic, bright mobile-game cartoon colors, photorealism, top-down camera, front-facing elevation, mismatched perspectives, floating parts, black background, transparent checkerboard, borders, dividers, grid lines, magenta fringe, tiny unreadable clutter.
 ```
 
+## 8종 주민 역할 전면 3프레임 보행 아틀라스
+
+- 프로젝트 자산: static/art/settlement/resident-walk-front-atlas.png
+- 공유 프레임 정의: static/art/settlement/resident-walk-atlas.json
+- 최종 생성 원본: /Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-0721aeb7-e9fc-4257-b457-542f467b1d11.png
+- 생성 방식: 내장 이미지 생성 도구 stylized-concept
+- 참조 이미지: static/art/settlement/resident-roles-atlas.png — 역할·복식·체형·소지품·전면 사선 시점·화풍 참조 전용
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 8×3 고정 프레임, 24개 프레임 키, 네 모서리 완전 투명, 역할별 얼굴·복식·장비와 접지 A/통과/접지 B 순서 유지
+
+### 최종 생성 프롬프트
+
+~~~text
+Use case: stylized-concept
+Asset type: production front-direction three-frame walking sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the authoritative character-identity, outfit, equipment, scale, front three-quarter camera, palette and rendering reference. Generate new walking poses; do not edit Image 1.
+Primary request: create exactly 24 isolated full-body pirate-settlement residents in a precise 8-column by 3-row sprite sheet. Every column is one persistent role identity and every row is one coherent walk-cycle frame.
+Column order, left to right in every row:
+1. LABORER — rugged bearded laborer, worn cream shirt, patched brown trousers, pickaxe over shoulder, rope coil.
+2. HAULER — strong dark-skinned carrier, tan head wrap, rolled sleeves, closed wooden crate held securely.
+3. BUILDER — red-bandanna carpenter, hammer, rolled plans, tool belt.
+4. LOGGER — black-headscarf logger, leather apron, axe held low.
+5. FISHER — older gray-bearded fisher, dark brimmed hat, ochre oilskin coat, bundled net.
+6. SHIPWRIGHT — skilled dock worker, cream shirt, dark vest, blue headscarf, mallet and rope.
+7. GUARD — professional pirate guard, red bandanna, dark vest, sheathed or low-held cutlass.
+8. OFFICER — senior officer, long dark navy coat with gold trim, tricorn, rolled chart.
+Walk-cycle rows:
+Row 1: contact pose A, character's left leg clearly forward and right leg back, opposite arm swing; carried tools and cargo remain safely controlled.
+Row 2: passing pose, feet close beneath the body, torso at the highest point, natural neutral arm transition.
+Row 3: contact pose B, character's right leg clearly forward and left leg back, opposite arm swing; exact continuation of row 1.
+Direction and identity: all 24 sprites use the same front three-quarter isometric direction as Image 1, looking toward the viewer along the same diagonal. Within each column preserve the exact same face, skin tone, hair, beard, body proportions, clothing colors, tool, cargo and socioeconomic rank across all three frames. Frame differences must be limited to a natural walking gait, slight coat/rope follow-through and balanced weight shift.
+Style/medium: premium hand-painted 2.5D strategy-game character sprites, stylized realism, original Dark Pirate Maritime Command art direction, matching Image 1.
+Composition/framing: exact 1536x1024 canvas; exactly 8 equal columns and 3 equal rows; one centered full-body character per cell; consistent scale, feet baseline and camera; all hats, tools, weapons, crates, nets, hands and boots fully contained; generous padding; no overlap, cropping, borders or grid lines. Silhouettes must remain readable at 34x46 game pixels.
+Scene/backdrop: perfectly flat uniform solid #ff00ff chroma-key background across every empty pixel. No floor, cast shadow, contact shadow, gradient, texture, reflection, lighting variation or vignette. Do not use magenta or pink inside any person or equipment.
+Lighting/mood: restrained warm upper-left daylight with cool lower-right ambient shading contained inside each sprite.
+Constraints: exactly 24 sprites; exactly eight stable identities repeated across three frames; no extra people, swapped roles, missing tools, changing faces, changing outfits, duplicated walk poses, scenery, buildings, terrain, labels, letters, numbers, icons, logos or watermark.
+Avoid: running, jumping, dramatic combat, front-facing orthographic mugshot, side-only profile, rear view, malformed limbs or hands, floating equipment, inconsistent body scale, modern clothing, fantasy armor, bright cartoon colors, photorealism, black background, transparent checkerboard, cell overlap, magenta fringe.
+~~~
+
+## 8종 주민 역할 후면 3프레임 보행 아틀라스
+
+- 프로젝트 자산: static/art/settlement/resident-walk-rear-atlas.png
+- 공유 프레임 정의: static/art/settlement/resident-walk-atlas.json
+- 최종 생성 원본: /Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-065d0f74-3fbe-4cc2-b84b-5f6767372f4a.png
+- 생성 방식: 내장 이미지 생성 도구 stylized-concept
+- 참조 이미지: static/art/settlement/resident-roles-rear-atlas.png — 역할·복식·체형·소지품·후면 사선 시점·화풍 참조 전용
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 8×3 고정 프레임, 24개 프레임 키, 네 모서리 완전 투명, 전면 노출 없이 역할별 후면 정체성과 접지 A/통과/접지 B 순서 유지
+
+### 최종 생성 프롬프트
+
+~~~text
+Use case: stylized-concept
+Asset type: production rear-direction three-frame walking sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the authoritative character-identity, outfit, equipment, scale, rear three-quarter camera, palette and rendering reference. Generate new walking poses; do not edit Image 1.
+Primary request: create exactly 24 isolated full-body pirate-settlement residents in a precise 8-column by 3-row sprite sheet. Every column is one persistent role identity and every row is one coherent walk-cycle frame.
+Column order, left to right in every row:
+1. LABORER — rugged bearded laborer seen from behind, worn cream shirt, patched brown trousers, pickaxe over shoulder, rope coil.
+2. HAULER — strong dark-skinned carrier seen from behind, tan head wrap, rolled sleeves, closed wooden crate held securely.
+3. BUILDER — red-bandanna carpenter seen from behind, hammer, rolled plans, tool belt.
+4. LOGGER — black-headscarf logger seen from behind, leather apron, axe held low.
+5. FISHER — older gray-bearded fisher seen from behind, dark brimmed hat, ochre oilskin coat, bundled net.
+6. SHIPWRIGHT — skilled dock worker seen from behind, cream shirt, dark vest, blue headscarf, mallet and rope.
+7. GUARD — professional pirate guard seen from behind, red bandanna, dark vest, sheathed or low-held cutlass.
+8. OFFICER — senior officer seen from behind, long dark navy coat with gold trim, tricorn, rolled chart.
+Walk-cycle rows:
+Row 1: contact pose A, character's left leg clearly forward and right leg back, opposite arm swing; carried tools and cargo remain safely controlled.
+Row 2: passing pose, feet close beneath the body, torso at the highest point, natural neutral arm transition.
+Row 3: contact pose B, character's right leg clearly forward and left leg back, opposite arm swing; exact continuation of row 1.
+Direction and identity: all 24 sprites use the same rear three-quarter isometric direction as Image 1, facing away along the same diagonal. No face should turn toward the viewer. Within each column preserve the exact same skin tone, hair, hat, body proportions, clothing colors, back straps, tool, cargo and socioeconomic rank across all three frames. Frame differences must be limited to a natural walking gait, slight coat/rope follow-through and balanced weight shift.
+Style/medium: premium hand-painted 2.5D strategy-game character sprites, stylized realism, original Dark Pirate Maritime Command art direction, matching Image 1.
+Composition/framing: exact 1536x1024 canvas; exactly 8 equal columns and 3 equal rows; one centered full-body character per cell; consistent scale, feet baseline and camera; all hats, tools, weapons, crates, nets, hands and boots fully contained; generous padding; no overlap, cropping, borders or grid lines. Silhouettes must remain readable at 34x46 game pixels.
+Scene/backdrop: perfectly flat uniform solid #ff00ff chroma-key background across every empty pixel. No floor, cast shadow, contact shadow, gradient, texture, reflection, lighting variation or vignette. Do not use magenta or pink inside any person or equipment.
+Lighting/mood: restrained warm upper-left daylight with cool lower-right ambient shading contained inside each sprite.
+Constraints: exactly 24 rear-facing sprites; exactly eight stable identities repeated across three frames; no front-facing faces, looking over shoulders, extra people, swapped roles, missing tools, changing outfits, duplicated walk poses, scenery, buildings, terrain, labels, letters, numbers, icons, logos or watermark.
+Avoid: running, jumping, dramatic combat, front or side-only views, malformed limbs or hands, floating equipment, inconsistent body scale, modern clothing, fantasy armor, bright cartoon colors, photorealism, black background, transparent checkerboard, cell overlap, magenta fringe.
+~~~
+
 ## 핵심 건물 2단계 전용 본체 아틀라스
 
 - 프로젝트 자산: `static/art/settlement/core-buildings-tier2-atlas.png`
