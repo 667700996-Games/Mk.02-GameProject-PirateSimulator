@@ -4,6 +4,10 @@ export const CORE_BUILDING_ATLAS_KEY = 'settlement-core-buildings';
 export const CORE_BUILDING_ATLAS_IMAGE = '/art/settlement/core-buildings-atlas.png';
 export const CORE_BUILDING_ATLAS_DATA = '/art/settlement/core-buildings-atlas.json';
 export const CORE_BUILDING_FRAME_RATIO = 341 / 384;
+export const CORE_BUILDING_TIER2_ATLAS_KEY = 'settlement-core-buildings-tier2';
+export const CORE_BUILDING_TIER2_ATLAS_IMAGE = '/art/settlement/core-buildings-tier2-atlas.png';
+export const CORE_BUILDING_TIER3_ATLAS_KEY = 'settlement-core-buildings-tier3';
+export const CORE_BUILDING_TIER3_ATLAS_IMAGE = '/art/settlement/core-buildings-tier3-atlas.png';
 export const INDUSTRY_BUILDING_ATLAS_KEY = 'settlement-industry-buildings';
 export const INDUSTRY_BUILDING_ATLAS_IMAGE = '/art/settlement/industry-buildings-atlas.png';
 export const INDUSTRY_BUILDING_ATLAS_DATA = '/art/settlement/industry-buildings-atlas.json';
@@ -27,6 +31,8 @@ export const CIVIC_DEFENSE_BUILDING_FRAME_RATIO = 512 / 384;
 
 export const BUILDING_ATLAS_SOURCES = {
   [CORE_BUILDING_ATLAS_KEY]: { image: CORE_BUILDING_ATLAS_IMAGE, data: CORE_BUILDING_ATLAS_DATA },
+  [CORE_BUILDING_TIER2_ATLAS_KEY]: { image: CORE_BUILDING_TIER2_ATLAS_IMAGE, data: CORE_BUILDING_ATLAS_DATA },
+  [CORE_BUILDING_TIER3_ATLAS_KEY]: { image: CORE_BUILDING_TIER3_ATLAS_IMAGE, data: CORE_BUILDING_ATLAS_DATA },
   [INDUSTRY_BUILDING_ATLAS_KEY]: { image: INDUSTRY_BUILDING_ATLAS_IMAGE, data: INDUSTRY_BUILDING_ATLAS_DATA },
   [SOCIETY_BUILDING_ATLAS_KEY]: { image: SOCIETY_BUILDING_ATLAS_IMAGE, data: SOCIETY_BUILDING_ATLAS_DATA },
   [LOGISTICS_FLEET_BUILDING_ATLAS_KEY]: { image: LOGISTICS_FLEET_BUILDING_ATLAS_IMAGE, data: LOGISTICS_FLEET_BUILDING_ATLAS_DATA },
@@ -114,11 +120,31 @@ export function buildingAtlasKey(art: CoreBuildingArt): BuildingAtlasKey {
   return art.atlasKey ?? CORE_BUILDING_ATLAS_KEY;
 }
 
+export function buildingAtlasKeyForLevel(art: CoreBuildingArt, level: number): BuildingAtlasKey {
+  if (buildingAtlasKey(art) !== CORE_BUILDING_ATLAS_KEY) return buildingAtlasKey(art);
+  if (level >= 3) return CORE_BUILDING_TIER3_ATLAS_KEY;
+  if (level === 2) return CORE_BUILDING_TIER2_ATLAS_KEY;
+  return CORE_BUILDING_ATLAS_KEY;
+}
+
 export function buildingAtlasKeysForIds(ids: Iterable<SettlementBuildingId>): BuildingAtlasKey[] {
   const keys = new Set<BuildingAtlasKey>([CORE_BUILDING_ATLAS_KEY]);
   for (const id of ids) {
     const art = CORE_BUILDING_ART[id];
     if (art) keys.add(buildingAtlasKey(art));
+  }
+  return [...keys];
+}
+
+export function buildingAtlasKeysForBuildings(
+  buildings: Iterable<Pick<{ definitionId: SettlementBuildingId; level: number }, 'definitionId' | 'level'>>
+): BuildingAtlasKey[] {
+  const keys = new Set<BuildingAtlasKey>([CORE_BUILDING_ATLAS_KEY]);
+  for (const building of buildings) {
+    const art = CORE_BUILDING_ART[building.definitionId];
+    if (!art) continue;
+    keys.add(buildingAtlasKey(art));
+    keys.add(buildingAtlasKeyForLevel(art, building.level));
   }
   return [...keys];
 }

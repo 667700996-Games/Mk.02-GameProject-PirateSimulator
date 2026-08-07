@@ -9,6 +9,8 @@ import {
   CORE_BUILDING_ART,
   CORE_BUILDING_ATLAS_KEY,
   buildingAtlasKey,
+  buildingAtlasKeyForLevel,
+  buildingAtlasKeysForBuildings,
   buildingAtlasKeysForIds,
   coreBuildingDisplayHeight,
   type BuildingAtlasKey,
@@ -125,7 +127,7 @@ export class SettlementScene extends Phaser.Scene {
 
   preload(): void {
     this.queueBuildingAtlases(
-      buildingAtlasKeysForIds(this.snapshot.buildings.map((building) => building.definitionId)),
+      buildingAtlasKeysForBuildings(this.snapshot.buildings),
       false
     );
     if (!this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) {
@@ -175,7 +177,7 @@ export class SettlementScene extends Phaser.Scene {
     this.snapshot = snapshot;
     if (!this.scene.isActive()) return;
     this.queueBuildingAtlases(
-      buildingAtlasKeysForIds(snapshot.buildings.map((building) => building.definitionId)),
+      buildingAtlasKeysForBuildings(snapshot.buildings),
       true
     );
     this.drawDynamicLayers();
@@ -193,7 +195,7 @@ export class SettlementScene extends Phaser.Scene {
     this.buildTool = undefined;
     this.movingBuildingId = buildingId;
     const building = this.snapshot.buildings.find((item) => item.id === buildingId);
-    if (building) this.queueBuildingAtlases(buildingAtlasKeysForIds([building.definitionId]), true);
+    if (building) this.queueBuildingAtlases(buildingAtlasKeysForBuildings([building]), true);
     this.drawPreview();
   }
 
@@ -371,8 +373,14 @@ export class SettlementScene extends Phaser.Scene {
     const container = this.add.container(point.x, point.y - 12).setDepth(100 + building.x + building.y);
     const selected = building.id === this.selectedBuildingId;
     const texturedArt = CORE_BUILDING_ART[building.definitionId];
-    if (texturedArt && this.textures.exists(buildingAtlasKey(texturedArt))) {
-      this.drawTexturedBuilding(container, building, definition, texturedArt, selected);
+    const preferredAtlasKey = texturedArt ? buildingAtlasKeyForLevel(texturedArt, building.level) : undefined;
+    const availableAtlasKey = preferredAtlasKey && this.textures.exists(preferredAtlasKey)
+      ? preferredAtlasKey
+      : texturedArt && this.textures.exists(buildingAtlasKey(texturedArt))
+        ? buildingAtlasKey(texturedArt)
+        : undefined;
+    if (texturedArt && availableAtlasKey) {
+      this.drawTexturedBuilding(container, building, definition, texturedArt, selected, availableAtlasKey);
       this.buildingLayer.add(container);
       return;
     }
@@ -478,9 +486,13 @@ export class SettlementScene extends Phaser.Scene {
     building: SettlementBuilding,
     definition: BuildingDefinition,
     art: CoreBuildingArt,
-    selected: boolean
+    selected: boolean,
+    atlasKey: BuildingAtlasKey
   ): void {
-    const levelScale = 1 + Math.min(0.14, Math.max(0, building.level - 1) * 0.035);
+    const usesDedicatedTier = atlasKey !== buildingAtlasKey(art);
+    const levelScale = usesDedicatedTier
+      ? 1 + Math.min(0.08, Math.max(0, building.level - 3) * 0.02)
+      : 1 + Math.min(0.14, Math.max(0, building.level - 1) * 0.035);
     const displayWidth = art.displayWidth * levelScale;
     const displayHeight = coreBuildingDisplayHeight({ ...art, displayWidth });
     const spriteY = art.offsetY ?? 12;
@@ -500,7 +512,7 @@ export class SettlementScene extends Phaser.Scene {
       }
     }
 
-    const sprite = this.add.image(0, spriteY, buildingAtlasKey(art), art.frame)
+    const sprite = this.add.image(0, spriteY, atlasKey, art.frame)
       .setOrigin(0.5, art.originY ?? 0.88)
       .setDisplaySize(displayWidth, displayHeight)
       .setAlpha(isBlueprint ? 0.42 : isConstructing ? 0.76 : 1)
@@ -518,7 +530,7 @@ export class SettlementScene extends Phaser.Scene {
       container.add([upgradeGlow, pennantPole, pennant]);
     }
 
-    this.drawBuildingProgressionOverlay(container, building, displayWidth);
+    this.drawBuildingProgressionOverlay(container, building, displayWidth, !usesDedicatedTier || building.level > 3);
 
     if (isBlueprint || isConstructing) {
       const scaffoldHeight = Math.max(44, displayHeight * 0.45);
@@ -578,10 +590,11 @@ export class SettlementScene extends Phaser.Scene {
   private drawBuildingProgressionOverlay(
     container: Phaser.GameObjects.Container,
     building: SettlementBuilding,
-    baseWidth: number
+    baseWidth: number,
+    includeLevelGrowth = true
   ): void {
     if (!this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) return;
-    const visual = buildingProgressionVisual(building);
+    const visual = buildingProgressionVisual(includeLevelGrowth ? building : { ...building, level: 1 });
     if (!visual) return;
     const displaySize = buildingProgressionDisplaySize(baseWidth, visual);
     const flipped = building.rotation === 1 || building.rotation === 2;

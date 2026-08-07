@@ -88,7 +88,7 @@ function startNewGame(options: NewGameOptions): void {
   session.update((current) => ({ ...current, game, error: undefined }));
   writeActiveSessionId(game.saveId);
   periodicAutoSaveSeconds = 0;
-  scheduleAutoSave(200);
+  scheduleAutoSave(0);
 }
 
 async function load(id: string): Promise<void> {

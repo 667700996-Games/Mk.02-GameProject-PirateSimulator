@@ -9,6 +9,10 @@ import {
   CORE_BUILDING_ATLAS_DATA,
   CORE_BUILDING_ATLAS_IMAGE,
   CORE_BUILDING_ATLAS_KEY,
+  CORE_BUILDING_TIER2_ATLAS_IMAGE,
+  CORE_BUILDING_TIER2_ATLAS_KEY,
+  CORE_BUILDING_TIER3_ATLAS_IMAGE,
+  CORE_BUILDING_TIER3_ATLAS_KEY,
   INDUSTRY_BUILDING_ATLAS_DATA,
   INDUSTRY_BUILDING_ATLAS_IMAGE,
   INDUSTRY_BUILDING_ATLAS_KEY,
@@ -22,6 +26,8 @@ import {
   SOCIETY_BUILDING_ATLAS_IMAGE,
   SOCIETY_BUILDING_ATLAS_KEY,
   buildingAtlasKey,
+  buildingAtlasKeyForLevel,
+  buildingAtlasKeysForBuildings,
   buildingAtlasKeysForIds,
   coreBuildingDisplayHeight
 } from './settlementArt';
@@ -110,6 +116,8 @@ describe('settlement building art', () => {
 
     expect(CORE_BUILDING_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
     expect(CORE_BUILDING_ATLAS_DATA).toMatch(/^\/art\/settlement\/.*\.json$/);
+    expect(CORE_BUILDING_TIER2_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
+    expect(CORE_BUILDING_TIER3_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
     expect(INDUSTRY_BUILDING_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
     expect(INDUSTRY_BUILDING_ATLAS_DATA).toMatch(/^\/art\/settlement\/.*\.json$/);
     expect(SOCIETY_BUILDING_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
@@ -161,10 +169,33 @@ describe('settlement building art', () => {
       LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY,
       CIVIC_DEFENSE_BUILDING_ATLAS_KEY
     ]);
-    expect(Object.keys(BUILDING_ATLAS_SOURCES)).toHaveLength(6);
+    expect(Object.keys(BUILDING_ATLAS_SOURCES)).toHaveLength(8);
     for (const source of Object.values(BUILDING_ATLAS_SOURCES)) {
       expect(source.image).toMatch(/^\/art\/settlement\/.*\.png$/);
       expect(source.data).toMatch(/^\/art\/settlement\/.*\.json$/);
     }
+  });
+
+  it('selects dedicated tier art for upgraded core buildings and keeps other sets stable', () => {
+    const shipyard = CORE_BUILDING_ART.shipyard!;
+    const quarry = CORE_BUILDING_ART.quarry!;
+
+    expect(buildingAtlasKeyForLevel(shipyard, 1)).toBe(CORE_BUILDING_ATLAS_KEY);
+    expect(buildingAtlasKeyForLevel(shipyard, 2)).toBe(CORE_BUILDING_TIER2_ATLAS_KEY);
+    expect(buildingAtlasKeyForLevel(shipyard, 3)).toBe(CORE_BUILDING_TIER3_ATLAS_KEY);
+    expect(buildingAtlasKeyForLevel(shipyard, 7)).toBe(CORE_BUILDING_TIER3_ATLAS_KEY);
+    expect(buildingAtlasKeyForLevel(quarry, 3)).toBe(INDUSTRY_BUILDING_ATLAS_KEY);
+
+    expect(buildingAtlasKeysForBuildings([
+      { definitionId: 'wreckage', level: 1 },
+      { definitionId: 'campfire', level: 2 },
+      { definitionId: 'tent', level: 3 },
+      { definitionId: 'quarry', level: 3 }
+    ])).toEqual([
+      CORE_BUILDING_ATLAS_KEY,
+      CORE_BUILDING_TIER2_ATLAS_KEY,
+      CORE_BUILDING_TIER3_ATLAS_KEY,
+      INDUSTRY_BUILDING_ATLAS_KEY
+    ]);
   });
 });
