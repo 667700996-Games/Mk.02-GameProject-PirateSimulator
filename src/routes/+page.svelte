@@ -7,12 +7,14 @@
   import { soundEngine } from '$lib/audio/SoundEngine';
   import type { NewGameOptions } from '$lib/domain/types';
   import { focusTrap } from '$lib/actions/focusTrap';
+  import { CAPTAIN_CREATION_SESSION_KEY, CAPTAIN_DRAFT_SESSION_KEY } from '$lib/persistence/sessionContinuity';
 
   let creating = $state(false);
   let showSaves = $state(false);
   let showSettings = $state(false);
 
   onMount(() => {
+    creating = sessionStorage.getItem(CAPTAIN_CREATION_SESSION_KEY) === '1';
     void gameSession.initialize();
     const timer = window.setInterval(() => gameSession.tickPlayTime(1), 1000);
     const unlock = () => void soundEngine.unlock($gameSession.settings);
@@ -42,7 +44,18 @@
 
   function create(options: NewGameOptions): void {
     gameSession.startNewGame(options);
+    closeCreation();
+  }
+
+  function openCreation(): void {
+    creating = true;
+    sessionStorage.setItem(CAPTAIN_CREATION_SESSION_KEY, '1');
+  }
+
+  function closeCreation(): void {
     creating = false;
+    sessionStorage.removeItem(CAPTAIN_CREATION_SESSION_KEY);
+    sessionStorage.removeItem(CAPTAIN_DRAFT_SESSION_KEY);
   }
 
   async function load(id: string): Promise<void> {
@@ -56,9 +69,9 @@
 {:else if $gameSession.game}
   <GameShell game={$gameSession.game} settings={$gameSession.settings} saves={$gameSession.saves} saving={$gameSession.saving} />
 {:else if creating}
-  <CaptainCreation onCreate={create} onBack={() => (creating = false)} />
+  <CaptainCreation onCreate={create} onBack={closeCreation} />
 {:else}
-  <TitleScreen saves={$gameSession.saves} onNew={() => (creating = true)} onContinue={load} onOpenSaves={() => (showSaves = true)} onSettings={() => (showSettings = true)} />
+  <TitleScreen saves={$gameSession.saves} onNew={openCreation} onContinue={load} onOpenSaves={() => (showSaves = true)} onSettings={() => (showSettings = true)} />
   {#if showSaves}
     <div class="modal-backdrop"><div class="modal panel" role="dialog" aria-modal="true" aria-labelledby="save-dialog-title" tabindex="-1" use:focusTrap><div class="panel-title"><div><span class="eyebrow">VOYAGE LOGS</span><h2 id="save-dialog-title">항해일지 불러오기</h2></div><button class="btn small ghost" onclick={() => (showSaves = false)}>닫기</button></div>{#each $gameSession.saves as save}<div class="save-card"><div><strong>{save.name}</strong><small class="muted" style="display:block">{save.captainName} · {save.shipName} · {new Date(save.updatedAt).toLocaleString('ko-KR')}</small></div><button class="btn small primary" onclick={() => load(save.id)}>계속</button></div>{/each}</div></div>
   {/if}

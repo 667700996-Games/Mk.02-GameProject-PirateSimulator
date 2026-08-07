@@ -4,6 +4,7 @@ import { createId } from '$lib/domain/rng';
 import { advanceSimulation } from '$lib/domain/simulation';
 import type { GameScreen, GameSettings, GameState, NewGameOptions, SaveRecord, ToastMessage } from '$lib/domain/types';
 import { exportSave as serializeSave, importSave as deserializeSave, listSaves, loadSettings, readSave, removeSave, writeSave, writeSettings } from '$lib/persistence/gameRepository';
+import { ACTIVE_GAME_SESSION_KEY } from '$lib/persistence/sessionContinuity';
 
 interface SessionState {
   ready: boolean;
@@ -25,6 +26,17 @@ const initial: SessionState = {
 const session = writable<SessionState>(initial);
 let autoSaveTimer: ReturnType<typeof setTimeout> | undefined;
 let periodicAutoSaveSeconds = 0;
+
+function readActiveSessionId(): string | undefined {
+  if (typeof sessionStorage === 'undefined') return undefined;
+  return sessionStorage.getItem(ACTIVE_GAME_SESSION_KEY) ?? undefined;
+}
+
+function writeActiveSessionId(saveId?: string): void {
+  if (typeof sessionStorage === 'undefined') return;
+  if (saveId) sessionStorage.setItem(ACTIVE_GAME_SESSION_KEY, saveId);
+  else sessionStorage.removeItem(ACTIVE_GAME_SESSION_KEY);
+}
 
 function updateGame(mutator: (state: GameState) => GameState, autosave = false): void {
   session.update((current) => {
@@ -58,7 +70,17 @@ async function refreshSaves(): Promise<void> {
 async function initialize(): Promise<void> {
   try {
     const [saves] = await Promise.all([listSaves()]);
-    session.set({ ready: true, game: null, settings: loadSettings(), saves, saving: false });
+    const activeId = readActiveSessionId();
+    let activeGame: GameState | null = null;
+    if (activeId) {
+      try {
+        activeGame = (await readSave(activeId)) ?? null;
+      } catch {
+        activeGame = null;
+      }
+      if (!activeGame) writeActiveSessionId();
+    }
+    session.set({ ready: true, game: activeGame, settings: loadSettings(), saves, saving: false });
   } catch (error) {
     session.set({ ...initial, ready: true, error: error instanceof Error ? error.message : '저장소를 열지 못했습니다.' });
   }
@@ -67,6 +89,7 @@ async function initialize(): Promise<void> {
 function startNewGame(options: NewGameOptions): void {
   const game = createNewGame(options);
   session.update((current) => ({ ...current, game, error: undefined }));
+  writeActiveSessionId(game.saveId);
   periodicAutoSaveSeconds = 0;
   scheduleAutoSave(200);
 }
@@ -76,6 +99,7 @@ async function load(id: string): Promise<void> {
     const game = await readSave(id);
     if (!game) throw new Error('저장 슬롯을 찾을 수 없습니다.');
     session.update((current) => ({ ...current, game, error: undefined }));
+    writeActiveSessionId(game.saveId);
     periodicAutoSaveSeconds = 0;
   } catch (error) {
     session.update((current) => ({ ...current, error: error instanceof Error ? error.message : '불러오기에 실패했습니다.' }));
@@ -106,6 +130,7 @@ async function saveCurrent(toastDetail = '항해 기록을 안전하게 보관�
 
 async function deleteSave(id: string): Promise<void> {
   await removeSave(id);
+  if (readActiveSessionId() === id) writeActiveSessionId();
   await refreshSaves();
 }
 
@@ -115,6 +140,7 @@ function setScreen(screen: GameScreen): void {
 
 function returnToTitle(): void {
   periodicAutoSaveSeconds = 0;
+  writeActiveSessionId();
   session.update((current) => ({ ...current, game: null }));
 }
 
@@ -150,6 +176,7 @@ async function importSerialized(serialized: string): Promise<void> {
     const game = deserializeSave(serialized);
     const record = await writeSave(game, game.saveName);
     session.update((current) => ({ ...current, game: record.state, error: undefined, saves: [record, ...current.saves.filter((save) => save.id !== record.id)] }));
+    writeActiveSessionId(record.id);
   } catch (error) {
     session.update((current) => ({ ...current, error: error instanceof Error ? error.message : '저장 파일을 가져오지 못했습니다.' }));
   }

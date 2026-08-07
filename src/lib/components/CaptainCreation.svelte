@@ -1,20 +1,41 @@
 <script lang="ts">
   import { DIFFICULTIES, TRAITS } from '$lib/domain/catalog';
   import type { CaptainTrait, Difficulty, NewGameOptions } from '$lib/domain/types';
+  import { CAPTAIN_DRAFT_SESSION_KEY } from '$lib/persistence/sessionContinuity';
 
   let { onCreate, onBack } = $props<{ onCreate: (options: NewGameOptions) => void; onBack: () => void }>();
 
-  let captainName = $state('에드워드 베인');
-  let crewName = $state('검은물결 해적단');
-  let shipName = $state('붉은 갈매기');
-  let havenName = $state('검은물결 은신처');
-  let flagMark = $state('☠');
-  let flagColor = $state('#8f3028');
-  let trait = $state<CaptainTrait>('navigator');
-  let difficulty = $state<Difficulty>('captain');
+  type CaptainDraft = NewGameOptions & { havenName: string };
+
+  function loadDraft(): Partial<CaptainDraft> {
+    if (typeof sessionStorage === 'undefined') return {};
+    try {
+      return JSON.parse(sessionStorage.getItem(CAPTAIN_DRAFT_SESSION_KEY) ?? '{}') as Partial<CaptainDraft>;
+    } catch {
+      sessionStorage.removeItem(CAPTAIN_DRAFT_SESSION_KEY);
+      return {};
+    }
+  }
+
+  const draft = loadDraft();
+  let captainName = $state(draft.captainName ?? '에드워드 베인');
+  let crewName = $state(draft.crewName ?? '검은물결 해적단');
+  let shipName = $state(draft.shipName ?? '붉은 갈매기');
+  let havenName = $state(draft.havenName ?? '검은물결 은신처');
+  let flagMark = $state(draft.flagMark ?? '☠');
+  let flagColor = $state(draft.flagColor ?? '#8f3028');
+  let trait = $state<CaptainTrait>(draft.trait ?? 'navigator');
+  let difficulty = $state<Difficulty>(draft.difficulty ?? 'captain');
 
   const marks = ['☠', '⚔', '♛', '⚓', '✦', '♜'];
   const colors = ['#8f3028', '#15191a', '#244c58', '#5b3570', '#7c5b24', '#31553b'];
+
+  $effect(() => {
+    sessionStorage.setItem(
+      CAPTAIN_DRAFT_SESSION_KEY,
+      JSON.stringify({ captainName, crewName, shipName, havenName, flagMark, flagColor, trait, difficulty })
+    );
+  });
 
   function submit(): void {
     if (!captainName.trim() || !crewName.trim() || !shipName.trim()) return;
