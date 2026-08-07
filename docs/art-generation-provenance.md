@@ -124,6 +124,90 @@ Constraints: exactly nine buildings in the specified order; each cell contains o
 Avoid: duplicated silhouettes, modern machinery, fantasy magic, bright mobile-game cartoon colors, photorealism, top-down camera, front-facing elevation, mismatched perspectives, floating parts, black background, transparent checkerboard, borders, dividers, grid lines, magenta fringe, tiny unreadable clutter.
 ```
 
+## 핵심 건물 2단계 전용 본체 아틀라스
+
+- 프로젝트 자산: `static/art/settlement/core-buildings-tier2-atlas.png`
+- 프레임 정의: `static/art/settlement/core-buildings-atlas.json` 공유
+- 최종 생성 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-a6d28531-01ac-4f2e-aaf4-72f406c7f295.png`
+- 생성 방식: 내장 이미지 생성 도구 `precise-object-edit`
+- 편집 대상: `static/art/settlement/core-buildings-atlas.png`
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 4×3 고정 프레임, 네 모서리 완전 투명, 셀 순서·시점·건물 정체성 유지
+
+### 최종 생성 프롬프트
+
+```text
+Use case: precise-object-edit
+Asset type: production tier-2 isometric building sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the edit target and authoritative layout/style reference.
+Primary request: transform the existing 4-column by 3-row atlas into clearly upgraded tier-2 versions while preserving the exact 12-cell order, camera, scale, cell boundaries, and Dark Pirate Maritime Command art direction.
+Cell order, left to right:
+row 1: wreckage, communal campfire, canvas tent, rainwater collector.
+row 2: fisher hut, lumber camp, warehouse, sawmill.
+row 3: small dock, shipyard, watchtower, coastal battery.
+Tier-2 changes:
+- Keep wreckage materially unchanged as the visual baseline.
+- Campfire: permanent stone cook hearth, iron cauldron, sturdy benches, small tool rack.
+- Tent: reinforced timber-frame shelter, patched canvas roof, plank porch, storage chest.
+- Water collector: two linked timber cisterns, expanded gutters, filtration barrels.
+- Fisher hut: expanded stilt lodge, repaired roof, larger net rack, fish crates.
+- Lumber camp: roofed cutting bay, organized log stacks, sturdier workbench.
+- Warehouse: reinforced two-level storehouse, braced timber, secure doors, additional loading platform.
+- Sawmill: larger wheel and saw assembly, covered processing bay, organized lumber racks.
+- Small dock: wider and longer pier, compact cargo crane, bollards and lanterns.
+- Shipyard: reinforced slipway, taller scaffold, winch, more complete ship hull.
+- Watchtower: taller stone-and-timber tower, enclosed lookout, signal brazier, pirate pennants.
+- Coastal battery: reinforced stone bastion, three operational cannons, protected powder recess.
+Style/medium: painterly high-detail isometric game sprites, aged timber, dark slate, rough stone, brass, muted crimson cloth, physically plausible construction.
+Composition/framing: preserve the exact 1536x1024 4-by-3 grid, one isolated structure centered inside each cell, same 3/4 isometric view and footprint as its source cell, generous internal padding, no overlap or cropping.
+Scene/backdrop: perfectly flat solid #ff00ff chroma-key background across every empty pixel for later removal. No gradient, texture, lighting variation, floor plane, cast shadow, or reflection in the background. Do not use #ff00ff anywhere in the structures.
+Lighting/mood: warm lantern and forge accents against restrained cool maritime fill; consistent across all cells.
+Constraints: edit only the buildings into tier-2 upgrades; preserve all 12 identities and cell positions; no humans, no creatures, no labels, no text, no icons, no UI, no watermark, no logos, no extra cells, no structures crossing cell boundaries.
+```
+
+## 핵심 건물 3단계 전용 본체 아틀라스
+
+- 프로젝트 자산: `static/art/settlement/core-buildings-tier3-atlas.png`
+- 프레임 정의: `static/art/settlement/core-buildings-atlas.json` 공유
+- 최종 생성 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-42b36880-7888-47ca-beb5-f7a74334412f.png`
+- 생성 방식: 내장 이미지 생성 도구 `precise-object-edit`
+- 편집 대상: 위 2단계 생성 원본
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 4×3 고정 프레임, 네 모서리 완전 투명, 2단계보다 석조 기반·설비·방어 실루엣이 명확히 강화됨
+
+### 최종 생성 프롬프트
+
+```text
+Use case: precise-object-edit
+Asset type: production tier-3 isometric building sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the tier-2 edit target and authoritative layout/style reference.
+Primary request: transform each upgradeable structure into a visibly mature tier-3 version while preserving the exact 4-column by 3-row grid, camera, scale, cell boundaries, building identity, and Dark Pirate Maritime Command art direction.
+Cell order, left to right:
+row 1: wreckage, communal campfire, canvas shelter, rainwater collector.
+row 2: fisher lodge, lumber camp, warehouse, sawmill.
+row 3: dock, shipyard, watchtower, coastal battery.
+Tier-3 changes:
+- Keep wreckage materially unchanged as the visual baseline.
+- Campfire: substantial masonry communal galley with sheltered hearth, large iron cauldron, chimney hood, fixed tables, lanterns.
+- Shelter: permanent timber-and-canvas longhouse with shingled lower roof, reinforced porch, more storage, still recognizable from tier 2.
+- Water collector: elevated triple-cistern waterworks with copper gutters, covered filter beds, reinforced frame.
+- Fisher lodge: prosperous two-level stilt fishery, smokehouse vent, broad net-drying rack, hoist and stacked catch crates.
+- Lumber camp: mature lumberworks with roofed cutting floor, log gantry, heavy tool bench and organized timber stacks.
+- Warehouse: three-level stone-footed fortified storehouse with heavy bracing, secure loading doors, hoist and larger platform.
+- Sawmill: master saw works with twin cutting mechanism, larger drive wheel, stone foundation, expanded covered lumber staging.
+- Dock: fortified broad quay with large cargo crane, warehouse shed, capstan, lantern posts and protected moorings.
+- Shipyard: master naval yard with deep reinforced slipway, multiple winches and cranes, extensive scaffold, nearly completed brig hull.
+- Watchtower: tall fortified stone signal tower with enclosed timber command deck, beacon brazier, bells and restrained pirate pennants.
+- Coastal battery: formidable semicircular stone sea fort with four heavy naval cannons, merlons, protected powder doors and command platform.
+Style/medium: painterly high-detail isometric game sprites, aged hardwood, dark slate, rugged stone, blackened iron, brass, muted crimson and charcoal cloth, physically plausible Age-of-Sail construction.
+Composition/framing: preserve the exact 1536x1024 4-by-3 grid, one isolated structure centered inside each original cell, same 3/4 isometric view and footprint family, generous internal padding, no overlap or cropping.
+Scene/backdrop: perfectly flat solid #ff00ff chroma-key background across every empty pixel for later removal. No gradient, texture, lighting variation, floor plane, cast shadow, or reflection in the background. Do not use #ff00ff anywhere in the structures.
+Lighting/mood: warm lantern, hearth and forge accents against restrained cool maritime fill; consistent across all cells.
+Constraints: edit only the buildings into tier-3 upgrades; preserve all 12 identities and cell positions; no humans, no creatures, no labels, no text, no icons, no UI, no watermark, no logos, no extra cells, no structures crossing cell boundaries.
+```
+
 ## 8종 생산·생활 시설 본체 아틀라스
 
 - 프로젝트 자산: `static/art/settlement/livelihood-service-buildings-atlas.png`

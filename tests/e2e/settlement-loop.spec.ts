@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 const DEFERRED_BUILDING_ATLASES = [
+  'core-buildings-tier2-atlas.png',
+  'core-buildings-tier3-atlas.png',
   'industry-buildings-atlas.png',
   'society-buildings-atlas.png',
   'logistics-fleet-buildings-atlas.png',
@@ -119,4 +121,36 @@ test('shows the logistics overlay and persists settlement schema v4', async ({ p
   expect(storedVersion).toBe(41);
   await page.reload();
   await expect(page.getByTestId('settlement-screen')).toBeVisible();
+});
+
+test('loads distinct core building bodies as a facility reaches tiers two and three', async ({
+  page
+}, testInfo) => {
+  test.slow();
+  await createSettlement(page);
+  if ((page.viewportSize()?.width ?? 1280) <= 760) {
+    await page.getByRole('button', { name: '시설 장부 열기' }).click();
+  }
+  await page.getByTestId('facility-campfire').click();
+  await expect(page.getByTestId('selected-building-level')).toHaveText('1');
+
+  const tierTwoResponse = page.waitForResponse((response) =>
+    response.url().endsWith('/art/settlement/core-buildings-tier2-atlas.png')
+  );
+  await page.getByRole('button', { name: '확장', exact: true }).click();
+  await page.getByRole('button', { name: '3×', exact: true }).click();
+  const tierTwo = await tierTwoResponse;
+  expect(tierTwo.ok() || tierTwo.status() === 304, `${tierTwo.url()} returned ${tierTwo.status()}`).toBe(true);
+  if (tierTwo.status() !== 304) expect(tierTwo.headers()['content-type']).toContain('image/png');
+  await expect(page.getByTestId('selected-building-level')).toHaveText('2', { timeout: 30_000 });
+
+  const tierThreeResponse = page.waitForResponse((response) =>
+    response.url().endsWith('/art/settlement/core-buildings-tier3-atlas.png')
+  );
+  await page.getByRole('button', { name: '확장', exact: true }).click();
+  const tierThree = await tierThreeResponse;
+  expect(tierThree.ok() || tierThree.status() === 304, `${tierThree.url()} returned ${tierThree.status()}`).toBe(true);
+  if (tierThree.status() !== 304) expect(tierThree.headers()['content-type']).toContain('image/png');
+  await expect(page.getByTestId('selected-building-level')).toHaveText('3', { timeout: 30_000 });
+  await page.screenshot({ path: testInfo.outputPath('tier-three-core-facility.png'), fullPage: true });
 });

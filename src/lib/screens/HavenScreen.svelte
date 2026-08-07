@@ -96,6 +96,9 @@
   let categoryBuildings = $derived(
     BUILDING_LIST.filter((building) => building.category === selectedCategory)
   );
+  let buildingRegister: SettlementBuilding[] = $derived(
+    [...game.settlement.buildings].sort((a, b) => (a.x + a.y) - (b.x + b.y))
+  );
   let activeWarnings: SettlementWarning[] = $derived(
     game.settlement.warnings
       .filter((warning: SettlementWarning) => !warning.acknowledged)
@@ -585,7 +588,7 @@
           </div>
           <div><small>내구도</small><b>{Math.floor(selectedBuilding.condition)}%</b></div>
           <div><small>우선순위</small><b>{selectedBuilding.constructionPriority}</b></div>
-          <div><small>레벨</small><b>{selectedBuilding.level}</b></div>
+          <div><small>레벨</small><b data-testid="selected-building-level">{selectedBuilding.level}</b></div>
         </div>
         <div class="priority-control">
           <small>건설·운송 우선순위</small>
@@ -673,6 +676,25 @@
             <i class="terrain plain"></i>평지 <i class="terrain coast"></i>해안
             <i class="terrain high"></i>고지대 <i class="terrain resource"></i>자원 지대
           </div>
+        </div>
+        <div class="facility-register">
+          <div class="facility-register-title">
+            <span class="eyebrow">FACILITY REGISTER</span>
+            <h3>정착지 시설 장부</h3>
+          </div>
+          {#each buildingRegister as building}
+            {@const definition = BUILDINGS[building.definitionId]}
+            {#if definition}<button
+                onclick={() => focusWarning(building.id)}
+                data-testid={`facility-${building.definitionId}`}
+                aria-label={`${definition.name} ${building.level}단계 선택`}
+              >
+                <span>{definition.icon}</span>
+                <span><strong>{definition.name}</strong><small>구역 {building.x}:{building.y}</small></span>
+                <em class:attention={building.state !== 'ACTIVE'}>{building.state}</em>
+                <b>Lv.{building.level}</b>
+              </button>{/if}
+          {/each}
         </div>
       {/if}
     {:else if rightTab === 'warnings'}
@@ -775,6 +797,7 @@
   </div>
   <div class="mobile-city-controls panel" aria-label="정착지 도구">
     <button class:active={buildMenuOpen} onclick={() => { buildMenuOpen = !buildMenuOpen; inspectorOpen = false; overlayMenuOpen = false; }} aria-label={buildMenuOpen ? '건설 메뉴 닫기' : '건설 메뉴 열기'} aria-expanded={buildMenuOpen}>⚒<small>건설</small></button>
+    <button class:active={inspectorOpen && rightTab === 'selection'} onclick={() => { rightTab = 'selection'; inspectorOpen = true; buildMenuOpen = false; overlayMenuOpen = false; }} aria-label="시설 장부 열기">▣<small>시설</small></button>
     <button class:active={inspectorOpen && rightTab === 'warnings'} onclick={() => { rightTab = 'warnings'; inspectorOpen = true; buildMenuOpen = false; overlayMenuOpen = false; }} aria-label={`정착지 경고 ${activeWarnings.length}건`}>▲<small>경고 {activeWarnings.length}</small></button>
     <button class:active={inspectorOpen && rightTab === 'mission'} onclick={() => { rightTab = 'mission'; inspectorOpen = true; buildMenuOpen = false; overlayMenuOpen = false; }} aria-label="초기 임무 열기">▤<small>임무</small></button>
     <button class:active={overlayMenuOpen} onclick={() => { overlayMenuOpen = !overlayMenuOpen; inspectorOpen = false; buildMenuOpen = false; }} aria-label={overlayMenuOpen ? '분석 도구 닫기' : '분석 도구 열기'} aria-expanded={overlayMenuOpen}>◈<small>분석</small></button>
@@ -1268,6 +1291,71 @@
     font-size: 0.72rem;
     line-height: 1.6;
   }
+  .facility-register {
+    display: grid;
+    gap: 0.38rem;
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--line-soft);
+  }
+  .facility-register-title {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.2rem;
+  }
+  .facility-register-title h3 {
+    margin: 0;
+    font-size: 0.92rem;
+  }
+  .facility-register > button {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.48rem 0.55rem;
+    border: 1px solid var(--line-soft);
+    background: linear-gradient(90deg, #0a1b1f, #0d2425);
+    color: var(--ink-muted);
+    text-align: left;
+    cursor: pointer;
+  }
+  .facility-register > button:hover,
+  .facility-register > button:focus-visible {
+    border-color: var(--brass);
+    color: var(--ink);
+    transform: translateX(2px);
+  }
+  .facility-register > button > span:first-child {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--line);
+    color: var(--brass-light);
+    background: #061316;
+  }
+  .facility-register strong,
+  .facility-register small {
+    display: block;
+  }
+  .facility-register small {
+    margin-top: 0.1rem;
+    color: var(--ink-faint);
+  }
+  .facility-register em {
+    color: #7fc9a3;
+    font-size: 0.58rem;
+    font-style: normal;
+  }
+  .facility-register em.attention {
+    color: #e4a45d;
+  }
+  .facility-register b {
+    color: var(--brass-light);
+    font-size: 0.65rem;
+  }
   .legend {
     display: flex;
     flex-wrap: wrap;
@@ -1511,7 +1599,7 @@
       position: absolute;
       z-index: 14;
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
       left: 0.5rem;
       right: 0.5rem;
       bottom: 0.35rem;
