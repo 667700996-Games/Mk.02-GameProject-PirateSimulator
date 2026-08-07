@@ -798,3 +798,169 @@ Lighting/mood: restrained warm upper-left maritime daylight, cool lower-right am
 Constraints: change only the twelve tier-2 structures into tier-3 upgrades; preserve all identities, order, direction, scale family and positions; exactly twelve unoccupied structures; no people, human silhouettes, animals, ships, carts, modern vehicles, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, borders or grid lines.
 Avoid: changing categories, arbitrary fantasy ornament, steam engines, electrical motors, modern elevators or industrial machinery, tier-2 simplicity, bright mobile-game colors, photorealism, top-down or front elevation, black background, transparent checkerboard, malformed engineering, floating parts, disconnected cables, boundary contact, magenta fringe or unreadable clutter.
 ```
+
+## 생산·생활·서비스 건물 2단계 전용 본체 아틀라스
+
+- 프로젝트 자산: `static/art/settlement/livelihood-service-buildings-tier2-atlas.png`
+- 프레임 정의: `static/art/settlement/livelihood-service-buildings-atlas.json` 공유
+- 최종 생성 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-893deba0-8f32-4bce-92c5-fced35378a73.png`
+- 생성 방식: 내장 이미지 생성 도구 `precise-object-edit`
+- 편집 대상: `static/art/settlement/livelihood-service-buildings-atlas.png`
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 4×2 고정 프레임, 8개 건물 순서·시점·정체성 유지, 네 모서리 완전 투명, 인물·동물·혈흔·텍스트·외부 연기 없음
+
+### 최종 생성 프롬프트
+
+```text
+Use case: precise-object-edit
+Asset type: production tier-2 isometric livelihood, production and service-building sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the edit target and authoritative exact layout, building identity, cell occupancy, fixed orthographic isometric camera, scale family, palette, materials and Dark Pirate Maritime Command art direction.
+Primary request: transform all eight existing structures into clearly upgraded tier-2 livelihood, production and public-service facilities while preserving the exact 4-column by 2-row atlas, exact cell order, cell boundaries, camera direction and footprint family.
+Cell order, left to right:
+row 1: hunter hut, cookhouse, weaver, powder workshop.
+row 2: ammunition workshop, gambling den, bathhouse, bounty board.
+Tier-2 changes:
+- Hunter hut: reinforced two-room hunting lodge with stone footing, larger covered butchering porch, organized hide-drying frames, locked meat store, antler racks, trap chest and sheltered firewood; no carcasses, blood or people.
+- Cookhouse: expanded stone-and-timber communal kitchen with two enclosed cooking lines, broad preparation counter, roofed pantry wing, multiple copper pots, water barrels, serving hatch and tall safe chimney; no smoke outside and no people.
+- Weaver: enlarged two-level textile workshop with two visible empty loom bays, improved spinning wheels, covered fiber store, dye-vat annex, fabric drying rack and protected finished-cloth shelves; no people.
+- Powder workshop: fortified stone-footed powder mill with separated mixing room, protected grinding drums, covered ingredient store, lightning rod, blast-diverting wall, sand barrels and secure double doors; absolutely no fire, loose powder or people.
+- Ammunition workshop: expanded ammunition works with enclosed shot-casting room, roofed assembly bay, organized cannonball racks, cartridge benches, mold store, cooling trough and secured loading apron; no fire outside, loose powder or people.
+- Gambling den: prosperous two-story social hall with broad covered veranda, several empty card and dice tables, enclosed cashier nook, side gaming room, warm windows, hanging lanterns and restrained crimson drapery; no written sign and no people.
+- Bathhouse: expanded stone-and-timber bathhouse with separate washing wing, elevated copper water tank, enclosed boiler room with contained glow, roofed changing porch, clean linen shelves, drainage channels and pale canvas awnings; no steam outside and no people.
+- Bounty board: enlarged roofed contract kiosk and records office with several protected blank parchment panels, sealed dispatch slots, evidence lockers, waiting bench, lanterns, rope barrier and a small enclosed clerk room; no readable text and no people.
+Style/medium: premium painterly high-detail 2.5D isometric strategy-game sprites; stylized realism; weathered maritime hardwood, dark slate, rugged masonry, blackened iron, aged copper and brass, beige canvas and restrained crimson-black cloth; physically plausible Age-of-Sail settlement architecture.
+Composition/framing: preserve the exact 1536x1024 canvas and exact 4-by-2 grid of 384x512 cells; one complete upgraded structure centered inside each source cell; retain approximately the source cell occupancy while making upgrades visibly denser; preserve at least 7 pixels of flat magenta at shared cell boundaries and 14 pixels at outer edges; every roof, chimney, antler, drying rack, awning, tank, lantern, stair, board and foundation fully contained; no overlap or cropping.
+Scene/backdrop: replace every empty pixel with one perfectly flat uniform solid #ff00ff chroma-key background for local removal. No terrain, floor, cast shadow, contact shadow, gradient, texture, reflection, vignette or lighting variation in the background. Do not use magenta or pink inside structures.
+Lighting/mood: restrained warm upper-left maritime daylight, cool lower-right ambient occlusion and contained warm window, boiler or lantern accents; consistent across all cells.
+Constraints: change only the eight structures into tier-2 upgrades; preserve identities, order, direction, scale family and positions; exactly eight unoccupied buildings; no people, human silhouettes, animals, carcasses, blood, vehicles, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, borders or grid lines.
+Avoid: changing categories, tier-3 city scale, modern machinery or plumbing, fantasy magic, bright mobile-game colors, photorealism, top-down or front elevation, black background, transparent checkerboard, cell-boundary contact, smoke or steam outside structures, loose explosives, floating parts, magenta fringe or tiny unreadable clutter.
+```
+
+## 생산·생활·서비스 건물 3단계 전용 본체 아틀라스
+
+- 프로젝트 자산: `static/art/settlement/livelihood-service-buildings-tier3-atlas.png`
+- 최초 생성 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-e5c53eff-41af-43b3-a67f-24326a3397f0.png`
+- 최종 프레이밍 보정 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-95d3a3c2-b55c-41e7-950c-370ecc22a5cd.png`
+- 프레임 정의: `static/art/settlement/livelihood-service-buildings-atlas.json` 공유
+- 생성 방식: 내장 이미지 생성 도구 `precise-object-edit` 2회
+- 편집 대상: 위 2단계 프로젝트 아틀라스, 이후 최초 3단계 결과
+- 폴백 생성기: 사용하지 않음
+- 후처리: 최종 보정 원본의 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 4×2 고정 프레임, 네 모서리 완전 투명, 계약소를 포함한 모든 구조물의 프레임 경계 여백 확보, 2단계보다 작업 구획·안전 설비·서비스 수용력이 명확히 강화됨, 인물·텍스트·외부 연기 없음
+
+### 최초 3단계 생성 프롬프트
+
+```text
+Use case: precise-object-edit
+Asset type: production tier-3 isometric livelihood, production and service-building sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the approved tier-2 edit target and authoritative exact layout, building identity, cell occupancy, fixed orthographic isometric camera, scale family, palette, materials and Dark Pirate Maritime Command art direction.
+Primary request: transform all eight tier-2 structures into visibly mature tier-3 livelihood, production and public-service facilities while preserving the exact 4-column by 2-row atlas, exact cell order, cell boundaries, camera direction and footprint family.
+Cell order, left to right:
+row 1: hunter hut, cookhouse, weaver, powder workshop.
+row 2: ammunition workshop, gambling den, bathhouse, bounty board.
+Tier-3 changes:
+- Hunter hut: prosperous stone-footed hunting guild lodge with three connected work rooms, broad covered processing gallery, large secured cold store, organized hide and herb drying bays, trap workshop, equipment lockers, rain cistern and sheltered firewood; no carcasses, blood or people.
+- Cookhouse: grand communal kitchen complex with massive masonry hearth hall, three enclosed cooking lines, separate preparation and serving wings, protected pantry, cool food cellar doors, copper cauldrons, water cistern, broad clean counters and multiple tall safe chimneys; no smoke outside and no people.
+- Weaver: mature three-level textile guildhall with several empty loom bays, dedicated spinning gallery, enclosed dye house, covered drying terrace, fiber hoist, secure finished-cloth store and folded fabric shelves; no people.
+- Powder workshop: fortress-grade powder manufactory with segmented stone blast walls, separate protected ingredient, grinding and mixing rooms, multiple period-plausible rolling drums, lightning conductors, isolated secure powder vault, covered loading lock, sand stores and double iron-banded doors; absolutely no flame, loose powder or people.
+- Ammunition workshop: major naval ammunition arsenal with two enclosed shot-casting bays, protected cartridge assembly hall, separated powder-safe room, overhead period lifting beam, cooling troughs, mold archive, calibrated cannonball racks and broad secured loading apron; no exposed flame, loose powder or people.
+- Gambling den: grand three-level pirate gaming house with broad roofed veranda, multiple empty card and dice salons, enclosed cashier and strongroom, private upper gallery, compact empty music corner, warm windows, brass lanterns and deep restrained crimson drapery; no sign, readable text or people.
+- Bathhouse: mature stone civic bathhouse with two separate bathing wings, central water-heating hall, elevated copper cisterns, enclosed boiler room with contained glow, roofed changing gallery, linen store, drainage channels, pale awnings and clean warm windows; no steam outside and no people.
+- Bounty board: substantial contract hall and records office with a broad protected board gallery, several large blank parchment panels, sealed dispatch boxes, evidence archive, secure holding lockers, roofed waiting porch, elevated lookout nook without guards and lanterns; no readable text and no people.
+Style/medium: premium painterly high-detail 2.5D isometric strategy-game sprites; stylized realism; aged maritime hardwood, dark slate, rugged dressed masonry, blackened iron, copper and aged brass, beige canvas and restrained crimson-black cloth; physically plausible mature Age-of-Sail settlement architecture.
+Composition/framing: preserve the exact 1536x1024 canvas and exact 4-by-2 grid of 384x512 cells; one complete upgraded structure centered inside each original cell; retain approximately the same cell occupancy as Image 1; preserve at least 5 pixels of flat magenta at shared cell boundaries and 12 pixels at outer edges; every roof, chimney, antler, drying rack, awning, tank, lantern, stair, board, gallery and foundation fully contained; no overlap or cropping.
+Scene/backdrop: every empty pixel must be one perfectly flat uniform solid #ff00ff chroma-key background for local removal. No terrain, floor, cast shadow, contact shadow, gradient, texture, reflection, vignette or lighting variation in the background. Do not use magenta or pink inside structures.
+Lighting/mood: restrained warm upper-left maritime daylight, cool lower-right ambient occlusion and controlled contained window, boiler or lantern glow; consistent across cells.
+Constraints: change only the eight tier-2 structures into tier-3 upgrades; preserve all identities, order, direction, scale family and positions; exactly eight unoccupied buildings; no people, human silhouettes, animals, carcasses, blood, vehicles, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, borders or grid lines.
+Avoid: changing categories, arbitrary fantasy ornament, steam engines, electrical equipment, modern plumbing or industrial machinery, tier-2 simplicity, bright mobile-game colors, photorealism, top-down or front elevation, black background, transparent checkerboard, smoke or steam outside structures, exposed flame near explosives, floating parts, boundary contact, magenta fringe or unreadable clutter.
+```
+
+### 계약소 프레이밍 보정 프롬프트
+
+```text
+Use case: precise-object-edit
+Asset type: final framing correction for a production tier-3 livelihood, production and service-building sprite atlas
+Input image: Image 1 is the edit target and otherwise approved final 1536x1024 4-column by 2-row atlas.
+Primary request: modify only the BOUNTY BOARD contract hall in row 2 column 4. Move the entire complete structure, including its thin signal spire, lookout tower, all roofs, blank parchment boards, lanterns, stairs, porch, side office, foundation and every connected physical pixel exactly 28 pixels downward inside its existing cell so the highest point has clear flat magenta padding below the outer canvas top edge and the horizontal row boundary.
+Reconstruct every vacated pixel above it with the exact same perfectly flat uniform #ff00ff chroma-key background.
+Preserve unchanged: the bounty-board architecture, scale, perspective, colors, materials, lighting and proportions, and every pixel of the other seven buildings and all other background areas.
+Constraints: exact 1536x1024 canvas; exact 4-by-2 order; no resize, redesign, blur, crop or horizontal movement; keep the moved structure fully inside row 2 column 4 with at least 12 pixels of flat magenta around its highest and lowest physical points; no people, text, logos, new objects, smoke, steam, shadows, borders or grid lines.
+Avoid: shortening or removing the spire, changing any other building, altering the uniform magenta background, clipping, boundary contact or adding artifacts.
+```
+
+## 공공·훈련·방어·행정 건물 2단계 전용 본체 아틀라스
+
+- 프로젝트 자산: `static/art/settlement/civic-defense-buildings-tier2-atlas.png`
+- 프레임 정의: `static/art/settlement/civic-defense-buildings-atlas.json` 공유
+- 최종 생성 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-f2410b4c-f83f-4349-89ea-22c0213aba1c.png`
+- 생성 방식: 내장 이미지 생성 도구 `precise-object-edit`
+- 편집 대상: `static/art/settlement/civic-defense-buildings-atlas.png`
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 4×2 고정 프레임, 8개 구조물 순서·시점·정체성 유지, 네 모서리 완전 투명, 인물·전투·혈흔·텍스트·외부 연기 없음
+
+### 최종 생성 프롬프트
+
+```text
+Use case: precise-object-edit
+Asset type: production tier-2 isometric civic, training, defense and administration-building sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the edit target and authoritative exact layout, building identity, cell occupancy, fixed orthographic isometric camera, scale family, palette, materials and Dark Pirate Maritime Command art direction.
+Primary request: transform all eight existing structures into clearly upgraded tier-2 civic, training, defense and administration facilities while preserving the exact 4-column by 2-row atlas, exact cell order, cell boundaries, camera direction and footprint family.
+Cell order, left to right:
+row 1: arena, festival square, training yard, fort wall.
+row 2: guard post, signal tower, pirate council, intelligence network.
+Tier-2 changes:
+- Arena: reinforced timber-and-stone fighting arena with higher tiered seating, expanded empty sand floor, covered entry tunnel, secure equipment rooms, protected judges' balcony, weapon racks and restrained black-crimson banners; no people, combat, bodies or blood.
+- Festival square: expanded civic celebration deck with broad raised performance pavilion, roofed empty music corner, organized empty feast tables, market-stall frames, central contained brazier without smoke, lantern posts and restrained pennant lines; no people.
+- Training yard: fortified multi-purpose drill compound with separate empty melee ring, gunnery practice lane, climbing frame, target wall, roofed instructor platform, equipment racks and thicker palisade; no trainees or active weapons.
+- Fort wall: upgraded dressed-stone defensive gate segment with thicker curtain wall, reinforced iron-banded gate, taller twin watch turrets, accessible crenellated parapet, covered murder-hole gallery, side buttresses and restrained banners; no guards.
+- Guard post: fortified stone-footed checkpoint with enclosed watch room, raised bell pavilion, protected gate deck, covered weapon rack, small detention room, signal lanterns and thicker palisade perimeter; no guards or prisoners.
+- Signal tower: taller stone-and-timber coastal signal tower with broader observation gallery, enclosed chart room, multiple flag halyards with folded restrained flags, large signal bell, protected beacon frame without flame and deep foundations; no people.
+- Pirate council: expanded civic council hall with larger circular assembly chamber, two administrative side wings, broad covered public steps, raised speaker balcony, enclosed archive, central bell and disciplined black-crimson banners; no people.
+- Intelligence network: enlarged discreet information office with two-level records house, roofed message sorting gallery, secure cipher archive, observation cupola, concealed dispatch lockers, map tables under awnings, signal mast and restrained pennants; no readable text or people.
+Style/medium: premium painterly high-detail 2.5D isometric strategy-game sprites; stylized realism; weathered maritime hardwood, dark slate, rugged dressed masonry, blackened iron, aged brass, beige canvas and restrained crimson-black cloth; physically plausible Age-of-Sail civic and military architecture.
+Composition/framing: preserve the exact 1536x1024 canvas and exact 4-by-2 grid of 384x512 cells; one complete upgraded structure centered inside each source cell; retain approximately the source cell occupancy while making upgrades visibly denser; preserve at least 7 pixels of flat magenta at shared cell boundaries and 14 pixels at outer edges; every roof, turret, mast, banner, stair, wall, gallery, platform, target and foundation fully contained; no overlap or cropping.
+Scene/backdrop: replace every empty pixel with one perfectly flat uniform solid #ff00ff chroma-key background for local removal. No terrain, floor outside the physical structures, cast shadow, contact shadow, gradient, texture, reflection, vignette or lighting variation in the background. Do not use magenta or pink inside structures.
+Lighting/mood: restrained warm upper-left maritime daylight, cool lower-right ambient occlusion and contained warm window, brazier or lantern accents; consistent across all cells.
+Constraints: change only the eight structures into tier-2 upgrades; preserve identities, order, direction, scale family and positions; exactly eight unoccupied structures; no people, human silhouettes, animals, combat, bodies, blood, ships, vehicles, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, borders or grid lines.
+Avoid: changing categories, tier-3 capital-city scale, fantasy fortifications, modern military equipment, bright mobile-game colors, photorealism, top-down or front elevation, black background, transparent checkerboard, cell-boundary contact, flames or smoke outside structures, floating parts, magenta fringe or tiny unreadable clutter.
+```
+
+## 공공·훈련·방어·행정 건물 3단계 전용 본체 아틀라스
+
+- 프로젝트 자산: `static/art/settlement/civic-defense-buildings-tier3-atlas.png`
+- 프레임 정의: `static/art/settlement/civic-defense-buildings-atlas.json` 공유
+- 최종 생성 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-e8c077ae-ec4b-4824-8cae-f74592ae1b09.png`
+- 생성 방식: 내장 이미지 생성 도구 `precise-object-edit`
+- 편집 대상: 위 2단계 프로젝트 아틀라스
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 4×2 고정 프레임, 네 모서리 완전 투명, 모든 구조물의 프레임 경계 여백 확보, 2단계보다 관람·훈련·방어·통신·행정 수용력이 명확히 강화됨, 인물·전투·텍스트·외부 연기 없음
+
+### 최종 생성 프롬프트
+
+```text
+Use case: precise-object-edit
+Asset type: production tier-3 isometric civic, training, defense and administration-building sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the approved tier-2 edit target and authoritative exact layout, building identity, cell occupancy, fixed orthographic isometric camera, scale family, palette, materials and Dark Pirate Maritime Command art direction.
+Primary request: transform all eight tier-2 structures into visibly mature tier-3 civic, training, defense and administration facilities while preserving the exact 4-column by 2-row atlas, exact cell order, cell boundaries, camera direction and footprint family.
+Cell order, left to right:
+row 1: arena, festival square, training yard, fort wall.
+row 2: guard post, signal tower, pirate council, intelligence network.
+Tier-3 changes:
+- Arena: monumental stone-footed pirate amphitheater with deep multi-tier timber seating, broad empty combat floor, protected officials' gallery, two covered entry tunnels, secure fighter and equipment rooms, reinforced outer wall, weapon displays and disciplined black-crimson banners; no people, combat, bodies or blood.
+- Festival square: grand civic celebration plaza with a large roofed performance hall, second empty music pavilion, organized feast terraces, covered market arcades, contained central ceremonial brazier without smoke, lantern colonnade, raised speaker platform and layered pennant lines; no people.
+- Training yard: fortress-grade training academy compound with distinct empty melee court, elevated gunnery lane, obstacle and climbing tower, shield wall, covered instruction hall, equipment stores, infirmary nook and heavy stone-footed palisade; no trainees or active weapons.
+- Fort wall: massive fortress gatehouse segment with deep dressed-stone curtain wall, monumental double iron-banded gate, three tall watch and command towers, layered crenellated parapets, covered defensive galleries, machicolation-like timber platforms, deep buttresses and restrained banners; no guards or siege action.
+- Guard post: mature checkpoint bastion with a stone gate court, tall enclosed watch pavilion, protected signal bell tower, armory wing, small detention block, roofed inspection deck, secure weapon racks, lanterns and fortified palisade; no guards or prisoners.
+- Signal tower: commanding coastal communications citadel with massive stone base, several stacked observation and signal galleries, enclosed chart and relay rooms, multiple flag yards with restrained folded flags, large bell, telescope mounts, protected beacon cage without flame and deep buttressed foundations; no people.
+- Pirate council: grand pirate federal assembly complex with monumental circular council rotunda, four administrative wings, broad public stair and covered portico, raised speaker gallery, secure archive, central bell cupola, private negotiation rooms and disciplined black-crimson banners; no people.
+- Intelligence network: master intelligence headquarters with fortified three-level records house, enclosed cipher archive, hidden dispatch bays, multiple map rooms, rooftop observation post, signal mast, telescope mounts, covered informant entrances, secure lockers and restrained pennants; no readable text or people.
+Style/medium: premium painterly high-detail 2.5D isometric strategy-game sprites; stylized realism; aged maritime hardwood, dark slate, massive dressed masonry, blackened iron, aged brass, beige canvas and restrained crimson-black cloth; physically plausible mature Age-of-Sail civic and military architecture.
+Composition/framing: preserve the exact 1536x1024 canvas and exact 4-by-2 grid of 384x512 cells; one complete upgraded structure centered inside each original cell; retain approximately the same cell occupancy as Image 1; preserve at least 5 pixels of flat magenta at shared cell boundaries and 12 pixels at outer edges; every roof, turret, mast, banner, stair, wall, gallery, platform, target, antenna and foundation fully contained; no overlap or cropping.
+Scene/backdrop: every empty pixel must be one perfectly flat uniform solid #ff00ff chroma-key background for local removal. No terrain, floor outside physical structures, cast shadow, contact shadow, gradient, texture, reflection, vignette or lighting variation in the background. Do not use magenta or pink inside structures.
+Lighting/mood: restrained warm upper-left maritime daylight, cool lower-right ambient occlusion and controlled contained window, brazier or lantern glow; consistent across cells.
+Constraints: change only the eight tier-2 structures into tier-3 upgrades; preserve all identities, order, direction, scale family and positions; exactly eight unoccupied structures; no people, human silhouettes, animals, combat, bodies, blood, ships, vehicles, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, borders or grid lines.
+Avoid: changing categories, arbitrary fantasy ornament, modern military equipment or communications technology, tier-2 simplicity, bright mobile-game colors, photorealism, top-down or front elevation, black background, transparent checkerboard, malformed architecture, flames or smoke outside structures, floating parts, boundary contact, magenta fringe or unreadable clutter.
+```

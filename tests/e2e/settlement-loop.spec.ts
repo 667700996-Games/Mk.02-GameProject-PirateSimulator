@@ -13,7 +13,11 @@ const DEFERRED_BUILDING_ATLASES = [
   'logistics-fleet-buildings-tier2-atlas.png',
   'logistics-fleet-buildings-tier3-atlas.png',
   'livelihood-service-buildings-atlas.png',
-  'civic-defense-buildings-atlas.png'
+  'livelihood-service-buildings-tier2-atlas.png',
+  'livelihood-service-buildings-tier3-atlas.png',
+  'civic-defense-buildings-atlas.png',
+  'civic-defense-buildings-tier2-atlas.png',
+  'civic-defense-buildings-tier3-atlas.png'
 ] as const;
 
 async function createSettlement(page: import('@playwright/test').Page): Promise<void> {
@@ -67,7 +71,11 @@ test('publishes complete non-core tier bodies without loading them into a fresh 
     'society-buildings-tier2-atlas.png',
     'society-buildings-tier3-atlas.png',
     'logistics-fleet-buildings-tier2-atlas.png',
-    'logistics-fleet-buildings-tier3-atlas.png'
+    'logistics-fleet-buildings-tier3-atlas.png',
+    'livelihood-service-buildings-tier2-atlas.png',
+    'livelihood-service-buildings-tier3-atlas.png',
+    'civic-defense-buildings-tier2-atlas.png',
+    'civic-defense-buildings-tier3-atlas.png'
   ]) {
     expect(initialResources.some((url) => url.endsWith(`/art/settlement/${atlas}`))).toBe(false);
     const response = await page.request.get(`/art/settlement/${atlas}`);

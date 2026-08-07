@@ -6,6 +6,10 @@ import {
   CIVIC_DEFENSE_BUILDING_ATLAS_DATA,
   CIVIC_DEFENSE_BUILDING_ATLAS_IMAGE,
   CIVIC_DEFENSE_BUILDING_ATLAS_KEY,
+  CIVIC_DEFENSE_BUILDING_TIER2_ATLAS_IMAGE,
+  CIVIC_DEFENSE_BUILDING_TIER2_ATLAS_KEY,
+  CIVIC_DEFENSE_BUILDING_TIER3_ATLAS_IMAGE,
+  CIVIC_DEFENSE_BUILDING_TIER3_ATLAS_KEY,
   CORE_BUILDING_ART,
   CORE_BUILDING_ATLAS_DATA,
   CORE_BUILDING_ATLAS_IMAGE,
@@ -31,6 +35,10 @@ import {
   LIVELIHOOD_SERVICE_BUILDING_ATLAS_DATA,
   LIVELIHOOD_SERVICE_BUILDING_ATLAS_IMAGE,
   LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY,
+  LIVELIHOOD_SERVICE_BUILDING_TIER2_ATLAS_IMAGE,
+  LIVELIHOOD_SERVICE_BUILDING_TIER2_ATLAS_KEY,
+  LIVELIHOOD_SERVICE_BUILDING_TIER3_ATLAS_IMAGE,
+  LIVELIHOOD_SERVICE_BUILDING_TIER3_ATLAS_KEY,
   SOCIETY_BUILDING_ATLAS_DATA,
   SOCIETY_BUILDING_ATLAS_IMAGE,
   SOCIETY_BUILDING_ATLAS_KEY,
@@ -145,8 +153,12 @@ describe('settlement building art', () => {
     expect(LOGISTICS_FLEET_BUILDING_TIER3_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
     expect(LIVELIHOOD_SERVICE_BUILDING_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
     expect(LIVELIHOOD_SERVICE_BUILDING_ATLAS_DATA).toMatch(/^\/art\/settlement\/.*\.json$/);
+    expect(LIVELIHOOD_SERVICE_BUILDING_TIER2_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
+    expect(LIVELIHOOD_SERVICE_BUILDING_TIER3_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
     expect(CIVIC_DEFENSE_BUILDING_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
     expect(CIVIC_DEFENSE_BUILDING_ATLAS_DATA).toMatch(/^\/art\/settlement\/.*\.json$/);
+    expect(CIVIC_DEFENSE_BUILDING_TIER2_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
+    expect(CIVIC_DEFENSE_BUILDING_TIER3_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
   });
 
   it('routes each building set to its dedicated atlas', () => {
@@ -188,12 +200,14 @@ describe('settlement building art', () => {
       LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY,
       CIVIC_DEFENSE_BUILDING_ATLAS_KEY
     ]);
-    expect(Object.keys(BUILDING_ATLAS_SOURCES)).toHaveLength(14);
+    expect(Object.keys(BUILDING_ATLAS_SOURCES)).toHaveLength(18);
     expect(Object.keys(BUILDING_TIER_ATLAS_KEYS)).toEqual([
       CORE_BUILDING_ATLAS_KEY,
       INDUSTRY_BUILDING_ATLAS_KEY,
       SOCIETY_BUILDING_ATLAS_KEY,
-      LOGISTICS_FLEET_BUILDING_ATLAS_KEY
+      LOGISTICS_FLEET_BUILDING_ATLAS_KEY,
+      LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY,
+      CIVIC_DEFENSE_BUILDING_ATLAS_KEY
     ]);
     for (const source of Object.values(BUILDING_ATLAS_SOURCES)) {
       expect(source.image).toMatch(/^\/art\/settlement\/.*\.png$/);
@@ -201,11 +215,13 @@ describe('settlement building art', () => {
     }
   });
 
-  it('selects dedicated tier art for upgraded core, industry, society and logistics buildings', () => {
+  it('selects dedicated tier art for every upgradeable building family', () => {
     const shipyard = CORE_BUILDING_ART.shipyard!;
     const quarry = CORE_BUILDING_ART.quarry!;
     const tavern = CORE_BUILDING_ART.tavern!;
     const localStorage = CORE_BUILDING_ART['local-storage']!;
+    const hunterHut = CORE_BUILDING_ART['hunter-hut']!;
+    const signalTower = CORE_BUILDING_ART['signal-tower']!;
 
     expect(buildingAtlasKeyForLevel(shipyard, 1)).toBe(CORE_BUILDING_ATLAS_KEY);
     expect(buildingAtlasKeyForLevel(shipyard, 2)).toBe(CORE_BUILDING_TIER2_ATLAS_KEY);
@@ -229,6 +245,20 @@ describe('settlement building art', () => {
     expect(buildingAtlasKeyForLevel(localStorage, 7)).toBe(
       LOGISTICS_FLEET_BUILDING_TIER3_ATLAS_KEY
     );
+    expect(buildingAtlasKeyForLevel(hunterHut, 1)).toBe(LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY);
+    expect(buildingAtlasKeyForLevel(hunterHut, 2)).toBe(
+      LIVELIHOOD_SERVICE_BUILDING_TIER2_ATLAS_KEY
+    );
+    expect(buildingAtlasKeyForLevel(hunterHut, 3)).toBe(
+      LIVELIHOOD_SERVICE_BUILDING_TIER3_ATLAS_KEY
+    );
+    expect(buildingAtlasKeyForLevel(hunterHut, 7)).toBe(
+      LIVELIHOOD_SERVICE_BUILDING_TIER3_ATLAS_KEY
+    );
+    expect(buildingAtlasKeyForLevel(signalTower, 1)).toBe(CIVIC_DEFENSE_BUILDING_ATLAS_KEY);
+    expect(buildingAtlasKeyForLevel(signalTower, 2)).toBe(CIVIC_DEFENSE_BUILDING_TIER2_ATLAS_KEY);
+    expect(buildingAtlasKeyForLevel(signalTower, 3)).toBe(CIVIC_DEFENSE_BUILDING_TIER3_ATLAS_KEY);
+    expect(buildingAtlasKeyForLevel(signalTower, 7)).toBe(CIVIC_DEFENSE_BUILDING_TIER3_ATLAS_KEY);
 
     expect(
       buildingAtlasKeysForBuildings([
@@ -237,7 +267,9 @@ describe('settlement building art', () => {
         { definitionId: 'tent', level: 3 },
         { definitionId: 'quarry', level: 3 },
         { definitionId: 'tavern', level: 2 },
-        { definitionId: 'local-storage', level: 3 }
+        { definitionId: 'local-storage', level: 3 },
+        { definitionId: 'hunter-hut', level: 2 },
+        { definitionId: 'signal-tower', level: 3 }
       ])
     ).toEqual([
       CORE_BUILDING_ATLAS_KEY,
@@ -248,7 +280,11 @@ describe('settlement building art', () => {
       SOCIETY_BUILDING_ATLAS_KEY,
       SOCIETY_BUILDING_TIER2_ATLAS_KEY,
       LOGISTICS_FLEET_BUILDING_ATLAS_KEY,
-      LOGISTICS_FLEET_BUILDING_TIER3_ATLAS_KEY
+      LOGISTICS_FLEET_BUILDING_TIER3_ATLAS_KEY,
+      LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY,
+      LIVELIHOOD_SERVICE_BUILDING_TIER2_ATLAS_KEY,
+      CIVIC_DEFENSE_BUILDING_ATLAS_KEY,
+      CIVIC_DEFENSE_BUILDING_TIER3_ATLAS_KEY
     ]);
     expect(
       buildingAtlasKeysForBuildings([
@@ -257,7 +293,11 @@ describe('settlement building art', () => {
         { definitionId: 'bunkhouse', level: 2 },
         { definitionId: 'captains-lodge', level: 3 },
         { definitionId: 'local-storage', level: 2 },
-        { definitionId: 'dry-dock', level: 3 }
+        { definitionId: 'dry-dock', level: 3 },
+        { definitionId: 'cookhouse', level: 2 },
+        { definitionId: 'bathhouse', level: 3 },
+        { definitionId: 'arena', level: 2 },
+        { definitionId: 'pirate-council', level: 3 }
       ])
     ).toEqual([
       CORE_BUILDING_ATLAS_KEY,
@@ -269,7 +309,13 @@ describe('settlement building art', () => {
       SOCIETY_BUILDING_TIER3_ATLAS_KEY,
       LOGISTICS_FLEET_BUILDING_ATLAS_KEY,
       LOGISTICS_FLEET_BUILDING_TIER2_ATLAS_KEY,
-      LOGISTICS_FLEET_BUILDING_TIER3_ATLAS_KEY
+      LOGISTICS_FLEET_BUILDING_TIER3_ATLAS_KEY,
+      LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY,
+      LIVELIHOOD_SERVICE_BUILDING_TIER2_ATLAS_KEY,
+      LIVELIHOOD_SERVICE_BUILDING_TIER3_ATLAS_KEY,
+      CIVIC_DEFENSE_BUILDING_ATLAS_KEY,
+      CIVIC_DEFENSE_BUILDING_TIER2_ATLAS_KEY,
+      CIVIC_DEFENSE_BUILDING_TIER3_ATLAS_KEY
     ]);
   });
 });

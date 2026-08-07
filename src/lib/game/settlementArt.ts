@@ -47,12 +47,26 @@ export const LIVELIHOOD_SERVICE_BUILDING_ATLAS_IMAGE =
   '/art/settlement/livelihood-service-buildings-atlas.png';
 export const LIVELIHOOD_SERVICE_BUILDING_ATLAS_DATA =
   '/art/settlement/livelihood-service-buildings-atlas.json';
+export const LIVELIHOOD_SERVICE_BUILDING_TIER2_ATLAS_KEY =
+  'settlement-livelihood-service-buildings-tier2';
+export const LIVELIHOOD_SERVICE_BUILDING_TIER2_ATLAS_IMAGE =
+  '/art/settlement/livelihood-service-buildings-tier2-atlas.png';
+export const LIVELIHOOD_SERVICE_BUILDING_TIER3_ATLAS_KEY =
+  'settlement-livelihood-service-buildings-tier3';
+export const LIVELIHOOD_SERVICE_BUILDING_TIER3_ATLAS_IMAGE =
+  '/art/settlement/livelihood-service-buildings-tier3-atlas.png';
 export const LIVELIHOOD_SERVICE_BUILDING_FRAME_RATIO = 512 / 384;
 export const CIVIC_DEFENSE_BUILDING_ATLAS_KEY = 'settlement-civic-defense-buildings';
 export const CIVIC_DEFENSE_BUILDING_ATLAS_IMAGE =
   '/art/settlement/civic-defense-buildings-atlas.png';
 export const CIVIC_DEFENSE_BUILDING_ATLAS_DATA =
   '/art/settlement/civic-defense-buildings-atlas.json';
+export const CIVIC_DEFENSE_BUILDING_TIER2_ATLAS_KEY = 'settlement-civic-defense-buildings-tier2';
+export const CIVIC_DEFENSE_BUILDING_TIER2_ATLAS_IMAGE =
+  '/art/settlement/civic-defense-buildings-tier2-atlas.png';
+export const CIVIC_DEFENSE_BUILDING_TIER3_ATLAS_KEY = 'settlement-civic-defense-buildings-tier3';
+export const CIVIC_DEFENSE_BUILDING_TIER3_ATLAS_IMAGE =
+  '/art/settlement/civic-defense-buildings-tier3-atlas.png';
 export const CIVIC_DEFENSE_BUILDING_FRAME_RATIO = 512 / 384;
 
 export const BUILDING_ATLAS_SOURCES = {
@@ -105,8 +119,24 @@ export const BUILDING_ATLAS_SOURCES = {
     image: LIVELIHOOD_SERVICE_BUILDING_ATLAS_IMAGE,
     data: LIVELIHOOD_SERVICE_BUILDING_ATLAS_DATA
   },
+  [LIVELIHOOD_SERVICE_BUILDING_TIER2_ATLAS_KEY]: {
+    image: LIVELIHOOD_SERVICE_BUILDING_TIER2_ATLAS_IMAGE,
+    data: LIVELIHOOD_SERVICE_BUILDING_ATLAS_DATA
+  },
+  [LIVELIHOOD_SERVICE_BUILDING_TIER3_ATLAS_KEY]: {
+    image: LIVELIHOOD_SERVICE_BUILDING_TIER3_ATLAS_IMAGE,
+    data: LIVELIHOOD_SERVICE_BUILDING_ATLAS_DATA
+  },
   [CIVIC_DEFENSE_BUILDING_ATLAS_KEY]: {
     image: CIVIC_DEFENSE_BUILDING_ATLAS_IMAGE,
+    data: CIVIC_DEFENSE_BUILDING_ATLAS_DATA
+  },
+  [CIVIC_DEFENSE_BUILDING_TIER2_ATLAS_KEY]: {
+    image: CIVIC_DEFENSE_BUILDING_TIER2_ATLAS_IMAGE,
+    data: CIVIC_DEFENSE_BUILDING_ATLAS_DATA
+  },
+  [CIVIC_DEFENSE_BUILDING_TIER3_ATLAS_KEY]: {
+    image: CIVIC_DEFENSE_BUILDING_TIER3_ATLAS_IMAGE,
     data: CIVIC_DEFENSE_BUILDING_ATLAS_DATA
   }
 } as const;
@@ -131,6 +161,14 @@ export const BUILDING_TIER_ATLAS_KEYS: Partial<
   [LOGISTICS_FLEET_BUILDING_ATLAS_KEY]: {
     tier2: LOGISTICS_FLEET_BUILDING_TIER2_ATLAS_KEY,
     tier3: LOGISTICS_FLEET_BUILDING_TIER3_ATLAS_KEY
+  },
+  [LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY]: {
+    tier2: LIVELIHOOD_SERVICE_BUILDING_TIER2_ATLAS_KEY,
+    tier3: LIVELIHOOD_SERVICE_BUILDING_TIER3_ATLAS_KEY
+  },
+  [CIVIC_DEFENSE_BUILDING_ATLAS_KEY]: {
+    tier2: CIVIC_DEFENSE_BUILDING_TIER2_ATLAS_KEY,
+    tier3: CIVIC_DEFENSE_BUILDING_TIER3_ATLAS_KEY
   }
 };
 
