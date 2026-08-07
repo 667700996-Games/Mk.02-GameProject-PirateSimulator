@@ -118,6 +118,5 @@ test('shows the logistics overlay and persists settlement schema v4', async ({ p
   });
   expect(storedVersion).toBe(41);
   await page.reload();
-  await page.getByRole('button', { name: /항해 계속하기 · 모건 도시테스트/ }).click();
   await expect(page.getByTestId('settlement-screen')).toBeVisible();
 });

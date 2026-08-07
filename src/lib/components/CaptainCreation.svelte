@@ -1,18 +1,17 @@
 <script lang="ts">
   import { DIFFICULTIES, TRAITS } from '$lib/domain/catalog';
   import type { CaptainTrait, Difficulty, NewGameOptions } from '$lib/domain/types';
-  import { CAPTAIN_DRAFT_SESSION_KEY } from '$lib/persistence/sessionContinuity';
+  import { CAPTAIN_DRAFT_SESSION_KEY, readSessionValue, writeSessionValue } from '$lib/persistence/sessionContinuity';
 
   let { onCreate, onBack } = $props<{ onCreate: (options: NewGameOptions) => void; onBack: () => void }>();
 
   type CaptainDraft = NewGameOptions & { havenName: string };
 
   function loadDraft(): Partial<CaptainDraft> {
-    if (typeof sessionStorage === 'undefined') return {};
     try {
-      return JSON.parse(sessionStorage.getItem(CAPTAIN_DRAFT_SESSION_KEY) ?? '{}') as Partial<CaptainDraft>;
+      return JSON.parse(readSessionValue(CAPTAIN_DRAFT_SESSION_KEY) ?? '{}') as Partial<CaptainDraft>;
     } catch {
-      sessionStorage.removeItem(CAPTAIN_DRAFT_SESSION_KEY);
+      writeSessionValue(CAPTAIN_DRAFT_SESSION_KEY);
       return {};
     }
   }
@@ -31,7 +30,7 @@
   const colors = ['#8f3028', '#15191a', '#244c58', '#5b3570', '#7c5b24', '#31553b'];
 
   $effect(() => {
-    sessionStorage.setItem(
+    writeSessionValue(
       CAPTAIN_DRAFT_SESSION_KEY,
       JSON.stringify({ captainName, crewName, shipName, havenName, flagMark, flagColor, trait, difficulty })
     );

@@ -4,7 +4,7 @@ import { createId } from '$lib/domain/rng';
 import { advanceSimulation } from '$lib/domain/simulation';
 import type { GameScreen, GameSettings, GameState, NewGameOptions, SaveRecord, ToastMessage } from '$lib/domain/types';
 import { exportSave as serializeSave, importSave as deserializeSave, listSaves, loadSettings, readSave, removeSave, writeSave, writeSettings } from '$lib/persistence/gameRepository';
-import { ACTIVE_GAME_SESSION_KEY } from '$lib/persistence/sessionContinuity';
+import { ACTIVE_GAME_SESSION_KEY, readSessionValue, writeSessionValue } from '$lib/persistence/sessionContinuity';
 
 interface SessionState {
   ready: boolean;
@@ -28,14 +28,11 @@ let autoSaveTimer: ReturnType<typeof setTimeout> | undefined;
 let periodicAutoSaveSeconds = 0;
 
 function readActiveSessionId(): string | undefined {
-  if (typeof sessionStorage === 'undefined') return undefined;
-  return sessionStorage.getItem(ACTIVE_GAME_SESSION_KEY) ?? undefined;
+  return readSessionValue(ACTIVE_GAME_SESSION_KEY);
 }
 
 function writeActiveSessionId(saveId?: string): void {
-  if (typeof sessionStorage === 'undefined') return;
-  if (saveId) sessionStorage.setItem(ACTIVE_GAME_SESSION_KEY, saveId);
-  else sessionStorage.removeItem(ACTIVE_GAME_SESSION_KEY);
+  writeSessionValue(ACTIVE_GAME_SESSION_KEY, saveId);
 }
 
 function updateGame(mutator: (state: GameState) => GameState, autosave = false): void {

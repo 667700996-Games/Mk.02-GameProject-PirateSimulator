@@ -7,14 +7,14 @@
   import { soundEngine } from '$lib/audio/SoundEngine';
   import type { NewGameOptions } from '$lib/domain/types';
   import { focusTrap } from '$lib/actions/focusTrap';
-  import { CAPTAIN_CREATION_SESSION_KEY, CAPTAIN_DRAFT_SESSION_KEY } from '$lib/persistence/sessionContinuity';
+  import { CAPTAIN_CREATION_SESSION_KEY, CAPTAIN_DRAFT_SESSION_KEY, readSessionValue, writeSessionValue } from '$lib/persistence/sessionContinuity';
 
   let creating = $state(false);
   let showSaves = $state(false);
   let showSettings = $state(false);
 
   onMount(() => {
-    creating = sessionStorage.getItem(CAPTAIN_CREATION_SESSION_KEY) === '1';
+    creating = readSessionValue(CAPTAIN_CREATION_SESSION_KEY) === '1';
     void gameSession.initialize();
     const timer = window.setInterval(() => gameSession.tickPlayTime(1), 1000);
     const unlock = () => void soundEngine.unlock($gameSession.settings);
@@ -49,13 +49,13 @@
 
   function openCreation(): void {
     creating = true;
-    sessionStorage.setItem(CAPTAIN_CREATION_SESSION_KEY, '1');
+    writeSessionValue(CAPTAIN_CREATION_SESSION_KEY, '1');
   }
 
   function closeCreation(): void {
     creating = false;
-    sessionStorage.removeItem(CAPTAIN_CREATION_SESSION_KEY);
-    sessionStorage.removeItem(CAPTAIN_DRAFT_SESSION_KEY);
+    writeSessionValue(CAPTAIN_CREATION_SESSION_KEY);
+    writeSessionValue(CAPTAIN_DRAFT_SESSION_KEY);
   }
 
   async function load(id: string): Promise<void> {

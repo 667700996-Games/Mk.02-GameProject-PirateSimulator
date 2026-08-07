@@ -62,7 +62,6 @@ async function restoreFlagshipForNavalTest(page: import('@playwright/test').Page
       })
   );
   await page.reload();
-  await page.getByRole('button', { name: /항해 계속하기 · 검은수염 테스트/ }).click();
   await expect(page.getByTestId('settlement-screen')).toBeVisible();
 }
 
@@ -158,10 +157,31 @@ test('persists and restores the complete settlement state through IndexedDB', as
   expect(saved).toEqual({ version: 4, residents: 16, buildings: 6 });
 
   await page.reload();
-  await expect(page.getByRole('button', { name: /항해 계속하기 · 검은수염 테스트/ })).toBeVisible();
-  await page.getByRole('button', { name: /항해 계속하기 · 검은수염 테스트/ }).click();
   await expect(page.getByTestId('settlement-screen')).toBeVisible();
   await expect(page.getByText('인구 / 주거')).toBeVisible();
+});
+
+test('restores the captain draft and active voyage across same-tab reloads', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '새로운 전설 시작' }).click();
+  await page.locator('#captain-name').fill('세션의 앤 보니');
+  await page.locator('#crew-name').fill('되살아난 항해단');
+  await page.locator('#ship-name').fill('재장전된 나침반');
+
+  await page.reload();
+  await expect(page.locator('#captain-name')).toHaveValue('세션의 앤 보니');
+  await expect(page.locator('#crew-name')).toHaveValue('되살아난 항해단');
+  await expect(page.locator('#ship-name')).toHaveValue('재장전된 나침반');
+
+  await page.getByRole('button', { name: /건축가/ }).click();
+  await page.getByRole('button', { name: /검은 깃발을 올린다/ }).click();
+  await expect(page.getByTestId('settlement-screen')).toBeVisible();
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.getByText('항해 기록을 안전하게 보관했습니다.')).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByTestId('settlement-screen')).toBeVisible();
+  await expect(page.getByText('세션의 앤 보니')).toBeVisible();
 });
 
 test('accepts a contract and keeps missions connected to the expedition command', async ({
