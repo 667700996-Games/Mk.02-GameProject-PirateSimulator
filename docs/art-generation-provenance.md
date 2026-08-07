@@ -124,6 +124,103 @@ Constraints: exactly nine buildings in the specified order; each cell contains o
 Avoid: duplicated silhouettes, modern machinery, fantasy magic, bright mobile-game cartoon colors, photorealism, top-down camera, front-facing elevation, mismatched perspectives, floating parts, black background, transparent checkerboard, borders, dividers, grid lines, magenta fringe, tiny unreadable clutter.
 ```
 
+## 산업 건물 2단계 전용 본체 아틀라스
+
+- 프로젝트 자산: static/art/settlement/industry-buildings-tier2-atlas.png
+- 프레임 정의: static/art/settlement/industry-buildings-atlas.json 공유
+- 최초 2단계 생성 원본: /Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-c7b90d3f-9139-47da-af82-00c8e6a93ce7.png
+- 최종 프레이밍 보정 원본: /Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-a3af7640-6909-4a26-9c60-91d5b20d61de.png
+- 생성 방식: 내장 이미지 생성 도구 precise-object-edit
+- 편집 대상: static/art/settlement/industry-buildings-atlas.png
+- 프레이밍 참조: 기본 산업 아틀라스의 셀별 화면 점유율
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 3×3 고정 프레임, 9개 건물 순서·시점·정체성 유지, 네 모서리 완전 투명
+
+### 최초 2단계 생성 프롬프트
+
+~~~text
+Use case: precise-object-edit
+Asset type: production tier-2 isometric industry-building sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the edit target and authoritative layout, building-identity, camera, scale, palette, material and style reference.
+Primary request: transform the existing nine buildings into clearly upgraded tier-2 versions while preserving the exact 3-column by 3-row atlas, exact cell order, cell boundaries, fixed orthographic isometric camera, original footprint family, and Dark Pirate Maritime Command art direction.
+Cell order, left to right:
+row 1: quarry, iron mine, copper mine.
+row 2: terraced farm, smelter, forge.
+row 3: waterwheel mill, bakery, rum distillery.
+Tier-2 changes:
+- Quarry: expanded dressed-stone cutting yard, two compact timber lifting arms, improved hand winch, roofed tool station, organized block stacks and reinforced retaining edges; remain an open quarry, not a mine.
+- Iron mine: reinforced stone-and-dark-timber portal, roofed rope hoist, longer mine rails, ore sorting bin and one additional empty cart; preserve black-gray iron-streaked rock.
+- Copper mine: stronger stone-and-lighter-timber portal, larger bucket hoist, compact roofed sorting bench, organized ore crates and readable warm copper plus oxidized teal mineral accents; remain distinct from the iron mine.
+- Terraced farm: broader three-level cultivated terraces, improved timber irrigation channels and small header tank, covered seed/tool shed, more organized grain, fruit and vegetable plots; no farmhouse.
+- Smelter: enlarged stone furnace house with two enclosed furnace mouths, taller soot-dark chimney, roofed ore and charcoal bins, reinforced working floor and compact lifting beam.
+- Forge: expanded two-bay blacksmith workshop with stronger stone base, larger chimney, enclosed bellows assembly, covered anvil bay, quench tank and organized iron tool racks; visibly different from the smelter.
+- Mill: reinforced stone lower floor, larger readable wooden waterwheel, covered grain elevator and hopper, second storage bay and orderly sacks; no windmill blades.
+- Bakery: expanded stone-and-timber bakehouse with two enclosed ovens, larger chimney, covered cooling counter, storage loft, flour bins and restrained warm windows; no written sign.
+- Distillery: expanded pirate rum works with two copper still vessels, larger coiled condenser, reinforced stone firebox, roofed barrel aging rack and pipework fully contained inside the cell.
+Style/medium: premium painterly high-detail 2.5D isometric strategy-game sprites; stylized realism; aged maritime hardwood, dark slate, rugged masonry, blackened iron, brass and oxidized copper; physically plausible Age-of-Sail construction.
+Composition/framing: preserve the exact 1536x1024 canvas and exact 3-by-3 grid; one isolated upgraded building centered inside each source cell; preserve each source silhouette and viewing direction while making the upgrade visibly denser and more capable; generous internal padding; every roof, chimney, crane, wheel, tool, pipe and platform fully contained; no overlap or cropping.
+Scene/backdrop: replace every empty pixel with one perfectly flat uniform solid #ff00ff chroma-key background for local removal. No floor plane, terrain, cast shadow, contact shadow, gradient, texture, reflection, vignette or lighting variation in the background. Do not use magenta or pink inside any building.
+Lighting/mood: restrained warm upper-left maritime daylight with cool lower-right ambient occlusion; enclosed furnace, oven and window glow only; consistent across all cells.
+Constraints: change only the nine buildings into tier-2 upgrades; preserve all identities, order, camera, scale and cell positions; exactly nine buildings; no people, creatures, ships, vehicles beyond empty mine carts, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, grid lines or structures crossing cell boundaries.
+Avoid: redesigning a building into a different category, tier-3 fortress scale, modern machinery, fantasy magic, photorealism, bright mobile-game colors, top-down or front elevation, black background, transparent checkerboard, malformed equipment, floating parts, magenta fringe, tiny unreadable clutter.
+~~~
+
+### 최종 셀 점유율 보정 프롬프트
+
+~~~text
+Use case: precise-object-edit
+Asset type: production framing correction for a tier-2 isometric industry-building sprite atlas
+Input images: Image 1 is the edit target containing the approved tier-2 designs. Image 2 is a scale, centering, camera and per-cell footprint reference only; do not revert to its tier-1 architecture.
+Primary request: keep every tier-2 building design from Image 1 exactly, but resize and center each complete structure inside its own cell so its visible pixel footprint closely matches the corresponding tier-1 structure's cell occupancy in Image 2. The tier-2 structures must look at least as substantial as Image 2, never tiny, while remaining cleanly isolated.
+Grid invariants: exact 1536x1024 canvas; exact 3 columns by 3 rows; cell boundaries x=0/512/1024/1536 and y=0/341/683/1024; exact order quarry, iron mine, copper mine / terraced farm, smelter, forge / mill, bakery, distillery.
+Scale target: each tier-2 structure should occupy roughly 78–88 percent of its cell width or 72–88 percent of its cell height, comparable to Image 2. Preserve at least 5 clear pixels of flat magenta padding at every shared cell boundary and at least 12 pixels at the outer canvas edges. No physical pixel may cross into a neighboring cell. Do not shrink structures to small icon scale.
+Preserve from Image 1: every upgraded tier-2 architecture, added crane, portal, terrace, furnace, workshop bay, waterwheel, oven, copper still, equipment, materials, colors, lighting, fixed orthographic isometric direction, detail and relative proportions. Change only uniform per-cell scale and position.
+Scene/backdrop: perfectly flat uniform solid #ff00ff across every empty pixel; no terrain, floor, cast shadow, contact shadow, gradient, texture, reflection, vignette, border or grid line. Do not use magenta inside structures.
+Constraints: exactly nine buildings; one complete building per cell; no people, creatures, text, labels, icons, UI, logos, watermark, extra objects, overlap or cropping.
+Avoid: reverting to Image 2's simpler tier-1 architecture, redesigning, cell swapping, tiny buildings, boundary contact, blur, loss of detail, altered perspective, black background or transparent checkerboard.
+~~~
+
+## 산업 건물 3단계 전용 본체 아틀라스
+
+- 프로젝트 자산: static/art/settlement/industry-buildings-tier3-atlas.png
+- 프레임 정의: static/art/settlement/industry-buildings-atlas.json 공유
+- 최종 생성 원본: /Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-32554968-e040-4fd3-bffd-0bb5a5b4c639.png
+- 생성 방식: 내장 이미지 생성 도구 precise-object-edit
+- 편집 대상: 위 2단계 최종 프레이밍 원본
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 3×3 고정 프레임, 네 모서리 완전 투명, 2단계보다 석조 기반·다중 설비·전문화 저장 및 하역 공간이 명확히 강화됨
+
+### 최종 생성 프롬프트
+
+~~~text
+Use case: precise-object-edit
+Asset type: production tier-3 isometric industry-building sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the approved tier-2 edit target and authoritative layout, camera, scale, cell occupancy, building-identity, palette, material and style reference.
+Primary request: transform all nine tier-2 structures into visibly mature tier-3 industrial facilities while preserving the exact 3-column by 3-row atlas, exact cell order, cell boundaries, fixed orthographic isometric camera, footprint family and Dark Pirate Maritime Command art direction.
+Cell order, left to right:
+row 1: quarry, iron mine, copper mine.
+row 2: terraced farm, smelter, forge.
+row 3: waterwheel mill, bakery, rum distillery.
+Tier-3 changes:
+- Quarry: master stoneworks with deep organized cutting terraces, three compact lifting arms linked by heavy winches, roofed dressing shed, reinforced stone retaining walls, rail-guided block cart and precise block stacks; remain an open quarry.
+- Iron mine: fortified deep-mine stone portal with heavy dark timber, twin roofed hoists, two parallel rail lines, protected ore sorting floor, reinforced trestles, larger empty carts and black-gray iron-streaked rock.
+- Copper mine: fortified copper works with dressed-stone portal, twin bucket-and-capstan hoists, roofed ore grading shed, protected loading bay, organized copper crates and strong warm copper plus oxidized teal mineral identity; remain distinct from iron.
+- Terraced farm: prosperous high-yield four-level terraces with stone-and-timber retaining walls, elevated irrigation tank, sluice network, covered seed and tool pavilion, compact greenhouse frames without glass glare, diverse organized grain, fruit and vegetable beds; no large farmhouse.
+- Smelter: major stone metallurgical works with three enclosed furnace mouths, tall reinforced soot-dark chimney, covered ore and charcoal bunkers, overhead manual lifting rail, slag-safe paved floor and compact assay room.
+- Forge: master naval forge with fortified stone base, three covered work bays, large chimney, enclosed double bellows, heavy anchor anvil, manual tilt-hammer mechanism, quench cistern and organized cannon/tool blanks; visibly different from smelter.
+- Mill: master grain works with strong two-level stone lower structure, one monumental wooden waterwheel, covered grain elevator, dual hoppers, flour storage loft, loading porch and orderly sacks; no windmill blades.
+- Bakery: prosperous guild bakehouse with stone lower walls, timber upper storage loft, three enclosed brick ovens, tall chimney, broad covered cooling counter, flour bins, delivery porch and restrained warm windows; no signs.
+- Distillery: master pirate rum complex with three distinct copper still vessels, tall condenser column, multiple contained coils, reinforced masonry fireboxes, roofed barrel-aging warehouse, elevated pipe rack and loading platform; all equipment fully contained.
+Style/medium: premium painterly high-detail 2.5D isometric strategy-game sprites; stylized realism; aged hardwood, dark slate, rugged stone, blackened iron, brass and oxidized copper; physically plausible mature Age-of-Sail industry.
+Composition/framing: preserve exact 1536x1024 canvas and exact 3-by-3 grid; one complete upgraded structure centered inside each original cell; retain approximately the same per-cell occupancy as Image 1; keep at least 5 clear pixels of flat magenta from shared cell boundaries and 12 pixels from outer canvas edges; every chimney, crane, rail, wheel, awning, pipe, barrel and foundation fully contained; no overlap or cropping.
+Scene/backdrop: every empty pixel must be one perfectly flat uniform solid #ff00ff chroma-key background for local removal. No terrain, floor plane, cast shadow, contact shadow, gradient, texture, reflection, vignette or lighting variation in the background. Do not use magenta or pink inside any building.
+Lighting/mood: restrained warm upper-left maritime daylight, cool lower-right ambient occlusion and controlled enclosed furnace/window glow; consistent across cells.
+Constraints: change only the nine tier-2 structures into tier-3 upgrades; preserve all identities, order, direction, camera, scale family and positions; exactly nine buildings; no people, creatures, ships, modern vehicles, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, borders or grid lines.
+Avoid: changing categories, arbitrary fantasy ornament, modern industrial machinery, tier-2 simplicity, photorealism, bright mobile-game colors, top-down or front elevation, black background, transparent checkerboard, malformed equipment, floating parts, boundary contact, magenta fringe or unreadable clutter.
+~~~
+
 ## 8종 주민 역할 전면 3프레임 보행 아틀라스
 
 - 프로젝트 자산: static/art/settlement/resident-walk-front-atlas.png

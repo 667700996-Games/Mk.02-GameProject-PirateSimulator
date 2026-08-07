@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BUILDINGS } from '$lib/settlement/catalog';
 import {
   BUILDING_ATLAS_SOURCES,
+  BUILDING_TIER_ATLAS_KEYS,
   CIVIC_DEFENSE_BUILDING_ATLAS_DATA,
   CIVIC_DEFENSE_BUILDING_ATLAS_IMAGE,
   CIVIC_DEFENSE_BUILDING_ATLAS_KEY,
@@ -16,6 +17,10 @@ import {
   INDUSTRY_BUILDING_ATLAS_DATA,
   INDUSTRY_BUILDING_ATLAS_IMAGE,
   INDUSTRY_BUILDING_ATLAS_KEY,
+  INDUSTRY_BUILDING_TIER2_ATLAS_IMAGE,
+  INDUSTRY_BUILDING_TIER2_ATLAS_KEY,
+  INDUSTRY_BUILDING_TIER3_ATLAS_IMAGE,
+  INDUSTRY_BUILDING_TIER3_ATLAS_KEY,
   LOGISTICS_FLEET_BUILDING_ATLAS_DATA,
   LOGISTICS_FLEET_BUILDING_ATLAS_IMAGE,
   LOGISTICS_FLEET_BUILDING_ATLAS_KEY,
@@ -120,6 +125,8 @@ describe('settlement building art', () => {
     expect(CORE_BUILDING_TIER3_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
     expect(INDUSTRY_BUILDING_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
     expect(INDUSTRY_BUILDING_ATLAS_DATA).toMatch(/^\/art\/settlement\/.*\.json$/);
+    expect(INDUSTRY_BUILDING_TIER2_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
+    expect(INDUSTRY_BUILDING_TIER3_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
     expect(SOCIETY_BUILDING_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
     expect(SOCIETY_BUILDING_ATLAS_DATA).toMatch(/^\/art\/settlement\/.*\.json$/);
     expect(LOGISTICS_FLEET_BUILDING_ATLAS_IMAGE).toMatch(/^\/art\/settlement\/.*\.png$/);
@@ -169,14 +176,18 @@ describe('settlement building art', () => {
       LIVELIHOOD_SERVICE_BUILDING_ATLAS_KEY,
       CIVIC_DEFENSE_BUILDING_ATLAS_KEY
     ]);
-    expect(Object.keys(BUILDING_ATLAS_SOURCES)).toHaveLength(8);
+    expect(Object.keys(BUILDING_ATLAS_SOURCES)).toHaveLength(10);
+    expect(Object.keys(BUILDING_TIER_ATLAS_KEYS)).toEqual([
+      CORE_BUILDING_ATLAS_KEY,
+      INDUSTRY_BUILDING_ATLAS_KEY
+    ]);
     for (const source of Object.values(BUILDING_ATLAS_SOURCES)) {
       expect(source.image).toMatch(/^\/art\/settlement\/.*\.png$/);
       expect(source.data).toMatch(/^\/art\/settlement\/.*\.json$/);
     }
   });
 
-  it('selects dedicated tier art for upgraded core buildings and keeps other sets stable', () => {
+  it('selects dedicated tier art for upgraded core and industry buildings', () => {
     const shipyard = CORE_BUILDING_ART.shipyard!;
     const quarry = CORE_BUILDING_ART.quarry!;
 
@@ -184,7 +195,10 @@ describe('settlement building art', () => {
     expect(buildingAtlasKeyForLevel(shipyard, 2)).toBe(CORE_BUILDING_TIER2_ATLAS_KEY);
     expect(buildingAtlasKeyForLevel(shipyard, 3)).toBe(CORE_BUILDING_TIER3_ATLAS_KEY);
     expect(buildingAtlasKeyForLevel(shipyard, 7)).toBe(CORE_BUILDING_TIER3_ATLAS_KEY);
-    expect(buildingAtlasKeyForLevel(quarry, 3)).toBe(INDUSTRY_BUILDING_ATLAS_KEY);
+    expect(buildingAtlasKeyForLevel(quarry, 1)).toBe(INDUSTRY_BUILDING_ATLAS_KEY);
+    expect(buildingAtlasKeyForLevel(quarry, 2)).toBe(INDUSTRY_BUILDING_TIER2_ATLAS_KEY);
+    expect(buildingAtlasKeyForLevel(quarry, 3)).toBe(INDUSTRY_BUILDING_TIER3_ATLAS_KEY);
+    expect(buildingAtlasKeyForLevel(quarry, 7)).toBe(INDUSTRY_BUILDING_TIER3_ATLAS_KEY);
 
     expect(buildingAtlasKeysForBuildings([
       { definitionId: 'wreckage', level: 1 },
@@ -195,7 +209,17 @@ describe('settlement building art', () => {
       CORE_BUILDING_ATLAS_KEY,
       CORE_BUILDING_TIER2_ATLAS_KEY,
       CORE_BUILDING_TIER3_ATLAS_KEY,
-      INDUSTRY_BUILDING_ATLAS_KEY
+      INDUSTRY_BUILDING_ATLAS_KEY,
+      INDUSTRY_BUILDING_TIER3_ATLAS_KEY
+    ]);
+    expect(buildingAtlasKeysForBuildings([
+      { definitionId: 'quarry', level: 2 },
+      { definitionId: 'smelter', level: 3 }
+    ])).toEqual([
+      CORE_BUILDING_ATLAS_KEY,
+      INDUSTRY_BUILDING_ATLAS_KEY,
+      INDUSTRY_BUILDING_TIER2_ATLAS_KEY,
+      INDUSTRY_BUILDING_TIER3_ATLAS_KEY
     ]);
   });
 });

@@ -4,6 +4,8 @@ const DEFERRED_BUILDING_ATLASES = [
   'core-buildings-tier2-atlas.png',
   'core-buildings-tier3-atlas.png',
   'industry-buildings-atlas.png',
+  'industry-buildings-tier2-atlas.png',
+  'industry-buildings-tier3-atlas.png',
   'society-buildings-atlas.png',
   'logistics-fleet-buildings-atlas.png',
   'livelihood-service-buildings-atlas.png',
@@ -47,6 +49,22 @@ async function createSettlement(page: import('@playwright/test').Page): Promise<
     expect(initialResources.some((url) => url.endsWith(`/art/settlement/${atlas}`))).toBe(false);
   }
 }
+
+test('publishes complete industry tier bodies without loading them into a fresh settlement', async ({
+  page
+}) => {
+  await createSettlement(page);
+  const initialResources = await page.evaluate(() =>
+    performance.getEntriesByType('resource').map((entry) => entry.name)
+  );
+  for (const atlas of ['industry-buildings-tier2-atlas.png', 'industry-buildings-tier3-atlas.png']) {
+    expect(initialResources.some((url) => url.endsWith(`/art/settlement/${atlas}`))).toBe(false);
+    const response = await page.request.get(`/art/settlement/${atlas}`);
+    expect(response.ok(), `${atlas} returned ${response.status()}`).toBe(true);
+    expect(response.headers()['content-type']).toContain('image/png');
+    expect((await response.body()).byteLength).toBeGreaterThan(1_000_000);
+  }
+});
 
 test('places a terrain-bound building and runs its physical construction flow', async ({
   page
