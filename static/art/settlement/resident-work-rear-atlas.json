@@ -1,0 +1,495 @@
+{
+  "frames": {
+    "laborer-work-0": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 180,
+        "h": 339
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 30,
+        "y": 81,
+        "w": 180,
+        "h": 339
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "hauler-work-0": {
+      "frame": {
+        "x": 180,
+        "y": 0,
+        "w": 192,
+        "h": 339
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 24,
+        "y": 81,
+        "w": 192,
+        "h": 339
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "builder-work-0": {
+      "frame": {
+        "x": 372,
+        "y": 0,
+        "w": 195,
+        "h": 339
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 22,
+        "y": 81,
+        "w": 195,
+        "h": 339
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "logger-work-0": {
+      "frame": {
+        "x": 567,
+        "y": 0,
+        "w": 206,
+        "h": 339
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 17,
+        "y": 81,
+        "w": 206,
+        "h": 339
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "fisher-work-0": {
+      "frame": {
+        "x": 773,
+        "y": 0,
+        "w": 206,
+        "h": 339
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 17,
+        "y": 81,
+        "w": 206,
+        "h": 339
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "shipwright-work-0": {
+      "frame": {
+        "x": 979,
+        "y": 0,
+        "w": 182,
+        "h": 339
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 29,
+        "y": 81,
+        "w": 182,
+        "h": 339
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "guard-work-0": {
+      "frame": {
+        "x": 1161,
+        "y": 0,
+        "w": 179,
+        "h": 339
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 30,
+        "y": 81,
+        "w": 179,
+        "h": 339
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "officer-work-0": {
+      "frame": {
+        "x": 1340,
+        "y": 0,
+        "w": 196,
+        "h": 339
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 22,
+        "y": 81,
+        "w": 196,
+        "h": 339
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "laborer-work-1": {
+      "frame": {
+        "x": 0,
+        "y": 339,
+        "w": 180,
+        "h": 297
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 30,
+        "y": 123,
+        "w": 180,
+        "h": 297
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "hauler-work-1": {
+      "frame": {
+        "x": 180,
+        "y": 339,
+        "w": 192,
+        "h": 297
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 24,
+        "y": 123,
+        "w": 192,
+        "h": 297
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "builder-work-1": {
+      "frame": {
+        "x": 372,
+        "y": 339,
+        "w": 195,
+        "h": 297
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 22,
+        "y": 123,
+        "w": 195,
+        "h": 297
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "logger-work-1": {
+      "frame": {
+        "x": 567,
+        "y": 339,
+        "w": 206,
+        "h": 297
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 17,
+        "y": 123,
+        "w": 206,
+        "h": 297
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "fisher-work-1": {
+      "frame": {
+        "x": 773,
+        "y": 339,
+        "w": 206,
+        "h": 297
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 17,
+        "y": 123,
+        "w": 206,
+        "h": 297
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "shipwright-work-1": {
+      "frame": {
+        "x": 979,
+        "y": 339,
+        "w": 182,
+        "h": 297
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 29,
+        "y": 123,
+        "w": 182,
+        "h": 297
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "guard-work-1": {
+      "frame": {
+        "x": 1161,
+        "y": 339,
+        "w": 179,
+        "h": 297
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 30,
+        "y": 123,
+        "w": 179,
+        "h": 297
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "officer-work-1": {
+      "frame": {
+        "x": 1340,
+        "y": 339,
+        "w": 196,
+        "h": 297
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 22,
+        "y": 123,
+        "w": 196,
+        "h": 297
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "laborer-work-2": {
+      "frame": {
+        "x": 0,
+        "y": 636,
+        "w": 180,
+        "h": 388
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 30,
+        "y": 32,
+        "w": 180,
+        "h": 388
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "hauler-work-2": {
+      "frame": {
+        "x": 180,
+        "y": 636,
+        "w": 192,
+        "h": 388
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 24,
+        "y": 32,
+        "w": 192,
+        "h": 388
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "builder-work-2": {
+      "frame": {
+        "x": 372,
+        "y": 636,
+        "w": 195,
+        "h": 388
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 22,
+        "y": 32,
+        "w": 195,
+        "h": 388
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "logger-work-2": {
+      "frame": {
+        "x": 567,
+        "y": 636,
+        "w": 206,
+        "h": 388
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 17,
+        "y": 32,
+        "w": 206,
+        "h": 388
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "fisher-work-2": {
+      "frame": {
+        "x": 773,
+        "y": 636,
+        "w": 206,
+        "h": 388
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 17,
+        "y": 32,
+        "w": 206,
+        "h": 388
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "shipwright-work-2": {
+      "frame": {
+        "x": 979,
+        "y": 636,
+        "w": 182,
+        "h": 388
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 29,
+        "y": 32,
+        "w": 182,
+        "h": 388
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "guard-work-2": {
+      "frame": {
+        "x": 1161,
+        "y": 636,
+        "w": 179,
+        "h": 388
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 30,
+        "y": 32,
+        "w": 179,
+        "h": 388
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "officer-work-2": {
+      "frame": {
+        "x": 1340,
+        "y": 636,
+        "w": 196,
+        "h": 388
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 22,
+        "y": 32,
+        "w": 196,
+        "h": 388
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    }
+  },
+  "meta": {
+    "app": "Mk.02-GameProject-PirateSimulator",
+    "version": "1.0",
+    "image": "resident-work-rear-atlas.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 1536,
+      "h": 1024
+    },
+    "scale": "1"
+  }
+}

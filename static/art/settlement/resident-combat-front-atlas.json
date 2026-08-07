@@ -1,0 +1,495 @@
+{
+  "frames": {
+    "laborer-combat-0": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 194,
+        "h": 353
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 23,
+        "y": 67,
+        "w": 194,
+        "h": 353
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "hauler-combat-0": {
+      "frame": {
+        "x": 194,
+        "y": 0,
+        "w": 206,
+        "h": 353
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 17,
+        "y": 67,
+        "w": 206,
+        "h": 353
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "builder-combat-0": {
+      "frame": {
+        "x": 400,
+        "y": 0,
+        "w": 182,
+        "h": 353
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 29,
+        "y": 67,
+        "w": 182,
+        "h": 353
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "logger-combat-0": {
+      "frame": {
+        "x": 582,
+        "y": 0,
+        "w": 211,
+        "h": 353
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 14,
+        "y": 67,
+        "w": 211,
+        "h": 353
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "fisher-combat-0": {
+      "frame": {
+        "x": 793,
+        "y": 0,
+        "w": 185,
+        "h": 353
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 27,
+        "y": 67,
+        "w": 185,
+        "h": 353
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "shipwright-combat-0": {
+      "frame": {
+        "x": 978,
+        "y": 0,
+        "w": 171,
+        "h": 353
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 67,
+        "w": 171,
+        "h": 353
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "guard-combat-0": {
+      "frame": {
+        "x": 1149,
+        "y": 0,
+        "w": 172,
+        "h": 353
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 67,
+        "w": 172,
+        "h": 353
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "officer-combat-0": {
+      "frame": {
+        "x": 1321,
+        "y": 0,
+        "w": 215,
+        "h": 353
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 12,
+        "y": 67,
+        "w": 215,
+        "h": 353
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "laborer-combat-1": {
+      "frame": {
+        "x": 0,
+        "y": 353,
+        "w": 194,
+        "h": 338
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 23,
+        "y": 82,
+        "w": 194,
+        "h": 338
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "hauler-combat-1": {
+      "frame": {
+        "x": 194,
+        "y": 353,
+        "w": 206,
+        "h": 338
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 17,
+        "y": 82,
+        "w": 206,
+        "h": 338
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "builder-combat-1": {
+      "frame": {
+        "x": 400,
+        "y": 353,
+        "w": 182,
+        "h": 338
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 29,
+        "y": 82,
+        "w": 182,
+        "h": 338
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "logger-combat-1": {
+      "frame": {
+        "x": 582,
+        "y": 353,
+        "w": 211,
+        "h": 338
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 14,
+        "y": 82,
+        "w": 211,
+        "h": 338
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "fisher-combat-1": {
+      "frame": {
+        "x": 793,
+        "y": 353,
+        "w": 185,
+        "h": 338
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 27,
+        "y": 82,
+        "w": 185,
+        "h": 338
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "shipwright-combat-1": {
+      "frame": {
+        "x": 978,
+        "y": 353,
+        "w": 171,
+        "h": 338
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 82,
+        "w": 171,
+        "h": 338
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "guard-combat-1": {
+      "frame": {
+        "x": 1149,
+        "y": 353,
+        "w": 172,
+        "h": 338
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 82,
+        "w": 172,
+        "h": 338
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "officer-combat-1": {
+      "frame": {
+        "x": 1321,
+        "y": 353,
+        "w": 215,
+        "h": 338
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 12,
+        "y": 82,
+        "w": 215,
+        "h": 338
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "laborer-combat-2": {
+      "frame": {
+        "x": 0,
+        "y": 691,
+        "w": 194,
+        "h": 333
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 23,
+        "y": 87,
+        "w": 194,
+        "h": 333
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "hauler-combat-2": {
+      "frame": {
+        "x": 194,
+        "y": 691,
+        "w": 206,
+        "h": 333
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 17,
+        "y": 87,
+        "w": 206,
+        "h": 333
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "builder-combat-2": {
+      "frame": {
+        "x": 400,
+        "y": 691,
+        "w": 182,
+        "h": 333
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 29,
+        "y": 87,
+        "w": 182,
+        "h": 333
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "logger-combat-2": {
+      "frame": {
+        "x": 582,
+        "y": 691,
+        "w": 211,
+        "h": 333
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 14,
+        "y": 87,
+        "w": 211,
+        "h": 333
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "fisher-combat-2": {
+      "frame": {
+        "x": 793,
+        "y": 691,
+        "w": 185,
+        "h": 333
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 27,
+        "y": 87,
+        "w": 185,
+        "h": 333
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "shipwright-combat-2": {
+      "frame": {
+        "x": 978,
+        "y": 691,
+        "w": 171,
+        "h": 333
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 87,
+        "w": 171,
+        "h": 333
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "guard-combat-2": {
+      "frame": {
+        "x": 1149,
+        "y": 691,
+        "w": 172,
+        "h": 333
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 87,
+        "w": 172,
+        "h": 333
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    },
+    "officer-combat-2": {
+      "frame": {
+        "x": 1321,
+        "y": 691,
+        "w": 215,
+        "h": 333
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 12,
+        "y": 87,
+        "w": 215,
+        "h": 333
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 420
+      }
+    }
+  },
+  "meta": {
+    "app": "Mk.02-GameProject-PirateSimulator",
+    "version": "1.0",
+    "image": "resident-combat-front-atlas.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 1536,
+      "h": 1024
+    },
+    "scale": "1"
+  }
+}

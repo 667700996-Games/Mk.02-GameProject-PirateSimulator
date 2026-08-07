@@ -2,7 +2,14 @@ import Phaser from 'phaser';
 import { BUILDINGS, SETTLEMENT_RESOURCES } from '$lib/settlement/catalog';
 import type { BuildingDefinition } from '$lib/settlement/catalog';
 import { buildingCells, tileAt, validatePlacement } from '$lib/settlement/island';
-import type { ResidentAction, SettlementBuilding, SettlementBuildingId, SettlementOverlay, SettlementSimulationState, TerrainType } from '$lib/settlement/types';
+import type {
+  ResidentAction,
+  SettlementBuilding,
+  SettlementBuildingId,
+  SettlementOverlay,
+  SettlementSimulationState,
+  TerrainType
+} from '$lib/settlement/types';
 import type { GameSettings } from '$lib/domain/types';
 import {
   BUILDING_ATLAS_SOURCES,
@@ -24,11 +31,17 @@ import {
   buildingProgressionVisual
 } from './buildingProgressionArt';
 import {
+  RESIDENT_ACTION_ATLAS_SOURCES,
   RESIDENT_WALK_ATLAS_DATA,
   RESIDENT_WALK_FRONT_ATLAS_IMAGE,
   RESIDENT_WALK_FRONT_ATLAS_KEY,
   RESIDENT_WALK_REAR_ATLAS_IMAGE,
   RESIDENT_WALK_REAR_ATLAS_KEY,
+  residentActionAnimation,
+  residentActionAtlasKey,
+  residentActionAtlasKeysForActions,
+  residentActionFrame,
+  residentActionFrameIndex,
   residentActivityGlyph,
   residentActivityPose,
   residentArtFrame,
@@ -39,6 +52,7 @@ import {
   residentWalkAtlasKey,
   residentWalkFrame,
   residentWalkFrameIndex,
+  type ResidentActionAtlasKey,
   type ResidentArtFrame,
   type ResidentFacing
 } from './residentArt';
@@ -52,7 +66,12 @@ import {
 
 export interface SettlementSceneBridge {
   getState: () => SettlementSimulationState;
-  onPlace: (definitionId: SettlementBuildingId, x: number, y: number, rotation: 0 | 1 | 2 | 3) => void;
+  onPlace: (
+    definitionId: SettlementBuildingId,
+    x: number,
+    y: number,
+    rotation: 0 | 1 | 2 | 3
+  ) => void;
   onMoveBuilding: (buildingId: string, x: number, y: number) => void;
   onSelectBuilding: (id?: string) => void;
   onHoverTile: (x?: number, y?: number) => void;
@@ -61,7 +80,9 @@ export interface SettlementSceneBridge {
   getSettings: () => Pick<GameSettings, 'quality' | 'reducedMotion'>;
 }
 
-interface SceneData { bridge: SettlementSceneBridge }
+interface SceneData {
+  bridge: SettlementSceneBridge;
+}
 
 const TILE_W = 80;
 const TILE_H = 40;
@@ -70,14 +91,33 @@ const ORIGIN_X = 1100;
 const ORIGIN_Y = 170;
 
 const TERRAIN_COLORS: Record<TerrainType, number> = {
-  'deep-water': 0x082b38, reef: 0x15505a, beach: 0xa99668, coast: 0x6f835d, plain: 0x3f694e, forest: 0x294d3d,
-  slope: 0x445d46, cliff: 0x4e5047, highland: 0x536746, cave: 0x252c2d, ravine: 0x252d2c, wetland: 0x355a4f,
-  'stone-deposit': 0x68675d, 'iron-vein': 0x5d5b55, 'copper-vein': 0x5d6654
+  'deep-water': 0x082b38,
+  reef: 0x15505a,
+  beach: 0xa99668,
+  coast: 0x6f835d,
+  plain: 0x3f694e,
+  forest: 0x294d3d,
+  slope: 0x445d46,
+  cliff: 0x4e5047,
+  highland: 0x536746,
+  cave: 0x252c2d,
+  ravine: 0x252d2c,
+  wetland: 0x355a4f,
+  'stone-deposit': 0x68675d,
+  'iron-vein': 0x5d5b55,
+  'copper-vein': 0x5d6654
 };
 
 const CATEGORY_COLORS = {
-  gathering: 0x6d6740, processing: 0x785039, logistics: 0x355d61, housing: 0x6e583e, welfare: 0x8a6439,
-  fleet: 0x375465, military: 0x653c37, administration: 0x695747, infrastructure: 0x4f5350
+  gathering: 0x6d6740,
+  processing: 0x785039,
+  logistics: 0x355d61,
+  housing: 0x6e583e,
+  welfare: 0x8a6439,
+  fleet: 0x375465,
+  military: 0x653c37,
+  administration: 0x695747,
+  infrastructure: 0x4f5350
 };
 
 export class SettlementScene extends Phaser.Scene {
@@ -105,6 +145,7 @@ export class SettlementScene extends Phaser.Scene {
   private overlaySignature = '';
   private terrainSignature = '';
   private loadingBuildingAtlases = new Set<BuildingAtlasKey>();
+  private loadingResidentActionAtlases = new Set<ResidentActionAtlasKey>();
   private runtimeAtlasCompletionArmed = false;
   private residentObjects = new Map<
     string,
@@ -127,7 +168,9 @@ export class SettlementScene extends Phaser.Scene {
     }
   >();
 
-  constructor() { super('settlement'); }
+  constructor() {
+    super('settlement');
+  }
 
   init(data: SceneData): void {
     this.bridge = data.bridge;
@@ -135,18 +178,31 @@ export class SettlementScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.queueBuildingAtlases(
-      buildingAtlasKeysForBuildings(this.snapshot.buildings),
+    this.queueBuildingAtlases(buildingAtlasKeysForBuildings(this.snapshot.buildings), false);
+    this.queueResidentActionAtlases(
+      residentActionAtlasKeysForActions(this.snapshot.residents.map((resident) => resident.action)),
       false
     );
     if (!this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) {
-      this.load.atlas(BUILDING_PROGRESSION_ATLAS_KEY, BUILDING_PROGRESSION_ATLAS_IMAGE, BUILDING_PROGRESSION_ATLAS_DATA);
+      this.load.atlas(
+        BUILDING_PROGRESSION_ATLAS_KEY,
+        BUILDING_PROGRESSION_ATLAS_IMAGE,
+        BUILDING_PROGRESSION_ATLAS_DATA
+      );
     }
     if (!this.textures.exists(RESIDENT_WALK_FRONT_ATLAS_KEY)) {
-      this.load.atlas(RESIDENT_WALK_FRONT_ATLAS_KEY, RESIDENT_WALK_FRONT_ATLAS_IMAGE, RESIDENT_WALK_ATLAS_DATA);
+      this.load.atlas(
+        RESIDENT_WALK_FRONT_ATLAS_KEY,
+        RESIDENT_WALK_FRONT_ATLAS_IMAGE,
+        RESIDENT_WALK_ATLAS_DATA
+      );
     }
     if (!this.textures.exists(RESIDENT_WALK_REAR_ATLAS_KEY)) {
-      this.load.atlas(RESIDENT_WALK_REAR_ATLAS_KEY, RESIDENT_WALK_REAR_ATLAS_IMAGE, RESIDENT_WALK_ATLAS_DATA);
+      this.load.atlas(
+        RESIDENT_WALK_REAR_ATLAS_KEY,
+        RESIDENT_WALK_REAR_ATLAS_IMAGE,
+        RESIDENT_WALK_ATLAS_DATA
+      );
     }
     if (!this.textures.exists(TERRAIN_ATLAS_KEY)) {
       this.load.atlas(TERRAIN_ATLAS_KEY, TERRAIN_ATLAS_IMAGE, TERRAIN_ATLAS_DATA);
@@ -155,6 +211,7 @@ export class SettlementScene extends Phaser.Scene {
 
   create(): void {
     this.loadingBuildingAtlases.clear();
+    this.loadingResidentActionAtlases.clear();
     this.cameras.main.setBackgroundColor('#041820');
     this.cameras.main.setBounds(0, 0, 2200, 1450);
     this.cameras.main.centerOn(1080, 620);
@@ -165,7 +222,10 @@ export class SettlementScene extends Phaser.Scene {
     this.overlayLayer = this.add.container(0, 0).setDepth(300);
     this.weatherLayer = this.add.container(0, 0).setDepth(500);
     this.preview = this.add.graphics().setDepth(450);
-    this.previewSprite = this.add.image(0, 0, CORE_BUILDING_ATLAS_KEY, 'wreckage').setDepth(451).setVisible(false);
+    this.previewSprite = this.add
+      .image(0, 0, CORE_BUILDING_ATLAS_KEY, 'wreckage')
+      .setDepth(451)
+      .setVisible(false);
     this.drawOceanAtmosphere();
     this.drawTerrain();
     this.drawDynamicLayers(true);
@@ -198,17 +258,37 @@ export class SettlementScene extends Phaser.Scene {
         object.targetY
       );
       const moving = !reducedMotion && remainingDistance > 0.3;
-      const atlasKey = residentWalkAtlasKey(object.facing);
-      const frame = residentWalkFrame(
-        object.frame,
-        residentWalkFrameIndex(time, object.walkPhaseMs, moving, reducedMotion)
+      const actionAnimation = moving ? undefined : residentActionAnimation(object.action);
+      const actionAtlasKey = actionAnimation
+        ? residentActionAtlasKey(actionAnimation, object.facing)
+        : undefined;
+      const actionAnimated = Boolean(
+        actionAnimation && actionAtlasKey && this.textures.exists(actionAtlasKey)
       );
+      const atlasKey =
+        actionAnimated && actionAtlasKey ? actionAtlasKey : residentWalkAtlasKey(object.facing);
+      const frame =
+        actionAnimated && actionAnimation
+          ? residentActionFrame(
+              object.frame,
+              actionAnimation,
+              residentActionFrameIndex(actionAnimation, time, object.walkPhaseMs, reducedMotion)
+            )
+          : residentWalkFrame(
+              object.frame,
+              residentWalkFrameIndex(time, object.walkPhaseMs, moving, reducedMotion)
+            );
       if (object.sprite.texture.key !== atlasKey) object.sprite.setTexture(atlasKey, frame);
       else if (object.sprite.frame.name !== frame) object.sprite.setFrame(frame);
       object.sprite
         .setDisplaySize(object.displayWidth, object.displayHeight)
         .setFlipX(residentFacingFlipX(object.facing));
-      const pose = residentActivityPose(object.action, time, object.phase, reducedMotion || moving);
+      const pose = residentActivityPose(
+        object.action,
+        time,
+        object.phase,
+        reducedMotion || moving || actionAnimated
+      );
       object.sprite.setY(pose.offsetY).setRotation(pose.rotation);
       object.shadow.setScale(
         moving ? 0.94 : 1 - Math.min(0.12, Math.abs(pose.offsetY) * 0.045),
@@ -220,8 +300,9 @@ export class SettlementScene extends Phaser.Scene {
   public syncSnapshot(snapshot: SettlementSimulationState): void {
     this.snapshot = snapshot;
     if (!this.scene.isActive()) return;
-    this.queueBuildingAtlases(
-      buildingAtlasKeysForBuildings(snapshot.buildings),
+    this.queueBuildingAtlases(buildingAtlasKeysForBuildings(snapshot.buildings), true);
+    this.queueResidentActionAtlases(
+      residentActionAtlasKeysForActions(snapshot.residents.map((resident) => resident.action)),
       true
     );
     this.drawDynamicLayers();
@@ -252,12 +333,34 @@ export class SettlementScene extends Phaser.Scene {
       this.load.atlas(key, source.image, source.data);
       queued = true;
     }
-    if (!startNow || !queued) return;
+    if (!startNow) return;
+    this.startRuntimeAtlasLoad(queued);
+  }
+
+  private queueResidentActionAtlases(
+    keys: Iterable<ResidentActionAtlasKey>,
+    startNow: boolean
+  ): void {
+    let queued = false;
+    for (const key of keys) {
+      if (this.textures.exists(key) || this.loadingResidentActionAtlases.has(key)) continue;
+      const source = RESIDENT_ACTION_ATLAS_SOURCES[key];
+      this.loadingResidentActionAtlases.add(key);
+      this.load.atlas(key, source.image, source.data);
+      queued = true;
+    }
+    if (!startNow) return;
+    this.startRuntimeAtlasLoad(queued);
+  }
+
+  private startRuntimeAtlasLoad(queued: boolean): void {
+    if (!queued) return;
     if (!this.runtimeAtlasCompletionArmed) {
       this.runtimeAtlasCompletionArmed = true;
       this.load.once(Phaser.Loader.Events.COMPLETE, () => {
         this.runtimeAtlasCompletionArmed = false;
         this.loadingBuildingAtlases.clear();
+        this.loadingResidentActionAtlases.clear();
         if (!this.scene.isActive()) return;
         this.buildingSignature = '';
         this.drawDynamicLayers(true);
@@ -277,19 +380,28 @@ export class SettlementScene extends Phaser.Scene {
     const building = this.snapshot.buildings.find((item) => item.id === id);
     if (!building) return;
     this.selectedBuildingId = id;
-    const point = this.iso(building.x, building.y, tileAt(this.snapshot.island, building.x, building.y)?.elevation ?? 0);
+    const point = this.iso(
+      building.x,
+      building.y,
+      tileAt(this.snapshot.island, building.x, building.y)?.elevation ?? 0
+    );
     this.cameras.main.pan(point.x, point.y, 320, 'Sine.easeInOut');
     this.drawDynamicLayers();
   }
 
   private iso(x: number, y: number, elevation = 0): Phaser.Math.Vector2 {
-    return new Phaser.Math.Vector2(ORIGIN_X + (x - y) * TILE_W / 2, ORIGIN_Y + (x + y) * TILE_H / 2 - elevation * ELEVATION_H);
+    return new Phaser.Math.Vector2(
+      ORIGIN_X + ((x - y) * TILE_W) / 2,
+      ORIGIN_Y + ((x + y) * TILE_H) / 2 - elevation * ELEVATION_H
+    );
   }
 
   private diamond(point: Phaser.Math.Vector2): Phaser.Types.Math.Vector2Like[] {
     return [
-      { x: point.x, y: point.y - TILE_H / 2 }, { x: point.x + TILE_W / 2, y: point.y },
-      { x: point.x, y: point.y + TILE_H / 2 }, { x: point.x - TILE_W / 2, y: point.y }
+      { x: point.x, y: point.y - TILE_H / 2 },
+      { x: point.x + TILE_W / 2, y: point.y },
+      { x: point.x, y: point.y + TILE_H / 2 },
+      { x: point.x - TILE_W / 2, y: point.y }
     ];
   }
 
@@ -297,32 +409,80 @@ export class SettlementScene extends Phaser.Scene {
     const settings = this.bridge.getSettings();
     const waveCount = settings.quality === 'low' ? 14 : settings.quality === 'medium' ? 24 : 32;
     for (let index = 0; index < waveCount; index += 1) {
-      const wave = this.add.ellipse(80 + (index * 193) % 2040, 120 + (index * 97) % 1180, 46 + (index % 5) * 18, 3, 0x77b2b2, 0.09).setRotation(-0.35).setDepth(-20);
-      if (!settings.reducedMotion) this.tweens.add({ targets: wave, x: wave.x + 55, alpha: { from: 0.03, to: 0.15 }, duration: 3500 + (index % 7) * 380, yoyo: true, repeat: -1, delay: index * 90 });
+      const wave = this.add
+        .ellipse(
+          80 + ((index * 193) % 2040),
+          120 + ((index * 97) % 1180),
+          46 + (index % 5) * 18,
+          3,
+          0x77b2b2,
+          0.09
+        )
+        .setRotation(-0.35)
+        .setDepth(-20);
+      if (!settings.reducedMotion)
+        this.tweens.add({
+          targets: wave,
+          x: wave.x + 55,
+          alpha: { from: 0.03, to: 0.15 },
+          duration: 3500 + (index % 7) * 380,
+          yoyo: true,
+          repeat: -1,
+          delay: index * 90
+        });
       this.waveSprites.push(wave);
     }
     const fog = this.add.rectangle(1100, 760, 2200, 1450, 0x06151b, 0.08).setDepth(-10);
-    if (!settings.reducedMotion) this.tweens.add({ targets: fog, alpha: { from: 0.04, to: 0.12 }, duration: 8000, yoyo: true, repeat: -1 });
+    if (!settings.reducedMotion)
+      this.tweens.add({
+        targets: fog,
+        alpha: { from: 0.04, to: 0.12 },
+        duration: 8000,
+        yoyo: true,
+        repeat: -1
+      });
   }
 
   private drawTerrain(): void {
-    const signature = this.snapshot.island.tiles.map((tile) => `${tile.discovered ? 1 : 0}:${tile.terrain}:${Math.floor((tile.resourceRemaining ?? 0) / 50)}`).join('|');
+    const signature = this.snapshot.island.tiles
+      .map(
+        (tile) =>
+          `${tile.discovered ? 1 : 0}:${tile.terrain}:${Math.floor((tile.resourceRemaining ?? 0) / 50)}`
+      )
+      .join('|');
     if (signature === this.terrainSignature) return;
     this.terrainSignature = signature;
     this.terrainLayer.removeAll(true);
     const graphics = this.add.graphics();
-    const sortedTiles = [...this.snapshot.island.tiles].sort((a, b) => (a.x + a.y) - (b.x + b.y));
+    const sortedTiles = [...this.snapshot.island.tiles].sort((a, b) => a.x + a.y - (b.x + b.y));
     for (const tile of sortedTiles) {
       const point = this.iso(tile.x, tile.y, tile.elevation);
       if (tile.elevation > 0 && !['deep-water', 'reef'].includes(tile.terrain)) {
         graphics.fillStyle(0x252f2c, 1);
-        graphics.fillPoints([{ x: point.x - TILE_W / 2, y: point.y }, { x: point.x, y: point.y + TILE_H / 2 }, { x: point.x, y: point.y + TILE_H / 2 + tile.elevation * ELEVATION_H }, { x: point.x - TILE_W / 2, y: point.y + tile.elevation * ELEVATION_H }], true);
+        graphics.fillPoints(
+          [
+            { x: point.x - TILE_W / 2, y: point.y },
+            { x: point.x, y: point.y + TILE_H / 2 },
+            { x: point.x, y: point.y + TILE_H / 2 + tile.elevation * ELEVATION_H },
+            { x: point.x - TILE_W / 2, y: point.y + tile.elevation * ELEVATION_H }
+          ],
+          true
+        );
         graphics.fillStyle(0x303a34, 1);
-        graphics.fillPoints([{ x: point.x + TILE_W / 2, y: point.y }, { x: point.x, y: point.y + TILE_H / 2 }, { x: point.x, y: point.y + TILE_H / 2 + tile.elevation * ELEVATION_H }, { x: point.x + TILE_W / 2, y: point.y + tile.elevation * ELEVATION_H }], true);
+        graphics.fillPoints(
+          [
+            { x: point.x + TILE_W / 2, y: point.y },
+            { x: point.x, y: point.y + TILE_H / 2 },
+            { x: point.x, y: point.y + TILE_H / 2 + tile.elevation * ELEVATION_H },
+            { x: point.x + TILE_W / 2, y: point.y + tile.elevation * ELEVATION_H }
+          ],
+          true
+        );
       }
       const color = tile.discovered ? TERRAIN_COLORS[tile.terrain] : 0x0a2025;
       graphics.fillStyle(color, 1).fillPoints(this.diamond(point), true);
-      if (!tile.discovered) graphics.lineStyle(1, 0x15353a, 0.42).strokePoints(this.diamond(point), true);
+      if (!tile.discovered)
+        graphics.lineStyle(1, 0x15353a, 0.42).strokePoints(this.diamond(point), true);
     }
     this.terrainLayer.add(graphics);
 
@@ -331,13 +491,18 @@ export class SettlementScene extends Phaser.Scene {
         if (!tile.discovered) continue;
         const point = this.iso(tile.x, tile.y, tile.elevation);
         const art = TERRAIN_ART[tile.terrain];
-        const surface = this.add.image(point.x, point.y, TERRAIN_ATLAS_KEY, art.frame)
+        const surface = this.add
+          .image(point.x, point.y, TERRAIN_ATLAS_KEY, art.frame)
           .setOrigin(0.5)
           .setDisplaySize(TILE_W + 8, TILE_H + 7)
           .setAlpha(art.alpha)
           .setFlipX((tile.x * 17 + tile.y * 31 + this.snapshot.island.seed) % 2 === 0);
         const depletionTint = terrainDepletionTint(tile.resourceRemaining);
-        if (depletionTint !== undefined && ['stone-deposit', 'iron-vein', 'copper-vein'].includes(tile.terrain)) surface.setTint(depletionTint);
+        if (
+          depletionTint !== undefined &&
+          ['stone-deposit', 'iron-vein', 'copper-vein'].includes(tile.terrain)
+        )
+          surface.setTint(depletionTint);
         this.terrainLayer.add(surface);
       }
 
@@ -345,7 +510,12 @@ export class SettlementScene extends Phaser.Scene {
       for (const tile of sortedTiles) {
         if (!tile.discovered) continue;
         const point = this.iso(tile.x, tile.y, tile.elevation);
-        grid.lineStyle(1, tile.terrain === 'deep-water' ? 0x87b5b8 : 0x101d19, tile.terrain === 'deep-water' ? 0.04 : 0.08)
+        grid
+          .lineStyle(
+            1,
+            tile.terrain === 'deep-water' ? 0x87b5b8 : 0x101d19,
+            tile.terrain === 'deep-water' ? 0.04 : 0.08
+          )
           .strokePoints(this.diamond(point), true);
       }
       this.terrainLayer.add(grid);
@@ -357,20 +527,40 @@ export class SettlementScene extends Phaser.Scene {
       if (tile.terrain === 'forest') {
         const trees = this.add.container(point.x, point.y - 12);
         for (let index = 0; index < 3; index += 1) {
-          const trunk = this.add.rectangle(-12 + index * 11, 3 - (index % 2) * 3, 3, 12, 0x3a2c20, 0.9);
-          const crown = this.add.triangle(-12 + index * 11, -7 - (index % 2) * 3, -9, 9, 0, -12, 9, 9, 0x23483a, 1).setStrokeStyle(1, 0x51705a, 0.45);
+          const trunk = this.add.rectangle(
+            -12 + index * 11,
+            3 - (index % 2) * 3,
+            3,
+            12,
+            0x3a2c20,
+            0.9
+          );
+          const crown = this.add
+            .triangle(-12 + index * 11, -7 - (index % 2) * 3, -9, 9, 0, -12, 9, 9, 0x23483a, 1)
+            .setStrokeStyle(1, 0x51705a, 0.45);
           trees.add([trunk, crown]);
         }
         this.terrainLayer.add(trees);
       } else if (['stone-deposit', 'iron-vein', 'copper-vein'].includes(tile.terrain)) {
-        const oreColor = tile.terrain === 'copper-vein' ? 0xa16c45 : tile.terrain === 'iron-vein' ? 0x666a67 : 0x88877c;
+        const oreColor =
+          tile.terrain === 'copper-vein'
+            ? 0xa16c45
+            : tile.terrain === 'iron-vein'
+              ? 0x666a67
+              : 0x88877c;
         const rocks = this.add.container(point.x, point.y - 5);
-        rocks.add([this.add.polygon(-9, 0, [-10, 8, -4, -8, 6, -11, 12, 7], oreColor, 1), this.add.polygon(10, 3, [-8, 5, -2, -6, 7, -3, 9, 6], oreColor, 0.85)]);
+        rocks.add([
+          this.add.polygon(-9, 0, [-10, 8, -4, -8, 6, -11, 12, 7], oreColor, 1),
+          this.add.polygon(10, 3, [-8, 5, -2, -6, 7, -3, 9, 6], oreColor, 0.85)
+        ]);
         this.terrainLayer.add(rocks);
       } else if (tile.terrain === 'wetland') {
         const marsh = this.add.container(point.x, point.y - 2);
         marsh.add(this.add.ellipse(0, 4, 38, 10, 0x183f43, 0.72).setStrokeStyle(1, 0x5c8980, 0.45));
-        for (let index = 0; index < 4; index += 1) marsh.add(this.add.line(-16 + index * 10, 1, 0, 7, 2, -9 - (index % 2) * 3, 0x728b5c, 0.9));
+        for (let index = 0; index < 4; index += 1)
+          marsh.add(
+            this.add.line(-16 + index * 10, 1, 0, 7, 2, -9 - (index % 2) * 3, 0x728b5c, 0.9)
+          );
         this.terrainLayer.add(marsh);
       } else if (tile.terrain === 'cave') {
         const cave = this.add.container(point.x, point.y - 9);
@@ -378,10 +568,15 @@ export class SettlementScene extends Phaser.Scene {
         cave.add(this.add.ellipse(0, 8, 24, 17, 0x040a0c, 1));
         this.terrainLayer.add(cave);
       } else if (tile.terrain === 'ravine') {
-        const fissure = this.add.line(point.x, point.y, -22, -4, 21, 6, 0x0b1415, 0.96).setLineWidth(5).setDepth(1);
+        const fissure = this.add
+          .line(point.x, point.y, -22, -4, 21, 6, 0x0b1415, 0.96)
+          .setLineWidth(5)
+          .setDepth(1);
         this.terrainLayer.add(fissure);
       } else if (tile.terrain === 'beach') {
-        this.terrainLayer.add(this.add.ellipse(point.x + 6, point.y + 6, 46, 3, 0xd7d2ae, 0.32).setRotation(-0.22));
+        this.terrainLayer.add(
+          this.add.ellipse(point.x + 6, point.y + 6, 46, 3, 0xd7d2ae, 0.32).setRotation(-0.22)
+        );
       }
     }
   }
@@ -394,7 +589,8 @@ export class SettlementScene extends Phaser.Scene {
       if (this.dynamicTweenTargets.length > 0) this.tweens.killTweensOf(this.dynamicTweenTargets);
       this.dynamicTweenTargets = [];
       this.buildingLayer.removeAll(true);
-      for (const building of [...this.snapshot.buildings].sort((a, b) => (a.x + a.y) - (b.x + b.y))) this.drawBuilding(building);
+      for (const building of [...this.snapshot.buildings].sort((a, b) => a.x + a.y - (b.x + b.y)))
+        this.drawBuilding(building);
     }
     this.drawResidents();
     const overlaySignature = `${this.snapshot.overlay}|${this.snapshot.transports.map((job) => `${job.id}:${job.state}:${Math.floor(job.progress * 20)}`).join('|')}|${this.snapshot.buildings.map((building) => `${building.id}:${building.state}:${building.workers.length}:${Math.floor((building.inputInventory.hardtack ?? 0) + (building.inputInventory.water ?? 0) + (building.inputInventory.cannonballs ?? 0))}`).join('|')}`;
@@ -414,48 +610,120 @@ export class SettlementScene extends Phaser.Scene {
     const point = this.iso(building.x, building.y, tile?.elevation ?? 0);
     const [width, height] = definition.footprint;
     const scale = Math.max(0.85, Math.min(1.5, (width + height) / 3));
-    const container = this.add.container(point.x, point.y - 12).setDepth(100 + building.x + building.y);
+    const container = this.add
+      .container(point.x, point.y - 12)
+      .setDepth(100 + building.x + building.y);
     const selected = building.id === this.selectedBuildingId;
     const texturedArt = CORE_BUILDING_ART[building.definitionId];
-    const preferredAtlasKey = texturedArt ? buildingAtlasKeyForLevel(texturedArt, building.level) : undefined;
-    const availableAtlasKey = preferredAtlasKey && this.textures.exists(preferredAtlasKey)
-      ? preferredAtlasKey
-      : texturedArt && this.textures.exists(buildingAtlasKey(texturedArt))
-        ? buildingAtlasKey(texturedArt)
-        : undefined;
+    const preferredAtlasKey = texturedArt
+      ? buildingAtlasKeyForLevel(texturedArt, building.level)
+      : undefined;
+    const availableAtlasKey =
+      preferredAtlasKey && this.textures.exists(preferredAtlasKey)
+        ? preferredAtlasKey
+        : texturedArt && this.textures.exists(buildingAtlasKey(texturedArt))
+          ? buildingAtlasKey(texturedArt)
+          : undefined;
     if (texturedArt && availableAtlasKey) {
-      this.drawTexturedBuilding(container, building, definition, texturedArt, selected, availableAtlasKey);
+      this.drawTexturedBuilding(
+        container,
+        building,
+        definition,
+        texturedArt,
+        selected,
+        availableAtlasKey
+      );
       this.buildingLayer.add(container);
       return;
     }
     const shadow = this.add.ellipse(2, 14, 48 * scale, 18 * scale, 0x031013, 0.6);
     const baseColor = CATEGORY_COLORS[definition.category];
-    const wallColor = building.state === 'DAMAGED' ? 0x4b403a : building.state === 'BURNING' ? 0x70382e : baseColor;
-    const wallHeight = building.definitionId === 'watchtower' ? 48 : building.definitionId === 'coastal-battery' ? 24 : 25 + building.level * 3;
-    const wall = this.add.polygon(0, 0, [-24 * scale, 0, 0, 11 * scale, 24 * scale, 0, 24 * scale, -wallHeight, 0, -wallHeight + 10 * scale, -24 * scale, -wallHeight], wallColor, building.state === 'PLANNED' ? 0.35 : 1)
+    const wallColor =
+      building.state === 'DAMAGED' ? 0x4b403a : building.state === 'BURNING' ? 0x70382e : baseColor;
+    const wallHeight =
+      building.definitionId === 'watchtower'
+        ? 48
+        : building.definitionId === 'coastal-battery'
+          ? 24
+          : 25 + building.level * 3;
+    const wall = this.add
+      .polygon(
+        0,
+        0,
+        [
+          -24 * scale,
+          0,
+          0,
+          11 * scale,
+          24 * scale,
+          0,
+          24 * scale,
+          -wallHeight,
+          0,
+          -wallHeight + 10 * scale,
+          -24 * scale,
+          -wallHeight
+        ],
+        wallColor,
+        building.state === 'PLANNED' ? 0.35 : 1
+      )
       .setStrokeStyle(selected ? 3 : 1, selected ? 0xf0c873 : 0x1b201c, selected ? 1 : 0.72);
-    const roof = this.add.polygon(0, -wallHeight, [-28 * scale, 0, 0, 15 * scale, 28 * scale, 0, 0, -14 * scale], definition.category === 'military' ? 0x2d3332 : 0x4f3829, building.state === 'PLANNED' ? 0.35 : 1).setStrokeStyle(1, 0xa08255, 0.55);
+    const roof = this.add
+      .polygon(
+        0,
+        -wallHeight,
+        [-28 * scale, 0, 0, 15 * scale, 28 * scale, 0, 0, -14 * scale],
+        definition.category === 'military' ? 0x2d3332 : 0x4f3829,
+        building.state === 'PLANNED' ? 0.35 : 1
+      )
+      .setStrokeStyle(1, 0xa08255, 0.55);
     container.add([shadow, wall, roof]);
     if (building.definitionId === 'wreckage') {
-      container.add(this.add.polygon(-5, 3, [-34, 8, 30, -2, 22, 15, -25, 18], 0x4d3023, 1).setStrokeStyle(2, 0x241811));
+      container.add(
+        this.add
+          .polygon(-5, 3, [-34, 8, 30, -2, 22, 15, -25, 18], 0x4d3023, 1)
+          .setStrokeStyle(2, 0x241811)
+      );
       container.add(this.add.rectangle(14, -18, 4, 55, 0x33231c).setRotation(-0.18));
       container.add(this.add.triangle(24, -29, 0, 0, 29, 9, 2, 24, 0x75634d, 0.7));
     } else if (['tent', 'campfire'].includes(building.definitionId)) {
-      if (building.definitionId === 'tent') container.add(this.add.triangle(0, -7, -27, 17, 0, -32, 27, 17, 0x8b7655, 1).setStrokeStyle(2, 0x3e3024));
+      if (building.definitionId === 'tent')
+        container.add(
+          this.add.triangle(0, -7, -27, 17, 0, -32, 27, 17, 0x8b7655, 1).setStrokeStyle(2, 0x3e3024)
+        );
       else {
         container.add(this.add.circle(0, 1, 12, 0x4a3323));
         const flame = this.add.triangle(0, -7, -8, 9, 0, -15, 8, 9, 0xe88b3c, 0.95);
         container.add(flame);
         this.dynamicTweenTargets.push(flame);
-        this.tweens.add({ targets: flame, scaleX: { from: .78, to: 1.18 }, duration: 320, yoyo: true, repeat: -1 });
+        this.tweens.add({
+          targets: flame,
+          scaleX: { from: 0.78, to: 1.18 },
+          duration: 320,
+          yoyo: true,
+          repeat: -1
+        });
       }
     }
-    if (definition.category === 'gathering' && !['wreckage', 'campfire'].includes(building.definitionId)) {
-      if (['quarry', 'iron-mine', 'copper-mine'].includes(building.definitionId)) container.add(this.add.polygon(-17, 5, [-12, 8, -4, -12, 8, -8, 14, 9], 0x77746b, 1));
-      else for (let stack = 0; stack < 3; stack += 1) container.add(this.add.rectangle(-19 + stack * 7, 7 - stack * 3, 22, 4, 0x5f3d28).setRotation(-0.18));
+    if (
+      definition.category === 'gathering' &&
+      !['wreckage', 'campfire'].includes(building.definitionId)
+    ) {
+      if (['quarry', 'iron-mine', 'copper-mine'].includes(building.definitionId))
+        container.add(this.add.polygon(-17, 5, [-12, 8, -4, -12, 8, -8, 14, 9], 0x77746b, 1));
+      else
+        for (let stack = 0; stack < 3; stack += 1)
+          container.add(
+            this.add.rectangle(-19 + stack * 7, 7 - stack * 3, 22, 4, 0x5f3d28).setRotation(-0.18)
+          );
     }
     if (definition.category === 'logistics') {
-      for (let crate = 0; crate < Math.min(4, 1 + building.level); crate += 1) container.add(this.add.rectangle(-18 + crate * 11, 2 - (crate % 2) * 7, 10, 10, 0x84603a).setStrokeStyle(1, 0x3a281b));
+      for (let crate = 0; crate < Math.min(4, 1 + building.level); crate += 1)
+        container.add(
+          this.add
+            .rectangle(-18 + crate * 11, 2 - (crate % 2) * 7, 10, 10, 0x84603a)
+            .setStrokeStyle(1, 0x3a281b)
+        );
     }
     if (definition.category === 'welfare' && !['campfire'].includes(building.definitionId)) {
       const lanterns = Math.min(5, 2 + building.level);
@@ -463,11 +731,18 @@ export class SettlementScene extends Phaser.Scene {
         const glow = this.add.circle(-20 + lamp * 10, -wallHeight + 8, 3, 0xf1b854, 0.85);
         container.add(glow);
         this.dynamicTweenTargets.push(glow);
-        this.tweens.add({ targets: glow, alpha: { from: .45, to: 1 }, duration: 700 + lamp * 90, yoyo: true, repeat: -1 });
+        this.tweens.add({
+          targets: glow,
+          alpha: { from: 0.45, to: 1 },
+          duration: 700 + lamp * 90,
+          yoyo: true,
+          repeat: -1
+        });
       }
     }
     if (definition.category === 'military') {
-      for (let merlon = -2; merlon <= 2; merlon += 1) container.add(this.add.rectangle(merlon * 10, -wallHeight - 4, 6, 9, 0x4b4c47));
+      for (let merlon = -2; merlon <= 2; merlon += 1)
+        container.add(this.add.rectangle(merlon * 10, -wallHeight - 4, 6, 9, 0x4b4c47));
     }
     if (definition.category === 'administration') {
       container.add(this.add.rectangle(18, -wallHeight - 21, 3, 45, 0x30231b));
@@ -475,16 +750,26 @@ export class SettlementScene extends Phaser.Scene {
     }
     if (definition.category === 'infrastructure') {
       const beams = Math.min(5, 2 + building.level);
-      for (let beam = 0; beam < beams; beam += 1) container.add(this.add.rectangle(-22 + beam * 11, 5 + beam * 3, 38, 4, 0x765138).setRotation(.43));
+      for (let beam = 0; beam < beams; beam += 1)
+        container.add(
+          this.add.rectangle(-22 + beam * 11, 5 + beam * 3, 38, 4, 0x765138).setRotation(0.43)
+        );
     }
     if (building.level > 1) {
       for (let level = 1; level < building.level; level += 1) {
         const side = level % 2 === 0 ? -1 : 1;
-        container.add(this.add.rectangle(side * (28 + level * 3), -8 - level * 2, 17, 18 + level * 2, baseColor, .95).setStrokeStyle(1, 0xb69256, .45));
+        container.add(
+          this.add
+            .rectangle(side * (28 + level * 3), -8 - level * 2, 17, 18 + level * 2, baseColor, 0.95)
+            .setStrokeStyle(1, 0xb69256, 0.45)
+        );
       }
     }
     if (['small-dock', 'shipyard', 'dock-warehouse'].includes(building.definitionId)) {
-      for (let plank = 0; plank < 4; plank += 1) container.add(this.add.rectangle(12 + plank * 10, 10 + plank * 5, 45, 5, 0x553a27).setRotation(0.46));
+      for (let plank = 0; plank < 4; plank += 1)
+        container.add(
+          this.add.rectangle(12 + plank * 10, 10 + plank * 5, 45, 5, 0x553a27).setRotation(0.46)
+        );
       if (building.definitionId === 'shipyard') {
         container.add(this.add.polygon(45, 5, [-30, 0, 28, 0, 18, 13, -20, 13], 0x5e3928, 1));
         container.add(this.add.rectangle(42, -17, 3, 48, 0x31231d));
@@ -498,28 +783,66 @@ export class SettlementScene extends Phaser.Scene {
     this.drawBuildingProgressionOverlay(container, building, 62 * scale);
     if (building.state === 'CONSTRUCTING' || building.state === 'PLANNED') {
       if (!this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) {
-        for (let scaffold = -1; scaffold <= 1; scaffold += 1) container.add(this.add.rectangle(scaffold * 18, -10, 3, 50, 0x9a7445, 0.9));
+        for (let scaffold = -1; scaffold <= 1; scaffold += 1)
+          container.add(this.add.rectangle(scaffold * 18, -10, 3, 50, 0x9a7445, 0.9));
       }
       const progress = this.add.rectangle(0, 22, 50, 5, 0x0b1717).setStrokeStyle(1, 0xd3b06c, 0.6);
-      const fill = this.add.rectangle(-25, 22, 50 * building.constructionProgress, 3, 0xd3a754).setOrigin(0, 0.5);
+      const fill = this.add
+        .rectangle(-25, 22, 50 * building.constructionProgress, 3, 0xd3a754)
+        .setOrigin(0, 0.5);
       container.add([progress, fill]);
     }
-    if (definition.category === 'processing' && building.state === 'ACTIVE' && !building.statusReason) {
+    if (
+      definition.category === 'processing' &&
+      building.state === 'ACTIVE' &&
+      !building.statusReason
+    ) {
       const smoke = this.add.circle(8, -wallHeight - 17, 5, 0xb8b4a9, 0.22);
       container.add(smoke);
       this.dynamicTweenTargets.push(smoke);
-      this.tweens.add({ targets: smoke, y: smoke.y - 22, x: smoke.x + 7, alpha: 0, scale: 1.8, duration: 2400, repeat: -1 });
+      this.tweens.add({
+        targets: smoke,
+        y: smoke.y - 22,
+        x: smoke.x + 7,
+        alpha: 0,
+        scale: 1.8,
+        duration: 2400,
+        repeat: -1
+      });
     }
     if (building.state === 'BURNING') {
       const fire = this.add.triangle(0, -wallHeight - 10, -9, 10, 0, -13, 9, 10, 0xef6b2e, 0.95);
       container.add(fire);
       this.dynamicTweenTargets.push(fire);
-      this.tweens.add({ targets: fire, scaleX: { from: 0.8, to: 1.25 }, alpha: { from: 0.7, to: 1 }, duration: 230, yoyo: true, repeat: -1 });
+      this.tweens.add({
+        targets: fire,
+        scaleX: { from: 0.8, to: 1.25 },
+        alpha: { from: 0.7, to: 1 },
+        duration: 230,
+        yoyo: true,
+        repeat: -1
+      });
     }
-    const icon = this.add.text(0, -wallHeight + 2, definition.icon, { fontFamily: 'serif', fontSize: `${Math.round(14 * scale)}px`, color: '#f2d291', stroke: '#101816', strokeThickness: 3 }).setOrigin(0.5);
+    const icon = this.add
+      .text(0, -wallHeight + 2, definition.icon, {
+        fontFamily: 'serif',
+        fontSize: `${Math.round(14 * scale)}px`,
+        color: '#f2d291',
+        stroke: '#101816',
+        strokeThickness: 3
+      })
+      .setOrigin(0.5);
     container.add(icon);
     if (building.statusReason) {
-      const warning = this.add.text(22 * scale, -wallHeight - 12, building.state === 'BLOCKED' ? '!' : '…', { fontFamily: 'sans-serif', fontSize: '13px', color: '#ffe2a0', backgroundColor: '#713d24', padding: { x: 5, y: 2 } }).setOrigin(0.5);
+      const warning = this.add
+        .text(22 * scale, -wallHeight - 12, building.state === 'BLOCKED' ? '!' : '…', {
+          fontFamily: 'sans-serif',
+          fontSize: '13px',
+          color: '#ffe2a0',
+          backgroundColor: '#713d24',
+          padding: { x: 5, y: 2 }
+        })
+        .setOrigin(0.5);
       container.add(warning);
     }
     this.buildingLayer.add(container);
@@ -543,20 +866,36 @@ export class SettlementScene extends Phaser.Scene {
     const isBlueprint = building.state === 'PLANNED';
     const isConstructing = building.state === 'CONSTRUCTING' || building.state === 'UPGRADING';
 
-    const shadow = this.add.ellipse(2, 17, displayWidth * 0.64, Math.max(16, displayWidth * 0.18), 0x020b0d, 0.62);
+    const shadow = this.add.ellipse(
+      2,
+      17,
+      displayWidth * 0.64,
+      Math.max(16, displayWidth * 0.18),
+      0x020b0d,
+      0.62
+    );
     container.add(shadow);
 
     if (selected) {
-      const selectionGlow = this.add.ellipse(0, 14, displayWidth * 0.82, Math.max(30, displayWidth * 0.32), 0xd8b35f, 0.14)
+      const selectionGlow = this.add
+        .ellipse(0, 14, displayWidth * 0.82, Math.max(30, displayWidth * 0.32), 0xd8b35f, 0.14)
         .setStrokeStyle(3, 0xf5d17e, 0.95);
       container.add(selectionGlow);
       if (!this.bridge.getSettings().reducedMotion) {
         this.dynamicTweenTargets.push(selectionGlow);
-        this.tweens.add({ targets: selectionGlow, alpha: { from: 0.08, to: 0.24 }, scaleX: { from: 0.96, to: 1.04 }, duration: 920, yoyo: true, repeat: -1 });
+        this.tweens.add({
+          targets: selectionGlow,
+          alpha: { from: 0.08, to: 0.24 },
+          scaleX: { from: 0.96, to: 1.04 },
+          duration: 920,
+          yoyo: true,
+          repeat: -1
+        });
       }
     }
 
-    const sprite = this.add.image(0, spriteY, atlasKey, art.frame)
+    const sprite = this.add
+      .image(0, spriteY, atlasKey, art.frame)
       .setOrigin(0.5, art.originY ?? 0.88)
       .setDisplaySize(displayWidth, displayHeight)
       .setAlpha(isBlueprint ? 0.42 : isConstructing ? 0.76 : 1)
@@ -567,37 +906,103 @@ export class SettlementScene extends Phaser.Scene {
     else if (building.state === 'BLOCKED' || building.state === 'PAUSED') sprite.setTint(0x8c9691);
     container.add(sprite);
 
-    if (building.level > 1 && !isBlueprint && !this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) {
-      const upgradeGlow = this.add.ellipse(0, 10, displayWidth * 0.54, Math.max(14, displayWidth * 0.12), 0xe0b765, 0.07 + building.level * 0.015);
-      const pennantPole = this.add.rectangle(displayWidth * 0.22, -displayHeight * 0.48, 2, 28, 0x3c2a20, 0.92);
-      const pennant = this.add.triangle(displayWidth * 0.22 + 8, -displayHeight * 0.58, 0, 0, 17, 5, 0, 10, 0xa94c3e, 0.94);
+    if (
+      building.level > 1 &&
+      !isBlueprint &&
+      !this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)
+    ) {
+      const upgradeGlow = this.add.ellipse(
+        0,
+        10,
+        displayWidth * 0.54,
+        Math.max(14, displayWidth * 0.12),
+        0xe0b765,
+        0.07 + building.level * 0.015
+      );
+      const pennantPole = this.add.rectangle(
+        displayWidth * 0.22,
+        -displayHeight * 0.48,
+        2,
+        28,
+        0x3c2a20,
+        0.92
+      );
+      const pennant = this.add.triangle(
+        displayWidth * 0.22 + 8,
+        -displayHeight * 0.58,
+        0,
+        0,
+        17,
+        5,
+        0,
+        10,
+        0xa94c3e,
+        0.94
+      );
       container.add([upgradeGlow, pennantPole, pennant]);
     }
 
-    this.drawBuildingProgressionOverlay(container, building, displayWidth, !usesDedicatedTier || building.level > 3);
+    this.drawBuildingProgressionOverlay(
+      container,
+      building,
+      displayWidth,
+      !usesDedicatedTier || building.level > 3
+    );
 
     if (isBlueprint || isConstructing) {
       const scaffoldHeight = Math.max(44, displayHeight * 0.45);
       if (!this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) {
         for (let scaffold = -1; scaffold <= 1; scaffold += 1) {
-          const post = this.add.rectangle(scaffold * displayWidth * 0.25, 2 - scaffold * 2, 3, scaffoldHeight, 0xb18a52, 0.9);
-          const brace = this.add.rectangle(scaffold * displayWidth * 0.2, -8, displayWidth * 0.42, 3, 0x8f693f, 0.8).setRotation(scaffold * 0.34);
+          const post = this.add.rectangle(
+            scaffold * displayWidth * 0.25,
+            2 - scaffold * 2,
+            3,
+            scaffoldHeight,
+            0xb18a52,
+            0.9
+          );
+          const brace = this.add
+            .rectangle(scaffold * displayWidth * 0.2, -8, displayWidth * 0.42, 3, 0x8f693f, 0.8)
+            .setRotation(scaffold * 0.34);
           container.add([post, brace]);
         }
       }
       const progress = Phaser.Math.Clamp(building.constructionProgress, 0, 1);
       const trackWidth = Math.min(82, displayWidth * 0.62);
-      const track = this.add.rectangle(0, 27, trackWidth, 8, 0x081317, 0.92).setStrokeStyle(1, 0xd9b66b, 0.72);
-      const fill = this.add.rectangle(-trackWidth / 2 + 2, 27, Math.max(2, (trackWidth - 4) * progress), 4, building.state === 'UPGRADING' ? 0x70bad0 : 0xe0b25c, 1).setOrigin(0, 0.5);
+      const track = this.add
+        .rectangle(0, 27, trackWidth, 8, 0x081317, 0.92)
+        .setStrokeStyle(1, 0xd9b66b, 0.72);
+      const fill = this.add
+        .rectangle(
+          -trackWidth / 2 + 2,
+          27,
+          Math.max(2, (trackWidth - 4) * progress),
+          4,
+          building.state === 'UPGRADING' ? 0x70bad0 : 0xe0b25c,
+          1
+        )
+        .setOrigin(0, 0.5);
       container.add([track, fill]);
     }
 
-    if (definition.category === 'processing' && building.state === 'ACTIVE' && !building.statusReason) {
+    if (
+      definition.category === 'processing' &&
+      building.state === 'ACTIVE' &&
+      !building.statusReason
+    ) {
       const smoke = this.add.circle(displayWidth * 0.12, -displayHeight * 0.47, 6, 0xc8c1ae, 0.26);
       container.add(smoke);
       if (!this.bridge.getSettings().reducedMotion) {
         this.dynamicTweenTargets.push(smoke);
-        this.tweens.add({ targets: smoke, y: smoke.y - 30, x: smoke.x + 9, alpha: 0, scale: 1.9, duration: 2500, repeat: -1 });
+        this.tweens.add({
+          targets: smoke,
+          y: smoke.y - 30,
+          x: smoke.x + 9,
+          alpha: 0,
+          scale: 1.9,
+          duration: 2500,
+          repeat: -1
+        });
       }
     }
 
@@ -606,17 +1011,43 @@ export class SettlementScene extends Phaser.Scene {
       container.add(glow);
       if (!this.bridge.getSettings().reducedMotion) {
         this.dynamicTweenTargets.push(glow);
-        this.tweens.add({ targets: glow, alpha: { from: 0.1, to: 0.3 }, scale: { from: 0.86, to: 1.12 }, duration: 420, yoyo: true, repeat: -1 });
+        this.tweens.add({
+          targets: glow,
+          alpha: { from: 0.1, to: 0.3 },
+          scale: { from: 0.86, to: 1.12 },
+          duration: 420,
+          yoyo: true,
+          repeat: -1
+        });
       }
     }
 
     if (building.state === 'BURNING') {
       for (let index = 0; index < 3; index += 1) {
-        const fire = this.add.triangle((index - 1) * 16, -24 - (index % 2) * 9, -8, 10, 0, -14, 8, 10, index === 1 ? 0xffc052 : 0xef642d, 0.94);
+        const fire = this.add.triangle(
+          (index - 1) * 16,
+          -24 - (index % 2) * 9,
+          -8,
+          10,
+          0,
+          -14,
+          8,
+          10,
+          index === 1 ? 0xffc052 : 0xef642d,
+          0.94
+        );
         container.add(fire);
         if (!this.bridge.getSettings().reducedMotion) {
           this.dynamicTweenTargets.push(fire);
-          this.tweens.add({ targets: fire, scaleX: { from: 0.72, to: 1.24 }, scaleY: { from: 0.9, to: 1.15 }, alpha: { from: 0.7, to: 1 }, duration: 220 + index * 55, yoyo: true, repeat: -1 });
+          this.tweens.add({
+            targets: fire,
+            scaleX: { from: 0.72, to: 1.24 },
+            scaleY: { from: 0.9, to: 1.15 },
+            alpha: { from: 0.7, to: 1 },
+            duration: 220 + index * 55,
+            yoyo: true,
+            repeat: -1
+          });
         }
       }
     }
@@ -624,8 +1055,17 @@ export class SettlementScene extends Phaser.Scene {
     if (building.statusReason) {
       const isBlocked = building.state === 'BLOCKED';
       const warning = this.add.container(displayWidth * 0.28, -displayHeight * 0.52);
-      const badge = this.add.circle(0, 0, 11, isBlocked ? 0x8e382d : 0x72522a, 0.98).setStrokeStyle(2, 0xf4cf7e, 0.92);
-      const mark = this.add.text(0, -1, isBlocked ? '!' : '…', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff1c4' }).setOrigin(0.5);
+      const badge = this.add
+        .circle(0, 0, 11, isBlocked ? 0x8e382d : 0x72522a, 0.98)
+        .setStrokeStyle(2, 0xf4cf7e, 0.92);
+      const mark = this.add
+        .text(0, -1, isBlocked ? '!' : '…', {
+          fontFamily: 'sans-serif',
+          fontSize: '14px',
+          fontStyle: 'bold',
+          color: '#fff1c4'
+        })
+        .setOrigin(0.5);
       warning.add([badge, mark]);
       container.add(warning);
     }
@@ -638,11 +1078,14 @@ export class SettlementScene extends Phaser.Scene {
     includeLevelGrowth = true
   ): void {
     if (!this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) return;
-    const visual = buildingProgressionVisual(includeLevelGrowth ? building : { ...building, level: 1 });
+    const visual = buildingProgressionVisual(
+      includeLevelGrowth ? building : { ...building, level: 1 }
+    );
     if (!visual) return;
     const displaySize = buildingProgressionDisplaySize(baseWidth, visual);
     const flipped = building.rotation === 1 || building.rotation === 2;
-    const overlay = this.add.image(0, visual.offsetY, BUILDING_PROGRESSION_ATLAS_KEY, visual.frame)
+    const overlay = this.add
+      .image(0, visual.offsetY, BUILDING_PROGRESSION_ATLAS_KEY, visual.frame)
       .setOrigin(0.5, visual.originY)
       .setDisplaySize(displaySize, displaySize)
       .setAlpha(visual.alpha)
@@ -651,7 +1094,14 @@ export class SettlementScene extends Phaser.Scene {
 
     for (const [index, point] of (visual.lanternGlowPoints ?? []).entries()) {
       const x = point.x * displaySize * (flipped ? -1 : 1);
-      const glow = this.add.circle(x, point.y * displaySize + visual.offsetY, Math.max(4, displaySize * 0.035), 0xf1a847, 0.24)
+      const glow = this.add
+        .circle(
+          x,
+          point.y * displaySize + visual.offsetY,
+          Math.max(4, displaySize * 0.035),
+          0xf1a847,
+          0.24
+        )
         .setBlendMode(Phaser.BlendModes.ADD);
       container.add(glow);
       if (!this.bridge.getSettings().reducedMotion) {
@@ -676,37 +1126,57 @@ export class SettlementScene extends Phaser.Scene {
     const residentIds = new Set(this.snapshot.residents.map((resident) => resident.id));
     for (const [id, object] of this.residentObjects) {
       object.container.setVisible(false);
-      if (!residentIds.has(id)) { object.container.destroy(true); this.residentObjects.delete(id); }
+      if (!residentIds.has(id)) {
+        object.container.destroy(true);
+        this.residentObjects.delete(id);
+      }
     }
     let drawn = 0;
     for (const resident of this.snapshot.residents) {
       if (drawn >= visibleLimit) break;
-      const tile = tileAt(this.snapshot.island, Math.round(resident.position.x), Math.round(resident.position.y));
+      const tile = tileAt(
+        this.snapshot.island,
+        Math.round(resident.position.x),
+        Math.round(resident.position.y)
+      );
       const crowdOffset = residentCrowdOffset(resident.id);
       const renderX = resident.position.x + crowdOffset.x;
       const renderY = resident.position.y + crowdOffset.y;
       const point = this.iso(renderX, renderY, tile?.elevation ?? 0);
-      if (point.x < camera.worldView.x - 80 || point.x > camera.worldView.right + 80 || point.y < camera.worldView.y - 80 || point.y > camera.worldView.bottom + 80) continue;
+      if (
+        point.x < camera.worldView.x - 80 ||
+        point.x > camera.worldView.right + 80 ||
+        point.y < camera.worldView.y - 80 ||
+        point.y > camera.worldView.bottom + 80
+      )
+        continue;
       const frame = residentArtFrame(resident.job, resident.tier);
       const displaySize = residentDisplaySize(frame);
-      const phase = ([...resident.id].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 29) / 29 * Math.PI * 2;
+      const phase =
+        (([...resident.id].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 29) /
+          29) *
+        Math.PI *
+        2;
       let object = this.residentObjects.get(resident.id);
       if (!object) {
         const facing: ResidentFacing = 'front-right';
         const container = this.add.container(point.x, point.y - 5);
         const shadow = this.add.ellipse(0, 2, 17, 6, 0x020a0c, 0.62);
-        const sprite = this.add.image(0, 0, residentWalkAtlasKey(facing), residentWalkFrame(frame, 1))
+        const sprite = this.add
+          .image(0, 0, residentWalkAtlasKey(facing), residentWalkFrame(frame, 1))
           .setOrigin(0.5, 0.93)
           .setDisplaySize(displaySize.width, displaySize.height);
-        const cargo = this.add.text(11, -46, '', {
-          fontFamily: 'sans-serif',
-          fontSize: '10px',
-          color: '#ffe0a1',
-          backgroundColor: '#07171be6',
-          stroke: '#071414',
-          strokeThickness: 2,
-          padding: { x: 3, y: 2 }
-        }).setOrigin(0.5);
+        const cargo = this.add
+          .text(11, -46, '', {
+            fontFamily: 'sans-serif',
+            fontSize: '10px',
+            color: '#ffe0a1',
+            backgroundColor: '#07171be6',
+            stroke: '#071414',
+            strokeThickness: 2,
+            padding: { x: 3, y: 2 }
+          })
+          .setOrigin(0.5);
         container.add([shadow, sprite, cargo]);
         this.residentLayer.add(container);
         object = {
@@ -724,7 +1194,7 @@ export class SettlementScene extends Phaser.Scene {
           displayHeight: displaySize.height,
           action: resident.action,
           phase,
-          walkPhaseMs: phase / (Math.PI * 2) * 580
+          walkPhaseMs: (phase / (Math.PI * 2)) * 580
         };
         this.residentObjects.set(resident.id, object);
       }
@@ -747,9 +1217,17 @@ export class SettlementScene extends Phaser.Scene {
       else if (resident.action === 'DEFENDING') object.sprite.setTint(0xe3c47e);
       object.cargo.setText('');
       if (resident.action === 'HAULING') {
-        const job = this.snapshot.transports.find((item) => item.haulerId === resident.id && item.state === 'DELIVERING');
+        const job = this.snapshot.transports.find(
+          (item) => item.haulerId === resident.id && item.state === 'DELIVERING'
+        );
         if (job) object.cargo.setText(SETTLEMENT_RESOURCES[job.resourceId].icon);
-      } else object.cargo.setText(residentActivityGlyph(resident.action));
+      } else {
+        const actionAnimation = residentActionAnimation(resident.action);
+        const hasActionAtlas = actionAnimation
+          ? this.textures.exists(residentActionAtlasKey(actionAnimation, object.facing))
+          : false;
+        object.cargo.setText(hasActionAtlas ? '' : residentActivityGlyph(resident.action));
+      }
       drawn += 1;
     }
   }
@@ -757,17 +1235,40 @@ export class SettlementScene extends Phaser.Scene {
   private drawOverlay(overlay: SettlementOverlay): void {
     if (overlay === 'none') return;
     const trafficCounts = new Map<string, number>();
-    if (overlay === 'traffic') for (const job of this.snapshot.transports.filter((item) => !['COMPLETED', 'CANCELLED'].includes(item.state))) {
-      for (const cell of job.path) {
-        const key = `${cell.x}:${cell.y}`;
-        trafficCounts.set(key, (trafficCounts.get(key) ?? 0) + 1);
+    if (overlay === 'traffic')
+      for (const job of this.snapshot.transports.filter(
+        (item) => !['COMPLETED', 'CANCELLED'].includes(item.state)
+      )) {
+        for (const cell of job.path) {
+          const key = `${cell.x}:${cell.y}`;
+          trafficCounts.set(key, (trafficCounts.get(key) ?? 0) + 1);
+        }
       }
-    }
     if (overlay === 'logistics' || overlay === 'traffic') {
-      for (const job of this.snapshot.transports.filter((item) => !['COMPLETED', 'CANCELLED'].includes(item.state))) {
-        const congestion = job.path.reduce((peak, cell) => Math.max(peak, trafficCounts.get(`${cell.x}:${cell.y}`) ?? 0), 0);
-        const routeColor = overlay === 'traffic' ? (congestion > 5 ? 0xdb5947 : congestion > 2 ? 0xd8a957 : 0x62ad87) : job.state === 'WAITING' ? 0xd26a4c : 0xe9c56f;
-        const line = this.add.graphics().lineStyle(3 + Math.min(4, job.amount / 3), routeColor, job.state === 'WAITING' ? 0.5 : 0.8);
+      for (const job of this.snapshot.transports.filter(
+        (item) => !['COMPLETED', 'CANCELLED'].includes(item.state)
+      )) {
+        const congestion = job.path.reduce(
+          (peak, cell) => Math.max(peak, trafficCounts.get(`${cell.x}:${cell.y}`) ?? 0),
+          0
+        );
+        const routeColor =
+          overlay === 'traffic'
+            ? congestion > 5
+              ? 0xdb5947
+              : congestion > 2
+                ? 0xd8a957
+                : 0x62ad87
+            : job.state === 'WAITING'
+              ? 0xd26a4c
+              : 0xe9c56f;
+        const line = this.add
+          .graphics()
+          .lineStyle(
+            3 + Math.min(4, job.amount / 3),
+            routeColor,
+            job.state === 'WAITING' ? 0.5 : 0.8
+          );
         const points = job.path.map((point) => {
           const tile = tileAt(this.snapshot.island, point.x, point.y);
           return this.iso(point.x, point.y, tile?.elevation ?? 0);
@@ -781,8 +1282,16 @@ export class SettlementScene extends Phaser.Scene {
       const point = this.iso(building.x, building.y, tile?.elevation ?? 0);
       let color = 0x6fb69f;
       let alpha = 0;
-      if (overlay === 'storage' && ['warehouse', 'local-storage', 'dock-warehouse', 'distribution-depot'].includes(building.definitionId)) {
-        const used = [...Object.values(building.inputInventory), ...Object.values(building.outputInventory)].reduce((sum, value) => sum + (value ?? 0), 0);
+      if (
+        overlay === 'storage' &&
+        ['warehouse', 'local-storage', 'dock-warehouse', 'distribution-depot'].includes(
+          building.definitionId
+        )
+      ) {
+        const used = [
+          ...Object.values(building.inputInventory),
+          ...Object.values(building.outputInventory)
+        ].reduce((sum, value) => sum + (value ?? 0), 0);
         const capacity = BUILDINGS[building.definitionId]?.storage ?? 1;
         color = used / capacity > 0.85 ? 0xd45d4b : used / capacity > 0.6 ? 0xd8a957 : 0x69ad8b;
         alpha = 0.28;
@@ -792,37 +1301,83 @@ export class SettlementScene extends Phaser.Scene {
           color = building.workers.length < definition.workerSlots / 2 ? 0xd45d4b : 0x69ad8b;
           alpha = 0.22;
         }
-      } else if ((overlay === 'defense' || overlay === 'military') && ['coastal-battery', 'watchtower', 'guard-post', 'signal-tower'].includes(building.definitionId)) {
+      } else if (
+        (overlay === 'defense' || overlay === 'military') &&
+        ['coastal-battery', 'watchtower', 'guard-post', 'signal-tower'].includes(
+          building.definitionId
+        )
+      ) {
         color = 0xb25747;
         alpha = 0.17;
         const radius = (BUILDINGS[building.definitionId]?.range ?? 5) * TILE_W * 0.55;
-        const range = this.add.ellipse(point.x, point.y, radius * 2, radius, color, alpha).setStrokeStyle(2, color, 0.6);
+        const range = this.add
+          .ellipse(point.x, point.y, radius * 2, radius, color, alpha)
+          .setStrokeStyle(2, color, 0.6);
         this.overlayLayer.add(range);
       } else if (overlay === 'fire') {
-        const hazardous = ['powder-workshop', 'powder-magazine', 'distillery', 'smelter'].includes(building.definitionId);
+        const hazardous = ['powder-workshop', 'powder-magazine', 'distillery', 'smelter'].includes(
+          building.definitionId
+        );
         color = hazardous ? 0xe26945 : 0x63a889;
         alpha = 0.18;
       } else if (overlay === 'construction' && !['ACTIVE', 'DAMAGED'].includes(building.state)) {
-        color = building.state === 'BLOCKED' ? 0xdc5d49 : building.state === 'UPGRADING' ? 0x70a8c2 : 0xd9b15e;
+        color =
+          building.state === 'BLOCKED'
+            ? 0xdc5d49
+            : building.state === 'UPGRADING'
+              ? 0x70a8c2
+              : 0xd9b15e;
         alpha = 0.28;
       } else if (overlay === 'food') {
         const definition = BUILDINGS[building.definitionId];
         if (definition?.housing) {
-          const food = (building.inputInventory.hardtack ?? 0) + (building.inputInventory['fish-stew'] ?? 0) + (building.inputInventory['meat-dish'] ?? 0);
+          const food =
+            (building.inputInventory.hardtack ?? 0) +
+            (building.inputInventory['fish-stew'] ?? 0) +
+            (building.inputInventory['meat-dish'] ?? 0);
           color = food < 1 ? 0xd85847 : food < 4 ? 0xd4a34f : 0x65af85;
           alpha = 0.25;
-        } else if (['fisher-hut', 'farm', 'bakery', 'cookhouse'].includes(building.definitionId)) { color = 0x69b987; alpha = 0.18; }
-      } else if ((overlay === 'needs' || overlay === 'housing' || overlay === 'consumer') && BUILDINGS[building.definitionId]?.housing) {
-        const residents = this.snapshot.residents.filter((resident) => resident.homeId === building.id);
-        const satisfaction = residents.length === 0 ? 100 : residents.reduce((sum, resident) => sum + Object.values(resident.needs).reduce((total, value) => total + value, 0) / Object.values(resident.needs).length, 0) / residents.length;
+        } else if (['fisher-hut', 'farm', 'bakery', 'cookhouse'].includes(building.definitionId)) {
+          color = 0x69b987;
+          alpha = 0.18;
+        }
+      } else if (
+        (overlay === 'needs' || overlay === 'housing' || overlay === 'consumer') &&
+        BUILDINGS[building.definitionId]?.housing
+      ) {
+        const residents = this.snapshot.residents.filter(
+          (resident) => resident.homeId === building.id
+        );
+        const satisfaction =
+          residents.length === 0
+            ? 100
+            : residents.reduce(
+                (sum, resident) =>
+                  sum +
+                  Object.values(resident.needs).reduce((total, value) => total + value, 0) /
+                    Object.values(resident.needs).length,
+                0
+              ) / residents.length;
         color = satisfaction < 38 ? 0xd85646 : satisfaction < 62 ? 0xd5a64e : 0x62ad83;
         alpha = 0.25;
-      } else if (overlay === 'ship-supply' && ['small-dock', 'shipyard', 'dock-warehouse', 'supply-depot'].includes(building.definitionId)) {
-        const supplies = (building.inputInventory.hardtack ?? 0) + (building.inputInventory.water ?? 0) + (building.inputInventory.cannonballs ?? 0) + (building.inputInventory.powder ?? 0);
+      } else if (
+        overlay === 'ship-supply' &&
+        ['small-dock', 'shipyard', 'dock-warehouse', 'supply-depot'].includes(building.definitionId)
+      ) {
+        const supplies =
+          (building.inputInventory.hardtack ?? 0) +
+          (building.inputInventory.water ?? 0) +
+          (building.inputInventory.cannonballs ?? 0) +
+          (building.inputInventory.powder ?? 0);
         color = supplies < 8 ? 0xd95847 : supplies < 25 ? 0xd2a24e : 0x61ad87;
         alpha = 0.25;
       }
-      if (alpha > 0) this.overlayLayer.add(this.add.polygon(point.x, point.y, this.diamond(new Phaser.Math.Vector2(0, 0)), color, alpha).setStrokeStyle(2, color, 0.7));
+      if (alpha > 0)
+        this.overlayLayer.add(
+          this.add
+            .polygon(point.x, point.y, this.diamond(new Phaser.Math.Vector2(0, 0)), color, alpha)
+            .setStrokeStyle(2, color, 0.7)
+        );
     }
   }
 
@@ -835,15 +1390,27 @@ export class SettlementScene extends Phaser.Scene {
     if (oldWeather.length > 0) this.tweens.killTweensOf(oldWeather);
     this.weatherLayer.removeAll(true);
     const night = hour < 6 || hour > 19 ? 0.34 : hour < 8 || hour > 17 ? 0.14 : 0;
-    if (night > 0) this.weatherLayer.add(this.add.rectangle(1100, 725, 2200, 1450, 0x071026, night).setScrollFactor(0));
+    if (night > 0)
+      this.weatherLayer.add(
+        this.add.rectangle(1100, 725, 2200, 1450, 0x071026, night).setScrollFactor(0)
+      );
     if (this.snapshot.weather === 'rain' || this.snapshot.weather === 'storm') {
       const quality = this.bridge.getSettings().quality;
-      const density = quality === 'low' ? .4 : quality === 'medium' ? .7 : 1;
+      const density = quality === 'low' ? 0.4 : quality === 'medium' ? 0.7 : 1;
       const count = Math.floor((this.snapshot.weather === 'storm' ? 80 : 42) * density);
       for (let index = 0; index < count; index += 1) {
-        const drop = this.add.line((index * 83) % 1800, (index * 47) % 950, 0, 0, -9, 24, 0x9bbbc3, 0.24).setScrollFactor(0);
+        const drop = this.add
+          .line((index * 83) % 1800, (index * 47) % 950, 0, 0, -9, 24, 0x9bbbc3, 0.24)
+          .setScrollFactor(0);
         this.weatherLayer.add(drop);
-        if (!this.bridge.getSettings().reducedMotion) this.tweens.add({ targets: drop, x: drop.x - 130, y: drop.y + 480, duration: 900 + (index % 5) * 90, repeat: -1 });
+        if (!this.bridge.getSettings().reducedMotion)
+          this.tweens.add({
+            targets: drop,
+            x: drop.x - 130,
+            y: drop.y + 480,
+            duration: 900 + (index % 5) * 90,
+            repeat: -1
+          });
       }
     }
   }
@@ -852,7 +1419,12 @@ export class SettlementScene extends Phaser.Scene {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       this.dragging = true;
       this.dragDistance = 0;
-      this.dragStart = { x: pointer.x, y: pointer.y, scrollX: this.cameras.main.scrollX, scrollY: this.cameras.main.scrollY };
+      this.dragStart = {
+        x: pointer.x,
+        y: pointer.y,
+        scrollX: this.cameras.main.scrollX,
+        scrollY: this.cameras.main.scrollY
+      };
     });
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       const tile = this.pickTile(pointer);
@@ -865,24 +1437,41 @@ export class SettlementScene extends Phaser.Scene {
       const dx = pointer.x - this.dragStart.x;
       const dy = pointer.y - this.dragStart.y;
       this.dragDistance = Math.max(this.dragDistance, Math.hypot(dx, dy));
-      if (this.dragDistance > 5 && !this.buildTool && !this.movingBuildingId) this.cameras.main.setScroll(this.dragStart.scrollX - dx / this.cameras.main.zoom, this.dragStart.scrollY - dy / this.cameras.main.zoom);
+      if (this.dragDistance > 5 && !this.buildTool && !this.movingBuildingId)
+        this.cameras.main.setScroll(
+          this.dragStart.scrollX - dx / this.cameras.main.zoom,
+          this.dragStart.scrollY - dy / this.cameras.main.zoom
+        );
     });
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
       this.dragging = false;
       if (this.dragDistance > 7) return;
       const tile = this.pickTile(pointer);
       if (!tile) return;
-      if (this.buildTool || this.movingBuildingId) { this.activateToolAt(tile); return; }
-      const building = [...this.snapshot.buildings].reverse().find((item) => buildingCells(item).some((cell) => cell.x === tile.x && cell.y === tile.y));
+      if (this.buildTool || this.movingBuildingId) {
+        this.activateToolAt(tile);
+        return;
+      }
+      const building = [...this.snapshot.buildings]
+        .reverse()
+        .find((item) => buildingCells(item).some((cell) => cell.x === tile.x && cell.y === tile.y));
       this.selectedBuildingId = building?.id;
       this.bridge.onSelectBuilding(building?.id);
       this.drawDynamicLayers();
     });
-    this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _objects: unknown[], _dx: number, dy: number) => {
-      this.cameras.main.zoomTo(Phaser.Math.Clamp(this.cameras.main.zoom - dy * 0.0007, 0.55, 1.35), 120);
-    });
+    this.input.on(
+      'wheel',
+      (_pointer: Phaser.Input.Pointer, _objects: unknown[], _dx: number, dy: number) => {
+        this.cameras.main.zoomTo(
+          Phaser.Math.Clamp(this.cameras.main.zoom - dy * 0.0007, 0.55, 1.35),
+          120
+        );
+      }
+    );
     this.input.keyboard?.on('keydown-R', () => this.rotateBuildTool());
-    this.input.keyboard?.on('keydown-ENTER', () => { if (this.hoverTile) this.activateToolAt(this.hoverTile); });
+    this.input.keyboard?.on('keydown-ENTER', () => {
+      if (this.hoverTile) this.activateToolAt(this.hoverTile);
+    });
     this.input.keyboard?.on('keydown-UP', () => this.moveKeyboardCursor(0, -1));
     this.input.keyboard?.on('keydown-DOWN', () => this.moveKeyboardCursor(0, 1));
     this.input.keyboard?.on('keydown-LEFT', () => this.moveKeyboardCursor(-1, 0));
@@ -891,7 +1480,10 @@ export class SettlementScene extends Phaser.Scene {
 
   private moveKeyboardCursor(dx: number, dy: number): void {
     if (!this.buildTool && !this.movingBuildingId) return;
-    const current = this.hoverTile ?? { x: Math.floor(this.snapshot.island.width / 2), y: Math.floor(this.snapshot.island.height / 2) };
+    const current = this.hoverTile ?? {
+      x: Math.floor(this.snapshot.island.width / 2),
+      y: Math.floor(this.snapshot.island.height / 2)
+    };
     this.hoverTile = {
       x: Phaser.Math.Clamp(current.x + dx, 0, this.snapshot.island.width - 1),
       y: Phaser.Math.Clamp(current.y + dy, 0, this.snapshot.island.height - 1)
@@ -902,15 +1494,32 @@ export class SettlementScene extends Phaser.Scene {
 
   private activateToolAt(tile: { x: number; y: number }): void {
     if (this.buildTool) {
-      const validation = validatePlacement(this.snapshot.island, this.snapshot.buildings, this.buildTool, tile.x, tile.y, this.rotation);
-      if (validation.valid) { this.bridge.onPlace(this.buildTool, tile.x, tile.y, this.rotation); this.bridge.onSound('impact'); }
-      else this.bridge.onSound('critical');
+      const validation = validatePlacement(
+        this.snapshot.island,
+        this.snapshot.buildings,
+        this.buildTool,
+        tile.x,
+        tile.y,
+        this.rotation
+      );
+      if (validation.valid) {
+        this.bridge.onPlace(this.buildTool, tile.x, tile.y, this.rotation);
+        this.bridge.onSound('impact');
+      } else this.bridge.onSound('critical');
       return;
     }
     if (!this.movingBuildingId) return;
     const building = this.snapshot.buildings.find((item) => item.id === this.movingBuildingId);
     if (!building) return;
-    const validation = validatePlacement(this.snapshot.island, this.snapshot.buildings, building.definitionId, tile.x, tile.y, building.rotation, building.id);
+    const validation = validatePlacement(
+      this.snapshot.island,
+      this.snapshot.buildings,
+      building.definitionId,
+      tile.x,
+      tile.y,
+      building.rotation,
+      building.id
+    );
     if (validation.valid) {
       this.bridge.onMoveBuilding(building.id, tile.x, tile.y);
       this.bridge.onSound('impact');
@@ -924,7 +1533,8 @@ export class SettlementScene extends Phaser.Scene {
     let best: { x: number; y: number; score: number } | undefined;
     for (const tile of this.snapshot.island.tiles) {
       const point = this.iso(tile.x, tile.y, tile.elevation);
-      const score = Math.abs(world.x - point.x) / (TILE_W / 2) + Math.abs(world.y - point.y) / (TILE_H / 2);
+      const score =
+        Math.abs(world.x - point.x) / (TILE_W / 2) + Math.abs(world.y - point.y) / (TILE_H / 2);
       if (score <= 1.12 && (!best || score < best.score)) best = { x: tile.x, y: tile.y, score };
     }
     return best ? { x: best.x, y: best.y } : undefined;
@@ -934,11 +1544,21 @@ export class SettlementScene extends Phaser.Scene {
     this.preview?.clear();
     this.previewSprite?.setVisible(false).clearTint();
     if ((!this.buildTool && !this.movingBuildingId) || !this.hoverTile || !this.preview) return;
-    const moving = this.movingBuildingId ? this.snapshot.buildings.find((item) => item.id === this.movingBuildingId) : undefined;
+    const moving = this.movingBuildingId
+      ? this.snapshot.buildings.find((item) => item.id === this.movingBuildingId)
+      : undefined;
     const definitionId = this.buildTool ?? moving?.definitionId;
     if (!definitionId) return;
     const previewRotation = moving?.rotation ?? this.rotation;
-    const validation = validatePlacement(this.snapshot.island, this.snapshot.buildings, definitionId, this.hoverTile.x, this.hoverTile.y, previewRotation, moving?.id);
+    const validation = validatePlacement(
+      this.snapshot.island,
+      this.snapshot.buildings,
+      definitionId,
+      this.hoverTile.x,
+      this.hoverTile.y,
+      previewRotation,
+      moving?.id
+    );
     const color = validation.valid ? 0x62d39d : 0xe45549;
     this.preview.lineStyle(3, color, 0.95).fillStyle(color, 0.18);
     for (const cell of validation.cells) {

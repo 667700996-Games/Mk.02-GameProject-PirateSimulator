@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  RESIDENT_ACTION_ATLAS_SOURCES,
+  RESIDENT_ACTION_FRAME_MS,
+  RESIDENT_COMBAT_FRONT_ATLAS_DATA,
+  RESIDENT_COMBAT_FRONT_ATLAS_IMAGE,
+  RESIDENT_COMBAT_FRONT_ATLAS_KEY,
+  RESIDENT_COMBAT_REAR_ATLAS_DATA,
+  RESIDENT_COMBAT_REAR_ATLAS_IMAGE,
+  RESIDENT_COMBAT_REAR_ATLAS_KEY,
   RESIDENT_ATLAS_DATA,
   RESIDENT_ATLAS_IMAGE,
   RESIDENT_ATLAS_KEY,
@@ -13,6 +21,17 @@ import {
   RESIDENT_WALK_FRONT_ATLAS_KEY,
   RESIDENT_WALK_REAR_ATLAS_IMAGE,
   RESIDENT_WALK_REAR_ATLAS_KEY,
+  RESIDENT_WORK_FRONT_ATLAS_DATA,
+  RESIDENT_WORK_FRONT_ATLAS_IMAGE,
+  RESIDENT_WORK_FRONT_ATLAS_KEY,
+  RESIDENT_WORK_REAR_ATLAS_DATA,
+  RESIDENT_WORK_REAR_ATLAS_IMAGE,
+  RESIDENT_WORK_REAR_ATLAS_KEY,
+  residentActionAnimation,
+  residentActionAtlasKey,
+  residentActionAtlasKeysForActions,
+  residentActionFrame,
+  residentActionFrameIndex,
   residentActivityGlyph,
   residentActivityPose,
   residentAtlasKey,
@@ -59,8 +78,9 @@ describe('settlement resident art', () => {
 
   it('uses a contact-passing-contact walk loop with a neutral reduced-motion frame', () => {
     expect(residentWalkFrame('hauler', 2)).toBe('hauler-walk-2');
-    expect([0, 145, 290, 435, 580].map((time) => residentWalkFrameIndex(time, 0, true)))
-      .toEqual([0, 1, 2, 1, 0]);
+    expect([0, 145, 290, 435, 580].map((time) => residentWalkFrameIndex(time, 0, true))).toEqual([
+      0, 1, 2, 1, 0
+    ]);
     expect(residentWalkFrameIndex(290, 0, false)).toBe(1);
     expect(residentWalkFrameIndex(290, 0, true, true)).toBe(1);
   });
@@ -73,8 +93,49 @@ describe('settlement resident art', () => {
       RESIDENT_REAR_ATLAS_DATA,
       RESIDENT_WALK_FRONT_ATLAS_IMAGE,
       RESIDENT_WALK_REAR_ATLAS_IMAGE,
-      RESIDENT_WALK_ATLAS_DATA
-    ]) expect(path).toMatch(/^\/art\/settlement\/.*\.(png|json)$/);
+      RESIDENT_WALK_ATLAS_DATA,
+      RESIDENT_WORK_FRONT_ATLAS_IMAGE,
+      RESIDENT_WORK_FRONT_ATLAS_DATA,
+      RESIDENT_WORK_REAR_ATLAS_IMAGE,
+      RESIDENT_WORK_REAR_ATLAS_DATA,
+      RESIDENT_COMBAT_FRONT_ATLAS_IMAGE,
+      RESIDENT_COMBAT_FRONT_ATLAS_DATA,
+      RESIDENT_COMBAT_REAR_ATLAS_IMAGE,
+      RESIDENT_COMBAT_REAR_ATLAS_DATA
+    ])
+      expect(path).toMatch(/^\/art\/settlement\/.*\.(png|json)$/);
+    expect(Object.keys(RESIDENT_ACTION_ATLAS_SOURCES)).toHaveLength(4);
+  });
+
+  it('routes active labor and defense actions to dedicated three-frame loops', () => {
+    expect(RESIDENT_ACTION_FRAME_MS).toEqual({ work: 170, combat: 125 });
+    expect(residentActionAnimation('WORKING')).toBe('work');
+    expect(residentActionAnimation('FIREFIGHTING')).toBe('work');
+    expect(residentActionAnimation('TRAINING')).toBe('combat');
+    expect(residentActionAnimation('BOARDING')).toBe('combat');
+    expect(residentActionAnimation('DEFENDING')).toBe('combat');
+    expect(residentActionAnimation('EATING')).toBeUndefined();
+    expect(residentActionAtlasKey('work', 'front-left')).toBe(RESIDENT_WORK_FRONT_ATLAS_KEY);
+    expect(residentActionAtlasKey('work', 'rear-right')).toBe(RESIDENT_WORK_REAR_ATLAS_KEY);
+    expect(residentActionAtlasKey('combat', 'front-right')).toBe(RESIDENT_COMBAT_FRONT_ATLAS_KEY);
+    expect(residentActionAtlasKey('combat', 'rear-left')).toBe(RESIDENT_COMBAT_REAR_ATLAS_KEY);
+    expect(
+      residentActionAtlasKeysForActions(['IDLE', 'WORKING', 'FIREFIGHTING', 'DEFENDING'])
+    ).toEqual([
+      RESIDENT_WORK_FRONT_ATLAS_KEY,
+      RESIDENT_WORK_REAR_ATLAS_KEY,
+      RESIDENT_COMBAT_FRONT_ATLAS_KEY,
+      RESIDENT_COMBAT_REAR_ATLAS_KEY
+    ]);
+    expect(residentActionFrame('builder', 'work', 2)).toBe('builder-work-2');
+    expect(residentActionFrame('guard', 'combat', 1)).toBe('guard-combat-1');
+    expect(
+      [0, 170, 340, 510, 680].map((time) => residentActionFrameIndex('work', time, 0))
+    ).toEqual([0, 1, 2, 1, 0]);
+    expect(
+      [0, 125, 250, 375, 500].map((time) => residentActionFrameIndex('combat', time, 0))
+    ).toEqual([0, 1, 2, 1, 0]);
+    expect(residentActionFrameIndex('combat', 250, 0, true)).toBe(1);
   });
 
   it('assigns stable bounded crowd spacing without changing simulation coordinates', () => {
@@ -87,13 +148,18 @@ describe('settlement resident art', () => {
 
   it('defines a bounded readable motion language for every simulated action', () => {
     expect(Object.keys(RESIDENT_ACTION_VISUALS)).toHaveLength(13);
-    for (const action of Object.keys(RESIDENT_ACTION_VISUALS) as Array<keyof typeof RESIDENT_ACTION_VISUALS>) {
+    for (const action of Object.keys(RESIDENT_ACTION_VISUALS) as Array<
+      keyof typeof RESIDENT_ACTION_VISUALS
+    >) {
       const pose = residentActivityPose(action, 2_400, 0.7);
       expect(Math.abs(pose.offsetY)).toBeLessThanOrEqual(1.5);
       expect(Math.abs(pose.rotation)).toBeLessThanOrEqual(0.052);
     }
     expect(residentActivityGlyph('WORKING')).toBe('⚒');
     expect(residentActivityGlyph('MOVING')).toBe('');
-    expect(residentActivityPose('FIREFIGHTING', 2_400, 0.7, true)).toEqual({ offsetY: 0, rotation: 0 });
+    expect(residentActivityPose('FIREFIGHTING', 2_400, 0.7, true)).toEqual({
+      offsetY: 0,
+      rotation: 0
+    });
   });
 });

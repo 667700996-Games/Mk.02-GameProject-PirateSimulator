@@ -85,6 +85,36 @@ test('publishes complete non-core tier bodies without loading them into a fresh 
   }
 });
 
+test('publishes resident work and combat loops while keeping combat art demand-loaded', async ({
+  page
+}) => {
+  await createSettlement(page);
+  const initialResources = await page.evaluate(() =>
+    performance.getEntriesByType('resource').map((entry) => entry.name)
+  );
+  for (const atlas of ['resident-combat-front-atlas.png', 'resident-combat-rear-atlas.png']) {
+    expect(initialResources.some((url) => url.endsWith(`/art/settlement/${atlas}`))).toBe(false);
+  }
+  for (const asset of [
+    'resident-work-front-atlas.png',
+    'resident-work-front-atlas.json',
+    'resident-work-rear-atlas.png',
+    'resident-work-rear-atlas.json',
+    'resident-combat-front-atlas.png',
+    'resident-combat-front-atlas.json',
+    'resident-combat-rear-atlas.png',
+    'resident-combat-rear-atlas.json'
+  ]) {
+    const response = await page.request.get(`/art/settlement/${asset}`);
+    expect(response.ok(), `${asset} returned ${response.status()}`).toBe(true);
+    expect(response.headers()['content-type']).toContain(
+      asset.endsWith('.png') ? 'image/png' : 'application/json'
+    );
+    const body = await response.body();
+    expect(body.byteLength).toBeGreaterThan(asset.endsWith('.png') ? 1_000_000 : 1_000);
+  }
+});
+
 test('places a terrain-bound building and runs its physical construction flow', async ({
   page
 }, testInfo) => {
