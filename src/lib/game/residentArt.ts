@@ -28,6 +28,7 @@ export const RESIDENT_WALK_FRAME_MS = 145;
 export const RESIDENT_WALK_SEQUENCE = [0, 1, 2, 1] as const;
 export const RESIDENT_ACTION_FRAME_MS = { work: 170, combat: 125 } as const;
 export const RESIDENT_ACTION_SEQUENCE = [0, 1, 2, 1] as const;
+export const RESIDENT_ACTION_DISPLAY_SCALE = 1.35;
 export type ResidentFacing = 'front-left' | 'front-right' | 'rear-left' | 'rear-right';
 export type ResidentActionAnimation = keyof typeof RESIDENT_ACTION_FRAME_MS;
 

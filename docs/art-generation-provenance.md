@@ -964,3 +964,13 @@ Lighting/mood: restrained warm upper-left maritime daylight, cool lower-right am
 Constraints: change only the eight tier-2 structures into tier-3 upgrades; preserve all identities, order, direction, scale family and positions; exactly eight unoccupied structures; no people, human silhouettes, animals, combat, bodies, blood, ships, vehicles, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, borders or grid lines.
 Avoid: changing categories, arbitrary fantasy ornament, modern military equipment or communications technology, tier-2 simplicity, bright mobile-game colors, photorealism, top-down or front elevation, black background, transparent checkerboard, malformed architecture, flames or smoke outside structures, floating parts, boundary contact, magenta fringe or unreadable clutter.
 ```
+
+## 주민 작업·전투 전용 3프레임 아틀라스
+
+- 프로젝트 자산: `resident-work-front-atlas.png`, `resident-work-rear-atlas.png`, `resident-combat-front-atlas.png`, `resident-combat-rear-atlas.png`
+- 프레임 정의: 같은 이름의 JSON 네 개, 파일마다 8개 역할×3프레임
+- 생성 방식: 기존 전·후면 보행 아틀라스를 정체성 편집 대상으로 사용한 내장 이미지 생성 도구 `precise-object-edit`
+- 폴백 생성기·CLI: 사용하지 않음
+- 후처리: 단색 배경을 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 네 파일 모두 1536×1024 8-bit RGBA, 각 역할·행 사이에 알파 0 분리선, 실제 분리선을 기준으로 한 240×420 공통 가상 캔버스와 24프레임 JSON
+- 전체 편집 원본 경로와 정확한 생성·프레이밍·무기 분리 프롬프트: [`resident-action-art-provenance.md`](resident-action-art-provenance.md)

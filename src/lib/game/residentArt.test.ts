@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   RESIDENT_ACTION_ATLAS_SOURCES,
+  RESIDENT_ACTION_DISPLAY_SCALE,
   RESIDENT_ACTION_FRAME_MS,
   RESIDENT_COMBAT_FRONT_ATLAS_DATA,
   RESIDENT_COMBAT_FRONT_ATLAS_IMAGE,
@@ -108,6 +109,8 @@ describe('settlement resident art', () => {
   });
 
   it('routes active labor and defense actions to dedicated three-frame loops', () => {
+    expect(RESIDENT_ACTION_DISPLAY_SCALE).toBeGreaterThan(1);
+    expect(RESIDENT_ACTION_DISPLAY_SCALE).toBeLessThan(1.5);
     expect(RESIDENT_ACTION_FRAME_MS).toEqual({ work: 170, combat: 125 });
     expect(residentActionAnimation('WORKING')).toBe('work');
     expect(residentActionAnimation('FIREFIGHTING')).toBe('work');

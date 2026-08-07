@@ -38,6 +38,12 @@ async function createSettlement(page: import('@playwright/test').Page): Promise<
       response.url().endsWith('/art/settlement/resident-walk-rear-atlas.png')
     ),
     page.waitForResponse((response) =>
+      response.url().endsWith('/art/settlement/resident-work-front-atlas.png')
+    ),
+    page.waitForResponse((response) =>
+      response.url().endsWith('/art/settlement/resident-work-rear-atlas.png')
+    ),
+    page.waitForResponse((response) =>
       response.url().endsWith('/art/settlement/building-progression-overlays-atlas.png')
     )
   ]);
@@ -92,6 +98,9 @@ test('publishes resident work and combat loops while keeping combat art demand-l
   const initialResources = await page.evaluate(() =>
     performance.getEntriesByType('resource').map((entry) => entry.name)
   );
+  for (const atlas of ['resident-work-front-atlas.png', 'resident-work-rear-atlas.png']) {
+    expect(initialResources.some((url) => url.endsWith(`/art/settlement/${atlas}`))).toBe(true);
+  }
   for (const atlas of ['resident-combat-front-atlas.png', 'resident-combat-rear-atlas.png']) {
     expect(initialResources.some((url) => url.endsWith(`/art/settlement/${atlas}`))).toBe(false);
   }
@@ -112,6 +121,10 @@ test('publishes resident work and combat loops while keeping combat art demand-l
     );
     const body = await response.body();
     expect(body.byteLength).toBeGreaterThan(asset.endsWith('.png') ? 1_000_000 : 1_000);
+    if (asset.endsWith('.json')) {
+      const atlas = JSON.parse(body.toString()) as { frames?: Record<string, unknown> };
+      expect(Object.keys(atlas.frames ?? {}), `${asset} frame count`).toHaveLength(24);
+    }
   }
 });
 

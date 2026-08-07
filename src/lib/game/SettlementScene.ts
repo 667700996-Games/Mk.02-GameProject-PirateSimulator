@@ -32,6 +32,7 @@ import {
 } from './buildingProgressionArt';
 import {
   RESIDENT_ACTION_ATLAS_SOURCES,
+  RESIDENT_ACTION_DISPLAY_SCALE,
   RESIDENT_WALK_ATLAS_DATA,
   RESIDENT_WALK_FRONT_ATLAS_IMAGE,
   RESIDENT_WALK_FRONT_ATLAS_KEY,
@@ -281,7 +282,10 @@ export class SettlementScene extends Phaser.Scene {
       if (object.sprite.texture.key !== atlasKey) object.sprite.setTexture(atlasKey, frame);
       else if (object.sprite.frame.name !== frame) object.sprite.setFrame(frame);
       object.sprite
-        .setDisplaySize(object.displayWidth, object.displayHeight)
+        .setDisplaySize(
+          object.displayWidth * (actionAnimated ? RESIDENT_ACTION_DISPLAY_SCALE : 1),
+          object.displayHeight * (actionAnimated ? RESIDENT_ACTION_DISPLAY_SCALE : 1)
+        )
         .setFlipX(residentFacingFlipX(object.facing));
       const pose = residentActivityPose(
         object.action,
