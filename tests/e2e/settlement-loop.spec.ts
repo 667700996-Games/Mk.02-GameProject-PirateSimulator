@@ -7,7 +7,11 @@ const DEFERRED_BUILDING_ATLASES = [
   'industry-buildings-tier2-atlas.png',
   'industry-buildings-tier3-atlas.png',
   'society-buildings-atlas.png',
+  'society-buildings-tier2-atlas.png',
+  'society-buildings-tier3-atlas.png',
   'logistics-fleet-buildings-atlas.png',
+  'logistics-fleet-buildings-tier2-atlas.png',
+  'logistics-fleet-buildings-tier3-atlas.png',
   'livelihood-service-buildings-atlas.png',
   'civic-defense-buildings-atlas.png'
 ] as const;
@@ -50,14 +54,21 @@ async function createSettlement(page: import('@playwright/test').Page): Promise<
   }
 }
 
-test('publishes complete industry tier bodies without loading them into a fresh settlement', async ({
+test('publishes complete non-core tier bodies without loading them into a fresh settlement', async ({
   page
 }) => {
   await createSettlement(page);
   const initialResources = await page.evaluate(() =>
     performance.getEntriesByType('resource').map((entry) => entry.name)
   );
-  for (const atlas of ['industry-buildings-tier2-atlas.png', 'industry-buildings-tier3-atlas.png']) {
+  for (const atlas of [
+    'industry-buildings-tier2-atlas.png',
+    'industry-buildings-tier3-atlas.png',
+    'society-buildings-tier2-atlas.png',
+    'society-buildings-tier3-atlas.png',
+    'logistics-fleet-buildings-tier2-atlas.png',
+    'logistics-fleet-buildings-tier3-atlas.png'
+  ]) {
     expect(initialResources.some((url) => url.endsWith(`/art/settlement/${atlas}`))).toBe(false);
     const response = await page.request.get(`/art/settlement/${atlas}`);
     expect(response.ok(), `${atlas} returned ${response.status()}`).toBe(true);
@@ -158,7 +169,10 @@ test('loads distinct core building bodies as a facility reaches tiers two and th
   await page.getByRole('button', { name: '확장', exact: true }).click();
   await page.getByRole('button', { name: '3×', exact: true }).click();
   const tierTwo = await tierTwoResponse;
-  expect(tierTwo.ok() || tierTwo.status() === 304, `${tierTwo.url()} returned ${tierTwo.status()}`).toBe(true);
+  expect(
+    tierTwo.ok() || tierTwo.status() === 304,
+    `${tierTwo.url()} returned ${tierTwo.status()}`
+  ).toBe(true);
   if (tierTwo.status() !== 304) expect(tierTwo.headers()['content-type']).toContain('image/png');
   await expect(page.getByTestId('selected-building-level')).toHaveText('2', { timeout: 30_000 });
 
@@ -167,8 +181,15 @@ test('loads distinct core building bodies as a facility reaches tiers two and th
   );
   await page.getByRole('button', { name: '확장', exact: true }).click();
   const tierThree = await tierThreeResponse;
-  expect(tierThree.ok() || tierThree.status() === 304, `${tierThree.url()} returned ${tierThree.status()}`).toBe(true);
-  if (tierThree.status() !== 304) expect(tierThree.headers()['content-type']).toContain('image/png');
+  expect(
+    tierThree.ok() || tierThree.status() === 304,
+    `${tierThree.url()} returned ${tierThree.status()}`
+  ).toBe(true);
+  if (tierThree.status() !== 304)
+    expect(tierThree.headers()['content-type']).toContain('image/png');
   await expect(page.getByTestId('selected-building-level')).toHaveText('3', { timeout: 30_000 });
-  await page.screenshot({ path: testInfo.outputPath('tier-three-core-facility.png'), fullPage: true });
+  await page.screenshot({
+    path: testInfo.outputPath('tier-three-core-facility.png'),
+    fullPage: true
+  });
 });

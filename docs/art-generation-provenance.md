@@ -139,7 +139,7 @@ Avoid: duplicated silhouettes, modern machinery, fantasy magic, bright mobile-ga
 
 ### 최초 2단계 생성 프롬프트
 
-~~~text
+```text
 Use case: precise-object-edit
 Asset type: production tier-2 isometric industry-building sprite atlas for the browser game "검은물결: 해적 군주"
 Input image: Image 1 is the edit target and authoritative layout, building-identity, camera, scale, palette, material and style reference.
@@ -164,11 +164,11 @@ Scene/backdrop: replace every empty pixel with one perfectly flat uniform solid 
 Lighting/mood: restrained warm upper-left maritime daylight with cool lower-right ambient occlusion; enclosed furnace, oven and window glow only; consistent across all cells.
 Constraints: change only the nine buildings into tier-2 upgrades; preserve all identities, order, camera, scale and cell positions; exactly nine buildings; no people, creatures, ships, vehicles beyond empty mine carts, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, grid lines or structures crossing cell boundaries.
 Avoid: redesigning a building into a different category, tier-3 fortress scale, modern machinery, fantasy magic, photorealism, bright mobile-game colors, top-down or front elevation, black background, transparent checkerboard, malformed equipment, floating parts, magenta fringe, tiny unreadable clutter.
-~~~
+```
 
 ### 최종 셀 점유율 보정 프롬프트
 
-~~~text
+```text
 Use case: precise-object-edit
 Asset type: production framing correction for a tier-2 isometric industry-building sprite atlas
 Input images: Image 1 is the edit target containing the approved tier-2 designs. Image 2 is a scale, centering, camera and per-cell footprint reference only; do not revert to its tier-1 architecture.
@@ -179,7 +179,7 @@ Preserve from Image 1: every upgraded tier-2 architecture, added crane, portal, 
 Scene/backdrop: perfectly flat uniform solid #ff00ff across every empty pixel; no terrain, floor, cast shadow, contact shadow, gradient, texture, reflection, vignette, border or grid line. Do not use magenta inside structures.
 Constraints: exactly nine buildings; one complete building per cell; no people, creatures, text, labels, icons, UI, logos, watermark, extra objects, overlap or cropping.
 Avoid: reverting to Image 2's simpler tier-1 architecture, redesigning, cell swapping, tiny buildings, boundary contact, blur, loss of detail, altered perspective, black background or transparent checkerboard.
-~~~
+```
 
 ## 산업 건물 3단계 전용 본체 아틀라스
 
@@ -194,7 +194,7 @@ Avoid: reverting to Image 2's simpler tier-1 architecture, redesigning, cell swa
 
 ### 최종 생성 프롬프트
 
-~~~text
+```text
 Use case: precise-object-edit
 Asset type: production tier-3 isometric industry-building sprite atlas for the browser game "검은물결: 해적 군주"
 Input image: Image 1 is the approved tier-2 edit target and authoritative layout, camera, scale, cell occupancy, building-identity, palette, material and style reference.
@@ -219,7 +219,7 @@ Scene/backdrop: every empty pixel must be one perfectly flat uniform solid #ff00
 Lighting/mood: restrained warm upper-left maritime daylight, cool lower-right ambient occlusion and controlled enclosed furnace/window glow; consistent across cells.
 Constraints: change only the nine tier-2 structures into tier-3 upgrades; preserve all identities, order, direction, camera, scale family and positions; exactly nine buildings; no people, creatures, ships, modern vehicles, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, borders or grid lines.
 Avoid: changing categories, arbitrary fantasy ornament, modern industrial machinery, tier-2 simplicity, photorealism, bright mobile-game colors, top-down or front elevation, black background, transparent checkerboard, malformed equipment, floating parts, boundary contact, magenta fringe or unreadable clutter.
-~~~
+```
 
 ## 8종 주민 역할 전면 3프레임 보행 아틀라스
 
@@ -234,7 +234,7 @@ Avoid: changing categories, arbitrary fantasy ornament, modern industrial machin
 
 ### 최종 생성 프롬프트
 
-~~~text
+```text
 Use case: stylized-concept
 Asset type: production front-direction three-frame walking sprite atlas for the browser game "검은물결: 해적 군주"
 Input image: Image 1 is the authoritative character-identity, outfit, equipment, scale, front three-quarter camera, palette and rendering reference. Generate new walking poses; do not edit Image 1.
@@ -259,7 +259,7 @@ Scene/backdrop: perfectly flat uniform solid #ff00ff chroma-key background acros
 Lighting/mood: restrained warm upper-left daylight with cool lower-right ambient shading contained inside each sprite.
 Constraints: exactly 24 sprites; exactly eight stable identities repeated across three frames; no extra people, swapped roles, missing tools, changing faces, changing outfits, duplicated walk poses, scenery, buildings, terrain, labels, letters, numbers, icons, logos or watermark.
 Avoid: running, jumping, dramatic combat, front-facing orthographic mugshot, side-only profile, rear view, malformed limbs or hands, floating equipment, inconsistent body scale, modern clothing, fantasy armor, bright cartoon colors, photorealism, black background, transparent checkerboard, cell overlap, magenta fringe.
-~~~
+```
 
 ## 8종 주민 역할 후면 3프레임 보행 아틀라스
 
@@ -274,7 +274,7 @@ Avoid: running, jumping, dramatic combat, front-facing orthographic mugshot, sid
 
 ### 최종 생성 프롬프트
 
-~~~text
+```text
 Use case: stylized-concept
 Asset type: production rear-direction three-frame walking sprite atlas for the browser game "검은물결: 해적 군주"
 Input image: Image 1 is the authoritative character-identity, outfit, equipment, scale, rear three-quarter camera, palette and rendering reference. Generate new walking poses; do not edit Image 1.
@@ -299,7 +299,7 @@ Scene/backdrop: perfectly flat uniform solid #ff00ff chroma-key background acros
 Lighting/mood: restrained warm upper-left daylight with cool lower-right ambient shading contained inside each sprite.
 Constraints: exactly 24 rear-facing sprites; exactly eight stable identities repeated across three frames; no front-facing faces, looking over shoulders, extra people, swapped roles, missing tools, changing outfits, duplicated walk poses, scenery, buildings, terrain, labels, letters, numbers, icons, logos or watermark.
 Avoid: running, jumping, dramatic combat, front or side-only views, malformed limbs or hands, floating equipment, inconsistent body scale, modern clothing, fantasy armor, bright cartoon colors, photorealism, black background, transparent checkerboard, cell overlap, magenta fringe.
-~~~
+```
 
 ## 핵심 건물 2단계 전용 본체 아틀라스
 
@@ -532,6 +532,99 @@ Input images: Image 1 is the edit target, the existing 3-column by 3-row pirate 
 Primary request: remove every human figure from the entire atlas. In particular, remove all three visible people standing in front of and beside the PIRATE BARRACKS in row 1 column 2. Reconstruct only the small occluded building steps, timber deck, weapon racks, crates or barrels behind them so the barracks remains an unoccupied building sprite.
 Constraints: change only the human figures and the tiny directly occluded pixels behind them; preserve all nine buildings, their exact 3-by-3 order, silhouettes, camera angle, materials, lighting, colors, scale, spacing, flat #ff00ff background and canvas framing unchanged; do not add people, characters, animals, text, labels, symbols, logos or watermark; keep every building fully contained and keep the background uniformly magenta.
 Avoid: redesigning buildings, moving props, changing roofs or banners, adding new scenery, changing perspective, cropping, blurry repairs, extra objects outside the edited locations.
+```
+
+## 사회 건물 2단계 전용 본체 아틀라스
+
+- 프로젝트 자산: `static/art/settlement/society-buildings-tier2-atlas.png`
+- 프레임 정의: `static/art/settlement/society-buildings-atlas.json` 공유
+- 최종 생성 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-23093252-2b26-4fa1-901f-c946267b3e2f.png`
+- 생성 방식: 내장 이미지 생성 도구 `precise-object-edit`
+- 편집 대상: `static/art/settlement/society-buildings-atlas.png`
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1254×1254 RGBA, 3×3 고정 프레임, 9개 건물 순서·시점·정체성 유지, 네 모서리 완전 투명, 사람·연기·텍스트 없음
+
+### 최종 생성 프롬프트
+
+```text
+Use case: precise-object-edit
+Asset type: production tier-2 isometric society-building sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the edit target and authoritative layout, building identity, cell occupancy, fixed orthographic isometric camera, palette, material and Dark Pirate Maritime Command style reference.
+Primary request: transform the existing nine structures into clearly upgraded tier-2 society, housing, welfare, military and administration buildings while preserving the exact 3-column by 3-row atlas, exact order, cell boundaries, camera direction and footprint family.
+Cell order, left to right:
+row 1: communal bunkhouse, pirate barracks, skilled-worker house.
+row 2: officer quarters, tavern, infirmary.
+row 3: powder magazine, captain's lodge, expedition office.
+Tier-2 changes:
+- Communal bunkhouse: reinforced two-story longhouse with a compact rear sleeping wing, broader covered gallery, improved exterior stair, additional shuttered windows, organized boot lockers, wash barrels and shared porch; still practical laborer housing.
+- Pirate barracks: fortified stone-footed barracks with thicker palisade corners, secure double doors, roofed weapon store, expanded empty drill deck, training dummies and restrained crimson pennants; no people.
+- Skilled-worker house: expanded two-story craftspeople residence with dressed-stone lower wall, improved shingles, enclosed side workshop bay, tool chest, covered materials rack, flower boxes and warm windows.
+- Officer quarters: dignified enlarged residence with stronger stone base, private side wing, broad upper balcony, covered chart veranda, brass lanterns and restrained black-crimson naval pennants; elevated status but not a palace.
+- Tavern: prosperous two-story pirate tavern with reinforced porch, larger weathered crimson canopy, enclosed barrel cellar access, roofed outdoor tables, compact empty music corner and more amber windows; no written sign and no people.
+- Infirmary: expanded clean stone-and-timber clinic with a small separate ward wing, broader pale canvas awnings, medicine cabinet, herb racks, covered stretcher bay, rainwater cistern and restrained warm windows; no cross symbol.
+- Powder magazine: larger heavily buttressed stone magazine with thicker blast walls, two lightning rods, protected ventilation, double iron-banded doors, sand barrels and roofed loading vestibule; absolutely no fire or loose powder.
+- Captain's lodge: expanded fortified command residence with higher stone foundation, larger map-room balcony, enclosed council wing, improved observation cupola, brass lanterns, guarded architecture without guards, and restrained black-crimson banners; remain distinct from officer quarters.
+- Expedition office: expanded two-story navigation hall with covered chart veranda, enclosed supply-planning wing, two telescope mounts, signal mast, map racks, sealed supply crates and brass instruments; no readable text.
+Style/medium: premium painterly high-detail 2.5D isometric strategy-game sprites; stylized realism; weathered maritime hardwood, dark slate, rugged masonry, aged iron and brass, beige canvas and restrained crimson-black cloth; physically plausible Age-of-Sail construction.
+Composition/framing: preserve the exact 1254x1254 canvas and exact 3-by-3 grid of 418x418 cells; one complete upgraded building centered inside each source cell; retain approximately the source cell occupancy while making upgrades visibly denser; preserve at least 7 pixels of flat magenta at shared cell boundaries and 12 pixels at outer edges; every chimney, roof, stair, banner, mast, awning, balcony and foundation fully contained; no overlap or cropping.
+Scene/backdrop: replace every empty pixel with one perfectly flat uniform solid #ff00ff chroma-key background for local removal. No terrain, floor, cast shadow, contact shadow, gradient, texture, reflection, vignette or lighting variation in the background. Do not use magenta or pink inside structures.
+Lighting/mood: restrained warm upper-left maritime daylight, cool lower-right ambient occlusion and contained warm window/lantern accents; consistent across all cells.
+Constraints: change only the nine structures into tier-2 upgrades; preserve identities, order, direction, scale family and positions; exactly nine unoccupied buildings; no people, human silhouettes, creatures, ships, vehicles, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, borders or grid lines.
+Avoid: changing categories, tier-3 fortress/city scale, modern architecture, fantasy magic, bright mobile-game colors, photorealism, top-down or front elevation, black background, transparent checkerboard, cell-boundary contact, floating parts, magenta fringe or tiny unreadable clutter.
+```
+
+## 사회 건물 3단계 전용 본체 아틀라스
+
+- 프로젝트 자산: `static/art/settlement/society-buildings-tier3-atlas.png`
+- 프레임 정의: `static/art/settlement/society-buildings-atlas.json` 공유
+- 최초 3단계 생성 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-1a7a03fc-3f4c-4524-ae51-34296992b467.png`
+- 최종 연기 제거 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-13a28dab-c58b-4857-abec-3fcc86d40b96.png`
+- 생성 방식: 내장 이미지 생성 도구 `precise-object-edit` 후 동일 방식의 국소 정리
+- 편집 대상: 위 2단계 생성 원본
+- 폴백 생성기: 사용하지 않음
+- 편집 근거: 최초 3단계 결과의 공동 숙소 굴뚝 위 회색 연기 두 가닥만 제거하고 물리 건물 픽셀은 보존
+- 후처리: 최종 연기 제거 원본의 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1254×1254 RGBA, 3×3 고정 프레임, 네 모서리 완전 투명, 2단계보다 주거 동·의료 병동·방어 구조·행정 공간이 명확히 강화됨, 사람·연기·텍스트 없음
+
+### 최초 3단계 생성 프롬프트
+
+```text
+Use case: precise-object-edit
+Asset type: production tier-3 isometric society-building sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the approved tier-2 edit target and authoritative layout, cell occupancy, camera, building identity, palette, material and Dark Pirate Maritime Command style reference.
+Primary request: transform all nine tier-2 structures into visibly mature tier-3 society, housing, welfare, military and administration buildings while preserving the exact 3-column by 3-row atlas, exact order, cell boundaries, fixed orthographic isometric camera and footprint family.
+Cell order, left to right:
+row 1: communal bunkhouse, pirate barracks, skilled-worker house.
+row 2: officer quarters, tavern, infirmary.
+row 3: powder magazine, captain's lodge, expedition office.
+Tier-3 changes:
+- Communal bunkhouse: dense three-level stone-footed communal residence with two connected sleeping wings, broad covered galleries, twin safe exterior stairs, many organized shuttered windows, shared galley chimney, wash station, lockers and sturdy common porch; practical urban pirate housing, not luxurious.
+- Pirate barracks: formidable stone-and-heavy-timber barracks citadel with protected upper drill terrace, crenellated palisade corners, central secure gate, enclosed armory annex, covered equipment bays, multiple training dummies and restrained crimson-black pennants; no people.
+- Skilled-worker house: prosperous three-level guild residence and workshop with dressed-stone lower floor, quality slate roofs, two enclosed craft bays, covered material hoist, secure tool store, flower boxes, clean drainage and warm windows.
+- Officer quarters: prestigious command townhouse with tall stone base, two private residential wings, enclosed upper gallery, broad map balcony, sheltered meeting veranda, brass lamps and restrained naval pennants; high status but clearly below the captain's lodge.
+- Tavern: grand three-level pirate social house with broad reinforced porch, roofed feast terrace, enclosed barrel cellar doors, empty music and gaming alcoves, deep weathered crimson awnings, many warm windows and lanterns; no sign and no people.
+- Infirmary: mature stone hospital with two distinct clean ward wings, central treatment hall, broad pale awnings, enclosed medicine store, herb drying gallery, covered stretcher entrance, elevated rainwater tank and restrained warm windows; no cross symbol.
+- Powder magazine: fortress-grade isolated masonry vault with massive segmented blast buttresses, protected double-door loading lock, multiple lightning conductors, covered ventilation stacks, separated powder-safe annex, sand stores and guarded architecture without guards; absolutely no fire or loose powder.
+- Captain's lodge: commanding fortified manor and government seat with monumental stone base, central map hall, council chamber wing, broad command balcony, tall observation cupola, beacon frame without flame, brass lanterns and disciplined black-crimson banners; clearly superior to officer quarters.
+- Expedition office: master fleet-planning headquarters with three-level navigation hall, enclosed chart archive, large covered planning veranda, elevated signal platform, multiple telescope mounts, protected map and instrument stores, supply dispatch bays, restrained pennants and brass instruments; no readable text.
+Style/medium: premium painterly high-detail 2.5D isometric strategy-game sprites; stylized realism; aged hardwood, dark slate, rugged masonry, blackened iron, aged brass, beige canvas and restrained crimson-black cloth; physically plausible mature Age-of-Sail settlement architecture.
+Composition/framing: preserve the exact 1254x1254 canvas and exact 3-by-3 grid of 418x418 cells; one complete upgraded structure centered inside each original cell; retain approximately the same cell occupancy as Image 1; keep at least 5 clear pixels of flat magenta from shared cell boundaries and 10 pixels from outer canvas edges; every roof, chimney, stair, cupola, banner, mast, awning, balcony and foundation fully contained; no overlap or cropping.
+Scene/backdrop: every empty pixel must be one perfectly flat uniform solid #ff00ff chroma-key background for local removal. No terrain, floor, cast shadow, contact shadow, gradient, texture, reflection, vignette or lighting variation in the background. Do not use magenta or pink inside structures.
+Lighting/mood: restrained warm upper-left maritime daylight, cool lower-right ambient occlusion and controlled contained window/lantern glow; consistent across cells.
+Constraints: change only the nine tier-2 structures into tier-3 upgrades; preserve all identities, order, direction, scale family and positions; exactly nine unoccupied buildings; no people, human silhouettes, creatures, ships, modern vehicles, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, borders or grid lines.
+Avoid: changing categories, arbitrary fantasy ornament, modern architecture, tier-2 simplicity, bright mobile-game colors, photorealism, top-down or front elevation, black background, transparent checkerboard, malformed architecture, floating parts, boundary contact, magenta fringe or unreadable clutter.
+```
+
+### 3단계 연기 제거 정밀 편집 프롬프트
+
+```text
+Use case: precise-object-edit
+Asset type: final cleanup of a production tier-3 isometric society-building sprite atlas
+Input image: Image 1 is the edit target and otherwise approved final 1254x1254 3-by-3 atlas.
+Primary request: remove only the two faint gray smoke wisps above the communal bunkhouse chimneys in row 1 column 1. Replace those smoke pixels with the exact surrounding perfectly flat solid #ff00ff chroma-key background.
+Preserve unchanged: all nine buildings, every chimney and physical building pixel, exact cell order, architecture, materials, scale, lighting, color, camera, magenta background, framing, flags, banners, awnings, equipment and empty spaces. Do not remove or change the chimneys themselves.
+Constraints: change only the smoke wisps and the directly occupied smoke pixels; no smoke, steam, haze, particles or glow outside any structure; no people, text, labels, logos, watermark, new objects, blur, crop, repositioning, redesign or color shift. Keep the background uniformly #ff00ff with no gradient or texture.
 ```
 
 ## 8종 주민 역할 후면 아틀라스
