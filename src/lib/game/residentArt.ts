@@ -6,8 +6,15 @@ export const RESIDENT_ATLAS_DATA = '/art/settlement/resident-roles-atlas.json';
 export const RESIDENT_REAR_ATLAS_KEY = 'settlement-resident-roles-rear';
 export const RESIDENT_REAR_ATLAS_IMAGE = '/art/settlement/resident-roles-rear-atlas.png';
 export const RESIDENT_REAR_ATLAS_DATA = '/art/settlement/resident-roles-rear-atlas.json';
-export const RESIDENT_FRAME_RATIO = 512 / 384;
-export type ResidentFacing = 'front' | 'rear';
+export const RESIDENT_WALK_FRONT_ATLAS_KEY = 'settlement-resident-walk-front';
+export const RESIDENT_WALK_FRONT_ATLAS_IMAGE = '/art/settlement/resident-walk-front-atlas.png';
+export const RESIDENT_WALK_REAR_ATLAS_KEY = 'settlement-resident-walk-rear';
+export const RESIDENT_WALK_REAR_ATLAS_IMAGE = '/art/settlement/resident-walk-rear-atlas.png';
+export const RESIDENT_WALK_ATLAS_DATA = '/art/settlement/resident-walk-atlas.json';
+export const RESIDENT_FRAME_RATIO = 341 / 192;
+export const RESIDENT_WALK_FRAME_MS = 145;
+export const RESIDENT_WALK_SEQUENCE = [0, 1, 2, 1] as const;
+export type ResidentFacing = 'front-left' | 'front-right' | 'rear-left' | 'rear-right';
 
 export type ResidentArtFrame =
   | 'laborer'
@@ -91,22 +98,50 @@ export function residentArtFrame(job: JobId, tier: PopulationTier): ResidentArtF
 }
 
 export function residentDisplaySize(frame: ResidentArtFrame): { width: number; height: number } {
-  const width = frame === 'officer' ? 36 : frame === 'hauler' ? 35 : 34;
+  const width = frame === 'officer' ? 37 : frame === 'hauler' ? 36 : 35;
   return { width, height: width * RESIDENT_FRAME_RATIO };
 }
 
 export function residentAtlasKey(facing: ResidentFacing): string {
-  return facing === 'rear' ? RESIDENT_REAR_ATLAS_KEY : RESIDENT_ATLAS_KEY;
+  return facing.startsWith('rear') ? RESIDENT_REAR_ATLAS_KEY : RESIDENT_ATLAS_KEY;
+}
+
+export function residentWalkAtlasKey(facing: ResidentFacing): string {
+  return facing.startsWith('rear') ? RESIDENT_WALK_REAR_ATLAS_KEY : RESIDENT_WALK_FRONT_ATLAS_KEY;
+}
+
+export function residentFacingFlipX(facing: ResidentFacing): boolean {
+  return facing.endsWith('left');
+}
+
+export function residentWalkFrame(frame: ResidentArtFrame, index: 0 | 1 | 2): string {
+  return `${frame}-walk-${index}`;
+}
+
+export function residentWalkFrameIndex(
+  elapsedMs: number,
+  phaseOffsetMs: number,
+  moving: boolean,
+  reducedMotion = false
+): 0 | 1 | 2 {
+  if (!moving || reducedMotion) return 1;
+  const step = Math.floor(Math.max(0, elapsedMs + phaseOffsetMs) / RESIDENT_WALK_FRAME_MS);
+  return RESIDENT_WALK_SEQUENCE[step % RESIDENT_WALK_SEQUENCE.length];
 }
 
 export function residentFacingForMovement(
+  deltaScreenX: number,
   deltaScreenY: number,
   current: ResidentFacing,
   threshold = 0.18
 ): ResidentFacing {
-  if (deltaScreenY < -threshold) return 'rear';
-  if (deltaScreenY > threshold) return 'front';
-  return current;
+  let vertical: 'front' | 'rear' = current.startsWith('rear') ? 'rear' : 'front';
+  let horizontal: 'left' | 'right' = current.endsWith('left') ? 'left' : 'right';
+  if (deltaScreenY < -threshold) vertical = 'rear';
+  else if (deltaScreenY > threshold) vertical = 'front';
+  if (deltaScreenX < -threshold) horizontal = 'left';
+  else if (deltaScreenX > threshold) horizontal = 'right';
+  return `${vertical}-${horizontal}`;
 }
 
 export function residentCrowdOffset(id: string): { x: number; y: number } {

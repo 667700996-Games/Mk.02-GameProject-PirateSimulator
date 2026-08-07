@@ -24,19 +24,22 @@ import {
   buildingProgressionVisual
 } from './buildingProgressionArt';
 import {
-  RESIDENT_ATLAS_DATA,
-  RESIDENT_ATLAS_IMAGE,
-  RESIDENT_ATLAS_KEY,
-  RESIDENT_REAR_ATLAS_DATA,
-  RESIDENT_REAR_ATLAS_IMAGE,
-  RESIDENT_REAR_ATLAS_KEY,
+  RESIDENT_WALK_ATLAS_DATA,
+  RESIDENT_WALK_FRONT_ATLAS_IMAGE,
+  RESIDENT_WALK_FRONT_ATLAS_KEY,
+  RESIDENT_WALK_REAR_ATLAS_IMAGE,
+  RESIDENT_WALK_REAR_ATLAS_KEY,
   residentActivityGlyph,
   residentActivityPose,
-  residentAtlasKey,
   residentArtFrame,
   residentCrowdOffset,
   residentDisplaySize,
+  residentFacingFlipX,
   residentFacingForMovement,
+  residentWalkAtlasKey,
+  residentWalkFrame,
+  residentWalkFrameIndex,
+  type ResidentArtFrame,
   type ResidentFacing
 } from './residentArt';
 import {
@@ -112,9 +115,15 @@ export class SettlementScene extends Phaser.Scene {
       cargo: Phaser.GameObjects.Text;
       lastWorldX: number;
       lastWorldY: number;
+      targetX: number;
+      targetY: number;
       facing: ResidentFacing;
+      frame: ResidentArtFrame;
+      displayWidth: number;
+      displayHeight: number;
       action: ResidentAction;
       phase: number;
+      walkPhaseMs: number;
     }
   >();
 
@@ -133,11 +142,11 @@ export class SettlementScene extends Phaser.Scene {
     if (!this.textures.exists(BUILDING_PROGRESSION_ATLAS_KEY)) {
       this.load.atlas(BUILDING_PROGRESSION_ATLAS_KEY, BUILDING_PROGRESSION_ATLAS_IMAGE, BUILDING_PROGRESSION_ATLAS_DATA);
     }
-    if (!this.textures.exists(RESIDENT_ATLAS_KEY)) {
-      this.load.atlas(RESIDENT_ATLAS_KEY, RESIDENT_ATLAS_IMAGE, RESIDENT_ATLAS_DATA);
+    if (!this.textures.exists(RESIDENT_WALK_FRONT_ATLAS_KEY)) {
+      this.load.atlas(RESIDENT_WALK_FRONT_ATLAS_KEY, RESIDENT_WALK_FRONT_ATLAS_IMAGE, RESIDENT_WALK_ATLAS_DATA);
     }
-    if (!this.textures.exists(RESIDENT_REAR_ATLAS_KEY)) {
-      this.load.atlas(RESIDENT_REAR_ATLAS_KEY, RESIDENT_REAR_ATLAS_IMAGE, RESIDENT_REAR_ATLAS_DATA);
+    if (!this.textures.exists(RESIDENT_WALK_REAR_ATLAS_KEY)) {
+      this.load.atlas(RESIDENT_WALK_REAR_ATLAS_KEY, RESIDENT_WALK_REAR_ATLAS_IMAGE, RESIDENT_WALK_ATLAS_DATA);
     }
     if (!this.textures.exists(TERRAIN_ATLAS_KEY)) {
       this.load.atlas(TERRAIN_ATLAS_KEY, TERRAIN_ATLAS_IMAGE, TERRAIN_ATLAS_DATA);
@@ -163,13 +172,48 @@ export class SettlementScene extends Phaser.Scene {
     this.bindInput();
   }
 
-  update(time: number): void {
+  update(time: number, delta: number): void {
     const reducedMotion = this.bridge.getSettings().reducedMotion;
     for (const object of this.residentObjects.values()) {
       if (!object.container.visible) continue;
-      const pose = residentActivityPose(object.action, time, object.phase, reducedMotion);
+      const distance = Phaser.Math.Distance.Between(
+        object.container.x,
+        object.container.y,
+        object.targetX,
+        object.targetY
+      );
+      if (reducedMotion || distance > 240) {
+        object.container.setPosition(object.targetX, object.targetY);
+      } else if (distance > 0.24) {
+        const blend = 1 - Math.exp(-Math.min(delta, 50) / 105);
+        object.container.setPosition(
+          Phaser.Math.Linear(object.container.x, object.targetX, blend),
+          Phaser.Math.Linear(object.container.y, object.targetY, blend)
+        );
+      }
+      const remainingDistance = Phaser.Math.Distance.Between(
+        object.container.x,
+        object.container.y,
+        object.targetX,
+        object.targetY
+      );
+      const moving = !reducedMotion && remainingDistance > 0.3;
+      const atlasKey = residentWalkAtlasKey(object.facing);
+      const frame = residentWalkFrame(
+        object.frame,
+        residentWalkFrameIndex(time, object.walkPhaseMs, moving, reducedMotion)
+      );
+      if (object.sprite.texture.key !== atlasKey) object.sprite.setTexture(atlasKey, frame);
+      else if (object.sprite.frame.name !== frame) object.sprite.setFrame(frame);
+      object.sprite
+        .setDisplaySize(object.displayWidth, object.displayHeight)
+        .setFlipX(residentFacingFlipX(object.facing));
+      const pose = residentActivityPose(object.action, time, object.phase, reducedMotion || moving);
       object.sprite.setY(pose.offsetY).setRotation(pose.rotation);
-      object.shadow.setScale(1 - Math.min(0.12, Math.abs(pose.offsetY) * 0.045), 1);
+      object.shadow.setScale(
+        moving ? 0.94 : 1 - Math.min(0.12, Math.abs(pose.offsetY) * 0.045),
+        moving ? 0.92 : 1
+      );
     }
   }
 
@@ -648,13 +692,13 @@ export class SettlementScene extends Phaser.Scene {
       const phase = ([...resident.id].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 29) / 29 * Math.PI * 2;
       let object = this.residentObjects.get(resident.id);
       if (!object) {
-        const facing: ResidentFacing = 'front';
+        const facing: ResidentFacing = 'front-right';
         const container = this.add.container(point.x, point.y - 5);
         const shadow = this.add.ellipse(0, 2, 17, 6, 0x020a0c, 0.62);
-        const sprite = this.add.image(0, 0, residentAtlasKey(facing), frame)
+        const sprite = this.add.image(0, 0, residentWalkAtlasKey(facing), residentWalkFrame(frame, 1))
           .setOrigin(0.5, 0.93)
           .setDisplaySize(displaySize.width, displaySize.height);
-        const cargo = this.add.text(11, -32, '', {
+        const cargo = this.add.text(11, -46, '', {
           fontFamily: 'sans-serif',
           fontSize: '10px',
           color: '#ffe0a1',
@@ -665,21 +709,38 @@ export class SettlementScene extends Phaser.Scene {
         }).setOrigin(0.5);
         container.add([shadow, sprite, cargo]);
         this.residentLayer.add(container);
-        object = { container, sprite, shadow, cargo, lastWorldX: point.x, lastWorldY: point.y, facing, action: resident.action, phase };
+        object = {
+          container,
+          sprite,
+          shadow,
+          cargo,
+          lastWorldX: point.x,
+          lastWorldY: point.y,
+          targetX: point.x,
+          targetY: point.y - 5,
+          facing,
+          frame,
+          displayWidth: displaySize.width,
+          displayHeight: displaySize.height,
+          action: resident.action,
+          phase,
+          walkPhaseMs: phase / (Math.PI * 2) * 580
+        };
         this.residentObjects.set(resident.id, object);
       }
       object.action = resident.action;
       const deltaX = point.x - object.lastWorldX;
       const deltaY = point.y - object.lastWorldY;
-      object.facing = residentFacingForMovement(deltaY, object.facing);
-      const atlasKey = residentAtlasKey(object.facing);
-      if (object.sprite.texture.key !== atlasKey) object.sprite.setTexture(atlasKey, frame);
-      else if (object.sprite.frame.name !== frame) object.sprite.setFrame(frame);
+      object.facing = residentFacingForMovement(deltaX, deltaY, object.facing);
+      object.frame = frame;
+      object.displayWidth = displaySize.width;
+      object.displayHeight = displaySize.height;
       object.sprite.setDisplaySize(displaySize.width, displaySize.height).clearTint();
-      if (Math.abs(deltaX) > 0.18) object.sprite.setFlipX(deltaX < 0);
       object.lastWorldX = point.x;
       object.lastWorldY = point.y;
-      object.container.setVisible(true).setPosition(point.x, point.y - 5).setDepth(210 + renderX + renderY);
+      object.targetX = point.x;
+      object.targetY = point.y - 5;
+      object.container.setVisible(true).setDepth(210 + renderX + renderY);
       object.sprite.setAlpha(resident.action === 'SLEEPING' ? 0.68 : 1);
       if (resident.health < 30) object.sprite.setTint(0xd17a6c);
       else if (resident.action === 'FIREFIGHTING') object.sprite.setTint(0xffd28a);

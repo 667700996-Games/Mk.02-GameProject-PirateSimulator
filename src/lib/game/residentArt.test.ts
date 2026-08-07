@@ -8,13 +8,22 @@ import {
   RESIDENT_REAR_ATLAS_DATA,
   RESIDENT_REAR_ATLAS_IMAGE,
   RESIDENT_REAR_ATLAS_KEY,
+  RESIDENT_WALK_ATLAS_DATA,
+  RESIDENT_WALK_FRONT_ATLAS_IMAGE,
+  RESIDENT_WALK_FRONT_ATLAS_KEY,
+  RESIDENT_WALK_REAR_ATLAS_IMAGE,
+  RESIDENT_WALK_REAR_ATLAS_KEY,
   residentActivityGlyph,
   residentActivityPose,
   residentAtlasKey,
   residentArtFrame,
   residentCrowdOffset,
   residentDisplaySize,
-  residentFacingForMovement
+  residentFacingFlipX,
+  residentFacingForMovement,
+  residentWalkAtlasKey,
+  residentWalkFrame,
+  residentWalkFrameIndex
 } from './residentArt';
 import { JOB_NAMES } from '$lib/settlement/catalog';
 
@@ -35,21 +44,36 @@ describe('settlement resident art', () => {
     }
   });
 
-  it('selects front and rear atlases from stable screen-space movement', () => {
-    expect(residentAtlasKey('front')).toBe(RESIDENT_ATLAS_KEY);
-    expect(residentAtlasKey('rear')).toBe(RESIDENT_REAR_ATLAS_KEY);
-    expect(residentFacingForMovement(-0.19, 'front')).toBe('rear');
-    expect(residentFacingForMovement(0.19, 'rear')).toBe('front');
-    expect(residentFacingForMovement(-0.1, 'front')).toBe('front');
-    expect(residentFacingForMovement(0.1, 'rear')).toBe('rear');
+  it('selects four diagonal directions from stable screen-space movement', () => {
+    expect(residentAtlasKey('front-right')).toBe(RESIDENT_ATLAS_KEY);
+    expect(residentAtlasKey('rear-left')).toBe(RESIDENT_REAR_ATLAS_KEY);
+    expect(residentWalkAtlasKey('front-left')).toBe(RESIDENT_WALK_FRONT_ATLAS_KEY);
+    expect(residentWalkAtlasKey('rear-right')).toBe(RESIDENT_WALK_REAR_ATLAS_KEY);
+    expect(residentFacingForMovement(-0.19, -0.19, 'front-right')).toBe('rear-left');
+    expect(residentFacingForMovement(0.19, 0.19, 'rear-left')).toBe('front-right');
+    expect(residentFacingForMovement(-0.1, -0.1, 'front-right')).toBe('front-right');
+    expect(residentFacingForMovement(0, -0.2, 'front-left')).toBe('rear-left');
+    expect(residentFacingFlipX('front-left')).toBe(true);
+    expect(residentFacingFlipX('rear-right')).toBe(false);
   });
 
-  it('publishes both directional atlases from the settlement art path', () => {
+  it('uses a contact-passing-contact walk loop with a neutral reduced-motion frame', () => {
+    expect(residentWalkFrame('hauler', 2)).toBe('hauler-walk-2');
+    expect([0, 145, 290, 435, 580].map((time) => residentWalkFrameIndex(time, 0, true)))
+      .toEqual([0, 1, 2, 1, 0]);
+    expect(residentWalkFrameIndex(290, 0, false)).toBe(1);
+    expect(residentWalkFrameIndex(290, 0, true, true)).toBe(1);
+  });
+
+  it('publishes idle and walk atlases from the settlement art path', () => {
     for (const path of [
       RESIDENT_ATLAS_IMAGE,
       RESIDENT_ATLAS_DATA,
       RESIDENT_REAR_ATLAS_IMAGE,
-      RESIDENT_REAR_ATLAS_DATA
+      RESIDENT_REAR_ATLAS_DATA,
+      RESIDENT_WALK_FRONT_ATLAS_IMAGE,
+      RESIDENT_WALK_REAR_ATLAS_IMAGE,
+      RESIDENT_WALK_ATLAS_DATA
     ]) expect(path).toMatch(/^\/art\/settlement\/.*\.(png|json)$/);
   });
 
