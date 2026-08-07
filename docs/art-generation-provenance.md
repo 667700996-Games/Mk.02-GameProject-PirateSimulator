@@ -712,3 +712,89 @@ Materials/textures: readable wood grain, chipped masonry, worn shingles, rope fi
 Constraints: exactly twelve structures in the specified order; each cell contains one complete self-contained structure; no people, ships, animals, terrain tiles, water, roads, scenery, written labels, icons, letters, numbers, logos or watermark; no smoke, fire, glow, cable or effect beyond the physical sprite boundary; no overlap between cells; no cropping.
 Avoid: duplicated silhouettes, modern machinery, fantasy magic, bright mobile-game cartoon colors, photorealism, top-down camera, front-facing elevation, mismatched perspectives, floating parts, black background, transparent checkerboard, borders, dividers, grid lines, magenta fringe, tiny unreadable clutter.
 ```
+
+## 물류·수직 기반시설·함대 건물 2단계 전용 본체 아틀라스
+
+- 프로젝트 자산: `static/art/settlement/logistics-fleet-buildings-tier2-atlas.png`
+- 프레임 정의: `static/art/settlement/logistics-fleet-buildings-atlas.json` 공유
+- 최종 생성 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-b468fa61-a508-40bd-8f10-edab5f6824b8.png`
+- 생성 방식: 내장 이미지 생성 도구 `precise-object-edit`
+- 편집 대상: `static/art/settlement/logistics-fleet-buildings-atlas.png`
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 4×3 고정 프레임, 12개 구조물 순서·시점·정체성 유지, 네 모서리 완전 투명, 인물·선박·텍스트·외부 연기 없음
+
+### 최종 생성 프롬프트
+
+```text
+Use case: precise-object-edit
+Asset type: production tier-2 isometric logistics, vertical-infrastructure and fleet-building sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the edit target and authoritative exact layout, building identity, cell occupancy, fixed orthographic isometric camera, scale family, palette, materials and Dark Pirate Maritime Command art direction.
+Primary request: transform all twelve existing structures into clearly upgraded tier-2 logistics, vertical-infrastructure and fleet facilities while preserving the exact 4-column by 3-row atlas, exact cell order, cell boundaries, camera direction and footprint family.
+Cell order, left to right:
+row 1: local storage, distribution depot, dock warehouse, cargo lift.
+row 2: zipline post, bridge, stairs, ramp.
+row 3: cliff platform, dry dock, supply depot, cannon foundry.
+Tier-2 changes:
+- Local storage: reinforced roofed neighborhood store with raised timber floor, lockable slatted walls on two sides, organized shelf bays, covered sacks and crates, rain gutters and a compact ledger counter; still a small local store.
+- Distribution depot: expanded timber-and-stone dispatch depot with two covered sorting bays, clearly separated incoming and outgoing cargo stacks, improved cart dock, hoist beam, pulley rail and weatherproof office nook; no vehicles or people.
+- Dock warehouse: enlarged two-level waterfront warehouse with heavy stone quay base, broad double doors, roofed loading deck, side crane, secure barrel cellar, upper loft vents and organized cargo bays.
+- Cargo lift: reinforced tall freight elevator with braced timber tower, stone footings, twin winding drums, protected upper machinery canopy, counterweight cage, larger empty loading platform and robust safety rails.
+- Zipline post: upgraded anchored freight zipline tower with heavy stone feet, double cable wheels, brake drum, covered operator platform, suspended empty cargo cage and secondary support cable; no person.
+- Bridge: wider reinforced timber truss bridge on dressed-stone abutments with cross-bracing, protected rope-and-timber rails, lantern posts without flames and a strengthened freight deck; remain a standalone bridge segment.
+- Stairs: durable multi-flight timber-and-stone stair tower with switchback landings, roofed rest platform, strong handrails, cargo-pulley side rail and masonry foundations; clearly stairs, not a building.
+- Ramp: broad reinforced freight ramp with stone sidewalls, heavy timber deck, wheel guides, drainage, landing platform and high-capacity bracing; keep a clean traversable center.
+- Cliff platform: expanded two-level cliffside loading platform with deep rock-anchor beams, covered winch station, strong guardrails, cargo staging markings without text, a small material hoist and visible underside bracing.
+- Dry dock: mature stone-lined dry dock with taller retaining walls, complete keel cradle, drainage sluice, two service cranes, capstan, timber work decks and a small covered shipwright bay; empty, no ship.
+- Supply depot: fortified fleet supply warehouse with stone lower walls, expanded roofed loading apron, separated food, rope, sailcloth and ammunition-safe bays, hoist, lockable store doors and restrained black-crimson pennants; no people.
+- Cannon foundry: enlarged stone-and-timber cannon works with a contained furnace glow, roofed casting bay, overhead lifting frame, boring bench, cooling trough, stacked molds and two completed cannons on cradles; no smoke outside the structure and no people.
+Style/medium: premium painterly high-detail 2.5D isometric strategy-game sprites; stylized realism; weathered maritime hardwood, dark slate, rugged masonry, blackened iron, rope, aged brass, beige canvas and restrained crimson-black cloth; physically plausible Age-of-Sail engineering.
+Composition/framing: preserve the exact 1536x1024 canvas and exact 4-by-3 grid of 384-pixel-wide cells; row heights remain 341, 342 and 341 pixels; one complete upgraded structure centered inside each source cell; retain approximately the source cell occupancy while making upgrades visibly denser; preserve at least 6 pixels of flat magenta at shared cell boundaries and 12 pixels at outer edges; every roof, crane, cable wheel, mast, chimney, stair, platform, railing, foundation and hanging cargo cage fully contained; no overlap or cropping.
+Scene/backdrop: replace every empty pixel with one perfectly flat uniform solid #ff00ff chroma-key background for local removal. No terrain, floor, cast shadow, contact shadow, gradient, texture, reflection, vignette or lighting variation in the background. Do not use magenta or pink inside structures.
+Lighting/mood: restrained warm upper-left maritime daylight, cool lower-right ambient occlusion and contained warm window or furnace accents; consistent across all cells.
+Constraints: change only the twelve structures into tier-2 upgrades; preserve identities, order, direction, scale family and positions; exactly twelve unoccupied structures; no people, human silhouettes, animals, ships, carts, modern machinery, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, borders or grid lines.
+Avoid: changing categories, tier-3 fortress-city scale, fantasy technology, modern elevators or industrial machinery, bright mobile-game colors, photorealism, top-down or front elevation, black background, transparent checkerboard, cell-boundary contact, floating parts, disconnected cables, magenta fringe or tiny unreadable clutter.
+```
+
+## 물류·수직 기반시설·함대 건물 3단계 전용 본체 아틀라스
+
+- 프로젝트 자산: `static/art/settlement/logistics-fleet-buildings-tier3-atlas.png`
+- 프레임 정의: `static/art/settlement/logistics-fleet-buildings-atlas.json` 공유
+- 최종 생성 원본: `/Users/i/.codex/generated_images/019fd0dc-c395-7382-9a7a-56256b6e164f/exec-7fbb1877-19ef-419b-849c-088eed6874a0.png`
+- 생성 방식: 내장 이미지 생성 도구 `precise-object-edit`
+- 편집 대상: 위 2단계 프로젝트 아틀라스
+- 폴백 생성기: 사용하지 않음
+- 후처리: 단색 배경을 로컬 크로마키 제거 도구의 border auto-key·soft matte·despill로 RGBA 알파 변환
+- 출력 검수: 1536×1024 RGBA, 4×3 고정 프레임, 네 모서리 완전 투명, 2단계보다 석조 기반·다중 하역 베이·수직 운송 용량·함대 건조 및 보급 능력이 명확히 강화됨, 인물·선박·텍스트·외부 연기 없음
+
+### 최종 생성 프롬프트
+
+```text
+Use case: precise-object-edit
+Asset type: production tier-3 isometric logistics, vertical-infrastructure and fleet-building sprite atlas for the browser game "검은물결: 해적 군주"
+Input image: Image 1 is the approved tier-2 edit target and authoritative exact layout, building identity, cell occupancy, fixed orthographic isometric camera, scale family, palette, materials and Dark Pirate Maritime Command art direction.
+Primary request: transform all twelve tier-2 structures into visibly mature tier-3 logistics, vertical-infrastructure and fleet facilities while preserving the exact 4-column by 3-row atlas, exact cell order, cell boundaries, camera direction and footprint family.
+Cell order, left to right:
+row 1: local storage, distribution depot, dock warehouse, cargo lift.
+row 2: zipline post, bridge, stairs, ramp.
+row 3: cliff platform, dry dock, supply depot, cannon foundry.
+Tier-3 changes:
+- Local storage: compact permanent stone-footed neighborhood warehouse with a tall lockable central store, two roofed side bays, organized shelves, protected food lockers, rain cistern, loading porch and ledger nook; high-capacity but still clearly smaller than the supply depot.
+- Distribution depot: major dispatch exchange with three distinct covered sorting lanes, stone freight apron, dual hoist beams, capstan, protected dispatch office, inbound and outbound cargo zones and sheltered handcart docks; no people or vehicles.
+- Dock warehouse: imposing three-level bonded waterfront warehouse on a massive quay base, multiple reinforced loading doors, two side cranes, broad covered wharf, secure barrel vaults, upper cargo loft and restrained black-crimson pennants.
+- Cargo lift: fortress-grade counterweighted freight elevator with a masonry lower shaft, very tall braced timber tower, enclosed twin winding houses, two cable drums, protected machinery deck, heavy empty cargo cage, loading gate and redundant safety rails; plausible rope-and-capstan technology.
+- Zipline post: high-capacity cliff freight transfer tower with broad stone footings, paired cable spans, twin brake drums, covered signal and control gallery, counterweight, two empty suspended cargo cages and robust anchor braces; no people.
+- Bridge: monumental wide freight bridge with dressed-stone piers and abutments, layered heavy timber trusses, protected rails, reinforced center deck, drainage and roofed checkpoint alcoves without guards; remain one standalone traversable bridge.
+- Stairs: mature vertical transit tower with multiple switchback flights, masonry cores, broad roofed landings, heavy handrails, integrated rope goods hoist, rest gallery and strong cliff anchors; unmistakably stairs rather than a residence.
+- Ramp: permanent high-capacity stone-and-timber freight causeway with deep retaining walls, wide reinforced deck, wheel guides, drainage channels, protected upper landing and extensive understructure bracing; keep an open traversable center.
+- Cliff platform: massive three-level cliffside logistics platform with deep rock-anchor lattice, two covered winch houses, freight crane, separated loading terraces, material hoist, broad guardrails and dense visible underside bracing.
+- Dry dock: fortress-grade stone dry dock with monumental stepped retaining walls, complete keel cradle, gated drainage sluice, paired heavy service cranes, capstans, covered shipwright galleries, material stores and working decks; one empty dock, no ship.
+- Supply depot: expansive fortified fleet provisioning complex with tall stone lower warehouse, two roofed loading wings, segregated food, water, rope, sailcloth and ammunition-safe stores, twin hoists, locked dispatch doors, watch cupola without guards and disciplined black-crimson banners.
+- Cannon foundry: mature naval ordnance complex with massive masonry furnace hall, contained furnace glow, two roofed casting bays, heavy overhead lifting gantry, period-plausible cannon-boring frame, cooling troughs, mold store, shot racks and several finished cannons on timber cradles; absolutely no smoke outside and no people.
+Style/medium: premium painterly high-detail 2.5D isometric strategy-game sprites; stylized realism; aged maritime hardwood, dark slate, rugged dressed masonry, blackened iron, rope, aged brass, beige canvas and restrained crimson-black cloth; physically plausible mature Age-of-Sail civil and naval engineering.
+Composition/framing: preserve the exact 1536x1024 canvas and exact 4-by-3 grid of 384-pixel-wide cells; row heights remain 341, 342 and 341 pixels; one complete upgraded structure centered inside each original cell; retain approximately the same cell occupancy as Image 1; preserve at least 4 pixels of flat magenta at shared cell boundaries and 10 pixels at outer edges; every roof, crane, cable wheel, chimney, stair, platform, bridge rail, foundation, counterweight and cargo cage fully contained; no overlap or cropping.
+Scene/backdrop: every empty pixel must be one perfectly flat uniform solid #ff00ff chroma-key background for local removal. No terrain, floor, cast shadow, contact shadow, gradient, texture, reflection, vignette or lighting variation in the background. Do not use magenta or pink inside structures.
+Lighting/mood: restrained warm upper-left maritime daylight, cool lower-right ambient occlusion and controlled contained window or furnace glow; consistent across cells.
+Constraints: change only the twelve tier-2 structures into tier-3 upgrades; preserve all identities, order, direction, scale family and positions; exactly twelve unoccupied structures; no people, human silhouettes, animals, ships, carts, modern vehicles, scenery, readable labels, letters, numbers, icons, UI, logos, watermark, extra cells, borders or grid lines.
+Avoid: changing categories, arbitrary fantasy ornament, steam engines, electrical motors, modern elevators or industrial machinery, tier-2 simplicity, bright mobile-game colors, photorealism, top-down or front elevation, black background, transparent checkerboard, malformed engineering, floating parts, disconnected cables, boundary contact, magenta fringe or unreadable clutter.
+```
