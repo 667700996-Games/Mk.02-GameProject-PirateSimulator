@@ -1,5 +1,6 @@
 import { clamp } from './physics';
-import type { BoardingState, CaptainTrait, Ship } from './types';
+import { DIFFICULTIES } from './catalog';
+import type { BoardingState, CaptainTrait, Difficulty, Ship } from './types';
 
 export type BoardingAction = 'charge' | 'flank' | 'captain' | 'magazine' | 'intimidate' | 'retreat';
 
@@ -27,7 +28,12 @@ export function beginBoarding(player: Ship, enemy: Ship, committedCrew: number, 
   };
 }
 
-export function resolveBoardingRound(state: BoardingState, action: BoardingAction, random: () => number): BoardingRoundResult {
+export function resolveBoardingRound(
+  state: BoardingState,
+  action: BoardingAction,
+  random: () => number,
+  context: { trait?: CaptainTrait; difficulty?: Difficulty } = {}
+): BoardingRoundResult {
   if (!state.active || state.outcome || !state.enemyShip) return { state, playerCasualties: 0, enemyCasualties: 0, message: '승선 전투가 진행 중이 아닙니다.' };
   if (action === 'retreat') {
     const next = { ...state, active: false, outcome: 'retreat' as const, log: [...state.log, '갈고리를 끊고 본선으로 후퇴했다.'] };
@@ -42,11 +48,17 @@ export function resolveBoardingRound(state: BoardingState, action: BoardingActio
     intimidate: { attack: 0.72, risk: 0.58, morale: 0.42, label: '항복 유도' }
   };
   const choice = modifiers[action];
-  const playerRoll = state.playerStrength * choice.attack * (0.76 + random() * 0.48);
+  const negotiatorBonus = action === 'intimidate' && context.trait === 'negotiator';
+  const playerRoll =
+    state.playerStrength * choice.attack * (negotiatorBonus ? 1.18 : 1) * (0.76 + random() * 0.48);
   const enemyRoll = state.enemyStrength * (0.76 + random() * 0.48);
   const enemyCasualties = Math.max(1, Math.round((playerRoll / Math.max(enemyRoll, 1)) * 2.4 + random() * 2));
-  const playerCasualties = Math.max(0, Math.round((enemyRoll / Math.max(playerRoll, 1)) * 1.7 * choice.risk + random() * 1.6 - 0.8));
-  const enemyStrength = Math.max(0, state.enemyStrength - enemyCasualties * (1.35 + choice.morale));
+  const lossMultiplier = context.difficulty ? DIFFICULTIES[context.difficulty].losses : 1;
+  const playerCasualties = Math.max(0, Math.round(((enemyRoll / Math.max(playerRoll, 1)) * 1.7 * choice.risk + random() * 1.6 - 0.8) * lossMultiplier));
+  const enemyStrength = Math.max(
+    0,
+    state.enemyStrength - enemyCasualties * (1.35 + choice.morale + (negotiatorBonus ? 0.22 : 0))
+  );
   const playerStrength = Math.max(0, state.playerStrength - playerCasualties * 1.65);
   const enemyCrew = Math.max(0, state.enemyShip.crew - enemyCasualties);
   const playerCommitted = Math.max(0, state.committedCrew - playerCasualties);

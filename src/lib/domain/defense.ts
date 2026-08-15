@@ -1,4 +1,4 @@
-import { FACTIONS } from './catalog';
+import { DIFFICULTIES, FACTIONS } from './catalog';
 import { fleetDefensePower } from './fleet';
 import { progressMissions } from './missions';
 import { clamp } from './physics';
@@ -92,14 +92,15 @@ export function resolveNavalStage(state: GameState, action: NavalAction, random:
     'fire-ships': { attack: 1.48, shipRisk: .12, havenRisk: .24, label: '불붙은 폐선을 조류에 실어 적 함대에 충돌시켰다.' }
   };
   const choice = modifiers[action];
+  const lossMultiplier = DIFFICULTIES[state.captain.difficulty].losses;
   const batteryReadiness = Math.min(1, batteryAmmunition(state.settlement) / 24);
   const batteryResult = action === 'fleet-charge' ? state.settlement : consumeBatteryAmmunition(state.settlement, 10, 5);
   const batteryFactor = action === 'fleet-charge' ? 1 : 0.35 + batteryReadiness * 0.65;
   const power = (state.defense.defenseStrength * .58 * batteryFactor + fleetDefensePower(state) * .42) * choice.attack;
   const damage = Math.max(8, Math.round(power * (.48 + random() * .34)));
   const attackerRemaining = Math.max(0, remaining - damage);
-  const shipDamage = Math.round(remaining * choice.shipRisk * (.35 + random() * .45));
-  const havenDamage = Math.round(remaining * choice.havenRisk * (.22 + random() * .4));
+  const shipDamage = Math.round(remaining * choice.shipRisk * (.35 + random() * .45) * lossMultiplier);
+  const havenDamage = Math.round(remaining * choice.havenRisk * (.22 + random() * .4) * lossMultiplier);
   const ships = damageFleet(state, shipDamage);
   const haven = { ...state.haven, defense: Math.max(0, state.haven.defense - havenDamage) };
   if (attackerRemaining <= 0) return finishDefense({ ...state, settlement: batteryResult, ships, haven, defense: { ...state.defense, attackerRemaining, log: [...(state.defense.log ?? []), choice.label, '적 함대가 상륙하기 전에 퇴각했다.'] } }, true);
@@ -120,8 +121,9 @@ export function resolveLandingStage(state: GameState, action: LandingAction, ran
   const attackerRemaining = Math.max(0, remaining - damage);
   const wallProtection = Math.min(.38, state.settlement.buildings.filter((building) => building.definitionId === 'fort-wall' && building.state === 'ACTIVE').reduce((sum, wall) => sum + wall.level * wall.condition / 2500, 0));
   const civilianRisk = clamp((state.defense.civilianRisk ?? 50) + choice.civilian, 0, 100);
-  const casualties = Math.round(remaining * choice.casualty * (.18 + random() * .34) * (1 - wallProtection));
-  const fatalityRate = clamp(.08 + civilianRisk / 500, .08, .32);
+  const lossMultiplier = DIFFICULTIES[state.captain.difficulty].losses;
+  const casualties = Math.round(remaining * choice.casualty * (.18 + random() * .34) * (1 - wallProtection) * lossMultiplier);
+  const fatalityRate = clamp((.08 + civilianRisk / 500) * lossMultiplier, .05, .42);
   const lossResult = applyResidentLosses(state.settlement, casualties, fatalityRate, random, true);
   const settlement = lossResult.settlement;
   const losses = mergeLosses(state, lossResult.wounded, lossResult.killed);
@@ -147,17 +149,18 @@ export function resolveInteriorStage(state: GameState, action: InteriorAction, r
     'organized-retreat': { power: .62, damage: .08, civilian: -28, label: '주민을 비밀 통로로 빼내며 핵심 시설만 지켰다.' }
   };
   const choice = modifiers[action];
+  const lossMultiplier = DIFFICULTIES[state.captain.difficulty].losses;
   const power = (state.crew.roles.marine * 4 + state.haven.order * .7 + state.captain.level * 8) * choice.power * (.72 + random() * .38);
   const victory = power >= remaining;
-  const resourceDamage = victory ? Math.round(remaining * choice.damage * .2) : Math.round(remaining * choice.damage + 35);
+  const resourceDamage = (victory ? Math.round(remaining * choice.damage * .2) : Math.round(remaining * choice.damage + 35)) * lossMultiplier;
   const civilianRisk = clamp((state.defense.civilianRisk ?? 50) + choice.civilian, 0, 100);
   const facilities = damageFacilities(state, victory ? Math.ceil(resourceDamage / 12) : Math.ceil(resourceDamage / 5));
   let settlement = damageSettlementBuildings(state.settlement, victory ? Math.ceil(resourceDamage / 14) : Math.ceil(resourceDamage / 6));
   const interiorCasualties = Math.min(
     Math.max(0, settlement.residents.length - 1),
-    Math.round(remaining * (victory ? .025 : .075) * (0.45 + civilianRisk / 100))
+    Math.round(remaining * (victory ? .025 : .075) * (0.45 + civilianRisk / 100) * lossMultiplier)
   );
-  const interiorLosses = applyResidentLosses(settlement, interiorCasualties, victory ? .12 : .28, random, false);
+  const interiorLosses = applyResidentLosses(settlement, interiorCasualties, (victory ? .12 : .28) * lossMultiplier, random, false);
   settlement = interiorLosses.settlement;
   const loss = { gold: Math.min(state.resources.gold, resourceDamage * 4), food: Math.min(state.resources.food, Math.ceil(resourceDamage * .45)), timber: Math.min(state.resources.timber, Math.ceil(resourceDamage * .3)), powder: Math.min(state.resources.powder, Math.ceil(resourceDamage * .12)) };
   const damagedState = { ...state, settlement };

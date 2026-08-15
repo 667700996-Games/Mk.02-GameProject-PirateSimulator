@@ -19,7 +19,10 @@
 
   function act(action: BoardingAction): void {
     gameSession.updateGame((state) => {
-      const result = resolveBoardingRound(state.boarding, action, Math.random);
+      const result = resolveBoardingRound(state.boarding, action, Math.random, {
+        trait: state.captain.trait,
+        difficulty: state.captain.difficulty
+      });
       return {
         ...state,
         boarding: result.state,

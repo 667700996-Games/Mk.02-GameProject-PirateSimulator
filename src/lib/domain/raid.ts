@@ -115,7 +115,7 @@ export function lootRaidTarget(
   const defensePressure = settlement.defense / Math.max(state.crewCommitted * 2.5, 1);
   const equipmentCasualtyBonus = state.equipment === 'muskets' ? -1 : 0;
   const approachCasualtyBonus = state.approach === 'assault' ? 1 : 0;
-  const casualties = Math.max(0, Math.floor(defensePressure * (0.4 + random()) + state.alarm / 80 - 0.5 + equipmentCasualtyBonus + approachCasualtyBonus));
+  const casualties = Math.max(0, Math.floor((defensePressure * (0.4 + random()) + state.alarm / 80 - 0.5 + equipmentCasualtyBonus + approachCasualtyBonus) * DIFFICULTIES[difficulty].losses));
   const timeCost = target.time * (state.equipment === 'grapples' ? .82 : 1) * (state.approach === 'assault' ? .88 : 1);
   const timeRemaining = Math.max(0, state.timeRemaining - timeCost);
   const alarmGain = target.alarm * (state.equipment === 'smoke-bombs' ? .62 : 1) * (state.approach === 'stealth' ? .88 : 1.18);

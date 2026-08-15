@@ -1,4 +1,4 @@
-import { ZONES } from './catalog';
+import { DIFFICULTIES, ZONES } from './catalog';
 import { clamp } from './physics';
 import { createId, hashString, mulberry32, randomInt } from './rng';
 import type { FleetAssignment, FleetFormation, FleetOrderType, GameState, Officer, OfficerRole, ResourceStock, ZoneId } from './types';
@@ -96,18 +96,23 @@ export function updateFleetAssignments(state: GameState, now = Date.now()): Game
       return { ...assignment, status: 'deserted', progress: 100, log: [...assignment.log, `${captain.name}이(가) 전리품과 함선을 빼돌려 달아났다.`] };
     }
     const formation = formationModifier(state.fleet.formation, assignment.order);
-    const shipPower = ship.stats.cannonSlots * 1.5 + ship.crew + ship.stats.hullMax * .08;
+    const admiralFactor = state.captain.trait === 'admiral' ? 1.1 : 1;
+    const difficulty = DIFFICULTIES[state.captain.difficulty];
+    const shipPower = (ship.stats.cannonSlots * 1.5 + ship.crew + ship.stats.hullMax * .08) * admiralFactor;
     const captainPower = captain.skill * 1.3 + captain.loyalty * .25;
-    const challenge = ZONES[assignment.zoneId].difficulty * 34 * assignment.risk / 32;
+    const challenge = ZONES[assignment.zoneId].difficulty * 34 * assignment.risk / 32 * difficulty.enemy;
     const aggressiveAutonomy = state.fleet.autoEngage && (assignment.order === 'raid' || assignment.order === 'patrol');
     const successChance = clamp(.42 + (shipPower + captainPower - challenge) / 340 + formation + (aggressiveAutonomy ? .06 : 0), .12, .94);
     const success = random() <= successChance;
-    const damage = Math.round((success ? assignment.risk * .28 : assignment.risk * .75) * (.7 + random() * .6) * (aggressiveAutonomy ? 1.18 : 1));
+    const damage = Math.round((success ? assignment.risk * .28 : assignment.risk * .75) * (.7 + random() * .6) * (aggressiveAutonomy ? 1.18 : 1) * difficulty.losses / admiralFactor);
     ships = ships.map((vessel) => vessel.id === ship.id ? { ...vessel, hull: Math.max(1, vessel.hull - damage), morale: clamp(vessel.morale + (success ? 4 : -12), 0, 100) } : vessel);
     officers = officers.map((officer) => officer.id === captain.id ? { ...officer, loyalty: clamp(officer.loyalty + (success ? 2 : -5), 0, 100), morale: clamp(officer.morale + (success ? 5 : -9), 0, 100) } : officer);
     if (!success) return { ...assignment, status: 'failed', progress: 100, damage, log: [...assignment.log, '강한 적과 마주쳐 피해를 입고 빈손으로 귀환했다.'] };
     victories += 1;
-    const reward = fleetReward(assignment.order, ZONES[assignment.zoneId].difficulty, random);
+    const reward = Object.fromEntries(
+      Object.entries(fleetReward(assignment.order, ZONES[assignment.zoneId].difficulty, random))
+        .map(([id, amount]) => [id, Math.max(0, Math.round((amount ?? 0) * difficulty.rewards))])
+    ) as Partial<ResourceStock>;
     return { ...assignment, status: 'complete', progress: 100, damage, reward, log: [...assignment.log, `${ZONES[assignment.zoneId].name} 작전을 완수하고 귀환했다.`] };
   });
   return { ...state, ships, officers, fleet: { ...state.fleet, assignments, victories, shipsLost } };
@@ -127,7 +132,8 @@ export function setFleetFormation(state: GameState, formation: FleetFormation): 
 export function fleetDefensePower(state: GameState): number {
   const available = state.ships.filter((ship) => !state.fleet.assignments.some((assignment) => assignment.shipId === ship.id && assignment.status === 'underway'));
   const formation = state.fleet.formation === 'line-abreast' ? 1.15 : state.fleet.formation === 'crescent' ? 1.1 : .98;
-  return Math.round(available.reduce((sum, ship) => sum + ship.stats.cannonSlots * 1.4 + ship.crew * .45 + ship.hull / 25, 0) * formation);
+  const admiralFactor = state.captain.trait === 'admiral' ? 1.1 : 1;
+  return Math.round(available.reduce((sum, ship) => sum + ship.stats.cannonSlots * 1.4 + ship.crew * .45 + ship.hull / 25, 0) * formation * admiralFactor);
 }
 
 function formationModifier(formation: FleetFormation, order: FleetOrderType): number {
