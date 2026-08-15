@@ -10,6 +10,7 @@ import type {
 } from './types';
 import { aggregateInventory, buildingUpgradeCost } from './construction';
 import { createId } from '$lib/domain/rng';
+import type { CaptainTrait } from '$lib/domain/types';
 import { findCachedPath, pathTravelCost } from './island';
 import { policyModifiers } from './progression';
 
@@ -156,7 +157,8 @@ function consumeInputs(
 function advanceConstruction(
   state: SettlementSimulationState,
   gameMinutes: number,
-  indexes: SimulationIndexes
+  indexes: SimulationIndexes,
+  trait?: CaptainTrait
 ): void {
   const builders = state.residents.filter(
     (resident) =>
@@ -178,8 +180,8 @@ function advanceConstruction(
       building.state === 'UPGRADING' ||
       (building.state === 'BLOCKED' && !!building.upgradeMaterialsCommitted);
     const constructionCost = upgrading
-      ? buildingUpgradeCost(building.definitionId, building.level)
-      : definition.constructionCost;
+      ? buildingUpgradeCost(building.definitionId, building.level, trait)
+      : buildingConstructionCost(building.definitionId, trait);
     const materialsCommitted = upgrading
       ? !!building.upgradeMaterialsCommitted
       : !!building.constructionMaterialsCommitted;
@@ -235,7 +237,7 @@ function advanceConstruction(
     building.constructionProgress = Math.min(
       1,
       building.constructionProgress +
-        (gameMinutes * assignedBuilders.length) /
+        (gameMinutes * assignedBuilders.length * (trait === 'architect' ? 1 / 0.85 : 1)) /
           Math.max(1, definition.constructionMinutes * (upgrading ? 2.8 : 2))
     );
     building.statusReason = `${upgrading ? '확장' : '건설'} ${Math.floor(building.constructionProgress * 100)}%`;
@@ -289,7 +291,8 @@ function advanceConstruction(
 function advanceProduction(
   state: SettlementSimulationState,
   gameMinutes: number,
-  indexes: SimulationIndexes
+  indexes: SimulationIndexes,
+  productionMultiplier: number
 ): void {
   for (const building of state.buildings) {
     if (building.state !== 'ACTIVE' || building.paused || !building.recipeId) continue;
@@ -368,7 +371,7 @@ function advanceProduction(
               : 0.92
             : 1;
     building.recipeProgress +=
-      (gameMinutes * Math.max(0.25, workerEfficiency) * weatherEfficiency) / recipe.durationMinutes;
+      (gameMinutes * Math.max(0.25, workerEfficiency) * weatherEfficiency * productionMultiplier) / recipe.durationMinutes;
     building.statusReason = `생산 ${Math.floor(Math.min(1, building.recipeProgress) * 100)}%`;
     if (building.recipeProgress < 1) continue;
     consumeInputs(building, recipe.inputs);
@@ -610,15 +613,25 @@ function scheduleResidentActivity(
       : 'MOVING';
 }
 
-function consumeAtHome(state: SettlementSimulationState, indexes: SimulationIndexes): void {
+function adjustMorale(resident: Resident, delta: number, trait?: CaptainTrait): void {
+  const adjusted = delta < 0 && trait === 'agitator' ? delta * 0.75 : delta;
+  resident.morale = Math.max(0, Math.min(100, resident.morale + adjusted));
+}
+
+function consumeAtHome(
+  state: SettlementSimulationState,
+  indexes: SimulationIndexes,
+  consumptionMultiplier: number,
+  trait?: CaptainTrait
+): void {
   const modifiers = policyModifiers(state);
-  const consumption = modifiers.foodConsumption;
+  const consumption = modifiers.foodConsumption * consumptionMultiplier;
   for (const resident of state.residents) {
     if (indexes.deployedResidentIds.has(resident.id)) continue;
     const home = resident.homeId ? indexes.buildingsById.get(resident.homeId) : undefined;
     if (!home) {
       resident.needs.housing = Math.max(0, resident.needs.housing - 8);
-      resident.morale = Math.max(0, resident.morale - 2);
+      adjustMorale(resident, -2, trait);
       continue;
     }
     const requiredNeeds = new Set(POPULATION_TIERS[resident.tier].needs);
@@ -748,12 +761,10 @@ function consumeAtHome(state: SettlementSimulationState, indexes: SimulationInde
         : ['castaway', 'laborer'].includes(resident.tier)
           ? modifiers.laborerMoralePerHour
           : 0;
-    resident.morale = Math.max(
-      0,
-      Math.min(
-        100,
-        resident.morale + (averageNeeds - 55) * 0.025 + modifiers.moralePerHour + tierMorale
-      )
+    adjustMorale(
+      resident,
+      (averageNeeds - 55) * 0.025 + modifiers.moralePerHour + tierMorale,
+      trait
     );
     resident.loyalty = Math.max(
       0,
@@ -792,7 +803,7 @@ function consumeAtHome(state: SettlementSimulationState, indexes: SimulationInde
   }
   const payroll = state.residents.length * modifiers.wageGoldPerResident;
   if (payroll > 0 && !consumeAnywhere(state, 'gold', payroll))
-    for (const resident of state.residents) resident.morale = Math.max(0, resident.morale - 0.5);
+    for (const resident of state.residents) adjustMorale(resident, -0.5, trait);
 }
 
 function populationTierPromotion(state: SettlementSimulationState): void {
@@ -1199,9 +1210,16 @@ function updateWarnings(state: SettlementSimulationState): void {
     .slice(-20);
 }
 
+export interface SettlementSimulationContext {
+  captainTrait?: CaptainTrait;
+  productionMultiplier?: number;
+  consumptionMultiplier?: number;
+}
+
 export function advanceSettlement(
   input: SettlementSimulationState,
-  realSeconds: number
+  realSeconds: number,
+  context: SettlementSimulationContext = {}
 ): SettlementSimulationState {
   if (input.speed === 0 || realSeconds <= 0) return input;
   const gameMinutes = realSeconds * input.speed;
@@ -1212,15 +1230,20 @@ export function advanceSettlement(
   state.lastTickAt = Date.now();
   state.weather = settlementWeatherAt(state.island.seed, state.simulationMinutes);
   const indexes = createSimulationIndexes(state);
-  advanceConstruction(state, gameMinutes, indexes);
+  advanceConstruction(state, gameMinutes, indexes, context.captainTrait);
   autoAssign(state, indexes);
   advanceResidentMovement(state, gameMinutes, indexes);
-  advanceProduction(state, gameMinutes, indexes);
+  advanceProduction(state, gameMinutes, indexes, context.productionMultiplier ?? 1);
   advanceHazards(state, gameMinutes);
-  state = scheduleLogistics(state, false);
+  state = scheduleLogistics(state, false, context.captainTrait);
   state = advanceTransports(state, gameMinutes, false);
   if (Math.floor(state.simulationMinutes / 60) > previousHour) {
-    consumeAtHome(state, indexes);
+    consumeAtHome(
+      state,
+      indexes,
+      context.consumptionMultiplier ?? 1,
+      context.captainTrait
+    );
     const revealed = revealIslandFromServices(state);
     if (revealed > 0)
       state.warnings.push({
