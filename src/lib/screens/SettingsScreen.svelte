@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { focusTrap } from '$lib/actions/focusTrap';
   import type { GameSettings, KeyBindings, SaveRecord } from '$lib/domain/types';
   let { settings, saves, onUpdate, onLoad, onDelete, onExport, onImport, onBack, onTitle } =
     $props<{
@@ -45,6 +46,10 @@
     'Escape'
   ];
   const keyLabel = (code: string) => (code.startsWith('Key') ? code.slice(3) : code);
+  let pendingDeleteId = $state<string>();
+  let pendingDelete: SaveRecord | undefined = $derived(
+    saves.find((save: SaveRecord) => save.id === pendingDeleteId)
+  );
   function bindKey(action: keyof KeyBindings, code: string): void {
     onUpdate({ keyBindings: { ...settings.keyBindings, [action]: code } });
   }
@@ -64,6 +69,12 @@
     if (!file) return;
     await onImport(await file.text());
     input.value = '';
+  }
+
+  function confirmDelete(): void {
+    if (!pendingDeleteId) return;
+    onDelete(pendingDeleteId);
+    pendingDeleteId = undefined;
   }
 </script>
 
@@ -199,9 +210,30 @@
           </div>
           <div>
             <button class="btn small" onclick={() => onLoad(save.id)}>불러오기</button>
-            <button class="btn small danger-button" onclick={() => onDelete(save.id)}>삭제</button>
+            <button class="btn small danger-button" onclick={() => (pendingDeleteId = save.id)}>삭제</button>
           </div>
         </div>{/each}
     </article>
   </div>
 </section>
+{#if pendingDelete}
+  <div class="modal-backdrop">
+    <div
+      class="modal panel pause-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-save-title"
+      tabindex="-1"
+      use:focusTrap
+    >
+      <span class="eyebrow">IRREVERSIBLE ORDER</span>
+      <h2 id="delete-save-title">항해일지를 삭제합니까?</h2>
+      <p><strong>{pendingDelete.name}</strong>과 최근 복구 지점이 이 기기에서 함께 삭제됩니다.</p>
+      <p class="muted">내보낸 저장 파일이 없다면 되돌릴 수 없습니다.</p>
+      <div class="pause-actions">
+        <button class="btn" onclick={() => (pendingDeleteId = undefined)}>취소</button>
+        <button class="btn danger-button" onclick={confirmDelete}>영구 삭제</button>
+      </div>
+    </div>
+  </div>
+{/if}

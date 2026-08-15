@@ -1,12 +1,39 @@
 /// <reference lib="webworker" />
 
-import { build, files, version } from '$service-worker';
+import { build, files, prerendered, version } from '$service-worker';
 
 const worker = self as unknown as ServiceWorkerGlobalScope;
 const shellCache = `blackwake-shell-${version}`;
 const runtimeCache = `blackwake-runtime-${version}`;
-const shellAssets = [...new Set([...build, ...files])];
+const INSTALL_STATIC_ASSETS = new Set([
+  '/art/pirate-haven-keyart.png',
+  '/manifest.webmanifest',
+  '/pirate-mark-192.png',
+  '/pirate-mark-512.png',
+  '/pirate-mark.svg'
+]);
+const shellAssets = [
+  ...new Set([
+    ...build,
+    ...prerendered,
+    ...files.filter((asset) => INSTALL_STATIC_ASSETS.has(asset))
+  ])
+];
 const MAX_RUNTIME_ENTRIES = 80;
+
+async function cacheShell(): Promise<void> {
+  const cache = await caches.open(shellCache);
+  await Promise.all(
+    shellAssets.map(async (asset) => {
+      try {
+        const response = await fetch(asset);
+        if (response.ok) await cache.put(asset, response);
+      } catch {
+        // A single optional shell asset must not make the worker installation fail.
+      }
+    })
+  );
+}
 
 async function trimRuntimeCache(): Promise<void> {
   const cache = await caches.open(runtimeCache);
@@ -37,7 +64,7 @@ async function navigationResponse(request: Request): Promise<Response> {
 }
 
 worker.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(shellCache).then((cache) => cache.addAll(shellAssets)));
+  event.waitUntil(cacheShell());
   worker.skipWaiting();
 });
 

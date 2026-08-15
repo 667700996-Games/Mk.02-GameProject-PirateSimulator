@@ -38,6 +38,7 @@
     TransportJob
   } from '$lib/settlement/types';
   import type { GameScreen, GameSettings, GameState } from '$lib/domain/types';
+  import { focusTrap } from '$lib/actions/focusTrap';
 
   let { game, settings, navigate } = $props<{
     game: GameState;
@@ -56,6 +57,15 @@
   let inspectorOpen = $state(true);
   let overlayMenuOpen = $state(false);
   let mobileLayout = $state(false);
+  let demolitionCandidateId = $state<string>();
+  let demolitionCandidate: SettlementBuilding | undefined = $derived(
+    game.settlement.buildings.find(
+      (building: SettlementBuilding) => building.id === demolitionCandidateId
+    )
+  );
+  let demolitionDefinition = $derived(
+    demolitionCandidate ? BUILDINGS[demolitionCandidate.definitionId] : undefined
+  );
 
   const categories: { id: BuildingCategory; name: string; icon: string }[] = [
     { id: 'gathering', name: '채집', icon: '♣' },
@@ -316,17 +326,24 @@
     if (reason) gameSession.addToast('warning', '회전 불가', reason);
   }
 
-  function demolishSelected(): void {
+  function requestDemolition(): void {
     if (!selectedBuilding || selectedBuilding.definitionId === 'wreckage') return;
-    const name = selectedDefinition?.name ?? '건물';
+    demolitionCandidateId = selectedBuilding.id;
+  }
+
+  function confirmDemolition(): void {
+    const candidate = demolitionCandidate;
+    if (!candidate || candidate.definitionId === 'wreckage') return;
+    const name = BUILDINGS[candidate.definitionId]?.name ?? '건물';
     gameSession.updateGame(
       (state) => ({
         ...state,
-        settlement: demolishBuilding(state.settlement, selectedBuilding.id)
+        settlement: demolishBuilding(state.settlement, candidate.id)
       }),
       true
     );
-    selectedBuildingId = undefined;
+    if (selectedBuildingId === candidate.id) selectedBuildingId = undefined;
+    demolitionCandidateId = undefined;
     gameSession.addToast('info', `${name} 철거`, '상태에 따라 건설 자재의 40%를 회수했습니다.');
   }
 
@@ -661,9 +678,9 @@
           >{#if ['PLANNED', 'CONSTRUCTING', 'UPGRADING', 'BLOCKED'].includes(selectedBuilding.state) || selectedBuilding.pausedFrom === 'UPGRADING'}<button
               class="btn small danger-button"
               onclick={cancelSelectedWork}>공사 취소</button
-            >{/if}<button
+          >{/if}<button
             class="btn small danger-button"
-            onclick={demolishSelected}
+            onclick={requestDemolition}
             disabled={selectedBuilding.definitionId === 'wreckage'}>철거</button
           >
         </div>
@@ -802,6 +819,27 @@
     <button class:active={inspectorOpen && rightTab === 'mission'} onclick={() => { rightTab = 'mission'; inspectorOpen = true; buildMenuOpen = false; overlayMenuOpen = false; }} aria-label="초기 임무 열기">▤<small>임무</small></button>
     <button class:active={overlayMenuOpen} onclick={() => { overlayMenuOpen = !overlayMenuOpen; inspectorOpen = false; buildMenuOpen = false; }} aria-label={overlayMenuOpen ? '분석 도구 닫기' : '분석 도구 열기'} aria-expanded={overlayMenuOpen}>◈<small>분석</small></button>
   </div>
+  {#if demolitionCandidate}
+    <div class="modal-backdrop">
+      <div
+        class="modal panel pause-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="demolish-building-title"
+        tabindex="-1"
+        use:focusTrap
+      >
+        <span class="eyebrow">DEMOLITION ORDER</span>
+        <h2 id="demolish-building-title">{demolitionDefinition?.name ?? '시설'}을 철거합니까?</h2>
+        <p>배치된 재고와 진행 상태가 사라지고, 시설 상태에 따라 기초 건설 자재의 40%만 회수합니다.</p>
+        <p class="muted">철거 명령은 자동 저장되며 되돌릴 수 없습니다.</p>
+        <div class="pause-actions">
+          <button class="btn" onclick={() => (demolitionCandidateId = undefined)}>취소</button>
+          <button class="btn danger-button" onclick={confirmDemolition}>철거 확정</button>
+        </div>
+      </div>
+    </div>
+  {/if}
 </section>
 
 <style>
