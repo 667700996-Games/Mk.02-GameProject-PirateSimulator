@@ -12,6 +12,7 @@
   import {
     aggregateInventory,
     beginBuildingUpgrade,
+    buildingConstructionCost,
     buildingMaxLevel,
     buildingUpgradeCost,
     cancelBuildingWork,
@@ -190,7 +191,15 @@
     let reason = '';
     let placedId: string | undefined;
     gameSession.updateGame((state) => {
-      const result = placeBuilding(state.settlement, id, x, y, rotation);
+      const result = placeBuilding(
+        state.settlement,
+        id,
+        x,
+        y,
+        rotation,
+        Date.now(),
+        state.captain.trait
+      );
       ok = result.ok;
       reason = result.reason ?? '';
       placedId = result.buildingId;
@@ -265,7 +274,11 @@
       selectedBuilding.pausedFrom === 'UPGRADING' ||
       !!selectedBuilding.upgradeMaterialsCommitted;
     gameSession.updateGame((state) => {
-      const result = cancelBuildingWork(state.settlement, selectedBuilding!.id);
+      const result = cancelBuildingWork(
+        state.settlement,
+        selectedBuilding!.id,
+        state.captain.trait
+      );
       ok = result.ok;
       reason = result.reason ?? '';
       return ok ? { ...state, settlement: result.state } : state;
@@ -338,7 +351,7 @@
     gameSession.updateGame(
       (state) => ({
         ...state,
-        settlement: demolishBuilding(state.settlement, candidate.id)
+        settlement: demolishBuilding(state.settlement, candidate.id, state.captain.trait)
       }),
       true
     );
@@ -542,7 +555,7 @@
             <span
               ><strong>{definition.name}</strong><small>{definition.description}</small><span
                 class="compact-cost"
-                >{#each Object.entries(definition.constructionCost).slice(0, 4) as [id, cost]}<i
+                >{#each Object.entries(buildingConstructionCost(definition.id, game.captain.trait)).slice(0, 4) as [id, cost]}<i
                     class:missing={(inventory[id as keyof typeof inventory] ?? 0) < cost}
                     >{SETTLEMENT_RESOURCES[id as keyof typeof SETTLEMENT_RESOURCES].icon}{cost}</i
                   >{/each}</span
@@ -653,7 +666,7 @@
             class="upgrade-cost"
           >
             <small>{selectedBuilding.level + 1}단계 확장</small
-            >{#each Object.entries(buildingUpgradeCost(selectedBuilding.definitionId, selectedBuilding.level)) as [id, cost]}<span
+            >{#each Object.entries(buildingUpgradeCost(selectedBuilding.definitionId, selectedBuilding.level, game.captain.trait)) as [id, cost]}<span
                 class:missing={(inventory[id as SettlementResourceId] ?? 0) < cost}
                 >{SETTLEMENT_RESOURCES[id as SettlementResourceId].icon}{cost}</span
               >{/each}

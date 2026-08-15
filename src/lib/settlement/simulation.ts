@@ -8,7 +8,7 @@ import type {
   SettlementResourceId,
   SettlementSimulationState
 } from './types';
-import { aggregateInventory, buildingUpgradeCost } from './construction';
+import { aggregateInventory, buildingConstructionCost, buildingUpgradeCost } from './construction';
 import { createId } from '$lib/domain/rng';
 import type { CaptainTrait } from '$lib/domain/types';
 import { findCachedPath, pathTravelCost } from './island';

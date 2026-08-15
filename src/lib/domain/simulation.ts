@@ -11,6 +11,7 @@ import { advanceShipConstruction } from '$lib/settlement/shipbuilding';
 import { advanceExpeditions } from '$lib/settlement/expeditions';
 import { tickDefenseCountdown } from './defense';
 import { evaluateCampaign } from './campaign';
+import { DIFFICULTIES } from './catalog';
 
 export function advanceSimulation(state: GameState, realSeconds: number, now = Date.now()): GameState {
   if (state.paused) return state;
@@ -19,7 +20,12 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
   const absoluteHours = (state.world.day - 1) * 24 + state.world.hour + elapsedGameHours;
   const day = Math.floor(absoluteHours / 24) + 1;
   const hour = absoluteHours % 24;
-  const advancedSettlement = advanceSettlement(state.settlement, realSeconds);
+  const difficulty = DIFFICULTIES[state.captain.difficulty];
+  const advancedSettlement = advanceSettlement(state.settlement, realSeconds, {
+    captainTrait: state.captain.trait,
+    productionMultiplier: difficulty.production,
+    consumptionMultiplier: difficulty.consumption
+  });
   const shipbuilding = advanceShipConstruction(advancedSettlement, state.ships, realSeconds * advancedSettlement.speed);
   const expeditions = advanceExpeditions(shipbuilding.settlement, shipbuilding.ships, realSeconds * shipbuilding.settlement.speed, now);
   const settlement = expeditions.settlement;
@@ -55,7 +61,12 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
     next = { ...next, world: { ...next.world, marketCycle: next.world.marketCycle + (day - previousDay) } };
   }
 
-  const threatGain = realSeconds * (next.bounty / 10000 + next.haven.detectionRisk / 5000);
+  const detectionFactor = next.captain.trait === 'smuggler' ? 0.85 : 1;
+  const threatGain =
+    realSeconds *
+    (next.bounty / 10000 + next.haven.detectionRisk / 5000) *
+    difficulty.pursuit *
+    detectionFactor;
   const raidThreat = clamp(next.haven.raidThreat + threatGain, 0, 100);
   let invasion = { ...next.settlement.threat };
   if (raidThreat >= 65 && !invasion.active) {
