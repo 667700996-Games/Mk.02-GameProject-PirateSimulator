@@ -367,10 +367,17 @@ describe('settlement simulation', () => {
   it('delivers upgrade materials and changes the building visual level through builder work', () => {
     const initial = createInitialSettlement(41, 1000);
     const tent = initial.buildings.find((building) => building.definitionId === 'tent')!;
-    const cost = buildingUpgradeCost('tent', tent.level);
+    const tierTwoCost = buildingUpgradeCost('tent', tent.level);
+    const tierThreeCost = buildingUpgradeCost('tent', tent.level + 1);
     const wreckage = initial.buildings.find((building) => building.definitionId === 'wreckage')!;
-    for (const [resource, amount] of Object.entries(cost))
-      wreckage.outputInventory[resource as keyof typeof wreckage.outputInventory] = amount;
+    for (const resource of new Set([
+      ...Object.keys(tierTwoCost),
+      ...Object.keys(tierThreeCost)
+    ])) {
+      wreckage.outputInventory[resource as keyof typeof wreckage.outputInventory] =
+        (tierTwoCost[resource as keyof typeof tierTwoCost] ?? 0) +
+        (tierThreeCost[resource as keyof typeof tierThreeCost] ?? 0);
+    }
     const begun = beginBuildingUpgrade(initial, tent.id);
     expect(begun.ok).toBe(true);
     const upgraded = advanceMany(begun.state, 160);

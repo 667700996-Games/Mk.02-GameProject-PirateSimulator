@@ -146,7 +146,9 @@ export class SettlementScene extends Phaser.Scene {
   private overlaySignature = '';
   private terrainSignature = '';
   private loadingBuildingAtlases = new Set<BuildingAtlasKey>();
+  private pendingBuildingAtlases = new Set<BuildingAtlasKey>();
   private loadingResidentActionAtlases = new Set<ResidentActionAtlasKey>();
+  private pendingResidentActionAtlases = new Set<ResidentActionAtlasKey>();
   private runtimeAtlasCompletionArmed = false;
   private residentObjects = new Map<
     string,
@@ -331,7 +333,16 @@ export class SettlementScene extends Phaser.Scene {
   private queueBuildingAtlases(keys: Iterable<BuildingAtlasKey>, startNow: boolean): void {
     let queued = false;
     for (const key of keys) {
-      if (this.textures.exists(key) || this.loadingBuildingAtlases.has(key)) continue;
+      if (
+        this.textures.exists(key) ||
+        this.loadingBuildingAtlases.has(key) ||
+        this.pendingBuildingAtlases.has(key)
+      )
+        continue;
+      if (startNow && this.load.isLoading()) {
+        this.pendingBuildingAtlases.add(key);
+        continue;
+      }
       const source = BUILDING_ATLAS_SOURCES[key];
       this.loadingBuildingAtlases.add(key);
       this.load.atlas(key, source.image, source.data);
@@ -347,7 +358,16 @@ export class SettlementScene extends Phaser.Scene {
   ): void {
     let queued = false;
     for (const key of keys) {
-      if (this.textures.exists(key) || this.loadingResidentActionAtlases.has(key)) continue;
+      if (
+        this.textures.exists(key) ||
+        this.loadingResidentActionAtlases.has(key) ||
+        this.pendingResidentActionAtlases.has(key)
+      )
+        continue;
+      if (startNow && this.load.isLoading()) {
+        this.pendingResidentActionAtlases.add(key);
+        continue;
+      }
       const source = RESIDENT_ACTION_ATLAS_SOURCES[key];
       this.loadingResidentActionAtlases.add(key);
       this.load.atlas(key, source.image, source.data);
@@ -369,9 +389,32 @@ export class SettlementScene extends Phaser.Scene {
         this.buildingSignature = '';
         this.drawDynamicLayers(true);
         this.drawPreview();
+        this.time.delayedCall(0, () => this.flushPendingRuntimeAtlases());
       });
     }
     if (!this.load.isLoading()) this.load.start();
+  }
+
+  private flushPendingRuntimeAtlases(): void {
+    if (!this.scene.isActive() || this.load.isLoading()) return;
+    let queued = false;
+    for (const key of this.pendingBuildingAtlases) {
+      this.pendingBuildingAtlases.delete(key);
+      if (this.textures.exists(key)) continue;
+      const source = BUILDING_ATLAS_SOURCES[key];
+      this.loadingBuildingAtlases.add(key);
+      this.load.atlas(key, source.image, source.data);
+      queued = true;
+    }
+    for (const key of this.pendingResidentActionAtlases) {
+      this.pendingResidentActionAtlases.delete(key);
+      if (this.textures.exists(key)) continue;
+      const source = RESIDENT_ACTION_ATLAS_SOURCES[key];
+      this.loadingResidentActionAtlases.add(key);
+      this.load.atlas(key, source.image, source.data);
+      queued = true;
+    }
+    this.startRuntimeAtlasLoad(queued);
   }
 
   public rotateBuildTool(): void {
