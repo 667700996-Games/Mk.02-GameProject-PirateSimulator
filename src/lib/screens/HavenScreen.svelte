@@ -38,7 +38,7 @@
     SettlementWarning,
     TransportJob
   } from '$lib/settlement/types';
-  import type { GameScreen, GameSettings, GameState } from '$lib/domain/types';
+  import type { GameScreen, GameSettings, GameState, Mission } from '$lib/domain/types';
   import { focusTrap } from '$lib/actions/focusTrap';
 
   let { game, settings, navigate } = $props<{
@@ -96,6 +96,12 @@
 
   let summary: SettlementSummary = $derived(settlementSummary(game.settlement));
   let inventory: PartialSettlementInventory = $derived(aggregateInventory(game.settlement));
+  let openingStory = $derived(
+    game.missions.find((mission: Mission) => mission.id === 'story-first-prize')
+  );
+  let onboardingProgress = $derived(
+    Math.min(6, Math.max(game.settlement.tutorialStep, openingStory?.progress ?? 0))
+  );
   let selectedBuilding: SettlementBuilding | undefined = $derived(
     game.settlement.buildings.find(
       (building: SettlementBuilding) => building.id === selectedBuildingId
@@ -782,33 +788,46 @@
       </p>
     {:else}
       <div class="mission-card">
-        <span class="eyebrow">THE WRECKED CROWN · {game.settlement.tutorialStep + 1}/5</span>
+        <span class="eyebrow">THE WRECKED CROWN · {onboardingProgress}/6</span>
         <h2>
-          {game.settlement.tutorialStep === 0
+          {onboardingProgress === 0
             ? '첫 물 한 모금'
-            : game.settlement.tutorialStep === 1
+            : onboardingProgress === 1
               ? '숲을 깨우는 도끼'
-              : game.settlement.tutorialStep === 2
+              : onboardingProgress === 2
                 ? '흩어진 짐을 한곳에'
-                : game.settlement.tutorialStep === 3
+                : onboardingProgress === 3
                   ? '오늘 잡은 생선'
-                  : '부두를 되찾아라'}
+                  : onboardingProgress === 4
+                    ? '부두를 되찾아라'
+                    : onboardingProgress === 5
+                      ? '첫 약탈 원정'
+                      : '검은 깃발이 올랐다'}
         </h2>
         <p>
-          {game.settlement.tutorialStep === 0
+          {onboardingProgress === 0
             ? '빗물 집수장을 평지에 배치하십시오. 자재가 난파선에서 직접 운반됩니다.'
-            : game.settlement.tutorialStep === 1
+            : onboardingProgress === 1
               ? '서쪽 숲 위에 벌목장을 배치하고 원목 생산을 시작하십시오.'
-              : game.settlement.tutorialStep === 2
+              : onboardingProgress === 2
                 ? '생산지와 해안 사이 평지에 중앙 창고를 세워 물류 거리를 줄이십시오.'
-                : game.settlement.tutorialStep === 3
+                : onboardingProgress === 3
                   ? '해안에 어업소를 세워 생존자들의 첫 식량망을 만드십시오.'
-                  : '판자, 밧줄과 도구를 생산해 폐허가 된 항만을 다시 일으키십시오.'}
+                  : onboardingProgress === 4
+                    ? '판자, 밧줄과 도구를 생산해 폐허가 된 항만을 다시 일으키십시오.'
+                    : onboardingProgress === 5
+                      ? '함선을 복구하고 초보자의 만으로 약탈 원정을 보내 정착지의 첫 전리품을 확보하십시오.'
+                      : '초기 생존망과 첫 원정이 완성됐습니다. 선장의 장부에서 다음 이야기 장을 확인하십시오.'}
         </p>
         <div class="objective-progress">
-          <span style={`--progress:${game.settlement.tutorialStep * 25}%`}></span>
+          <span style={`--progress:${onboardingProgress / 6 * 100}%`}></span>
         </div>
         <small class="muted">임무 안내는 실제 건설·생산 결과로만 진행됩니다.</small>
+        {#if onboardingProgress === 5}
+          <button class="btn primary wide" onclick={() => navigate('fleet')}>약탈 원정 편성</button>
+        {:else if onboardingProgress >= 6}
+          <button class="btn primary wide" onclick={() => navigate('missions')}>다음 이야기 장</button>
+        {/if}
       </div>
     {/if}
   </aside>

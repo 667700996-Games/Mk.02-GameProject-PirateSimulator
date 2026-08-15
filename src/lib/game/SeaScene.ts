@@ -384,7 +384,7 @@ export class SeaScene extends Phaser.Scene {
     }
     const distance = Phaser.Math.Distance.Between(this.playerMotion.x, this.playerMotion.y, this.enemyMotion.x, this.enemyMotion.y);
     const bearing = Math.atan2(this.enemyMotion.y - this.playerMotion.y, this.enemyMotion.x - this.playerMotion.x);
-    const result = resolveShot({ attacker: this.player, target: this.enemy, ammo: this.selectedAmmo, distance, bearingToTarget: bearing, attackerHeading: this.playerMotion.heading, attackerSpeed: this.playerMotion.speed, targetSpeed: this.enemyMotion.speed, broadside: this.selectedSide, difficulty: this.bridge.getState().captain.difficulty, captainIsGunner: this.bridge.getState().captain.trait === 'gunner', random: Math.random });
+    const result = resolveShot({ attacker: this.player, target: this.enemy, ammo: this.selectedAmmo, distance, bearingToTarget: bearing, attackerHeading: this.playerMotion.heading, attackerSpeed: this.playerMotion.speed, targetSpeed: this.enemyMotion.speed, broadside: this.selectedSide, difficulty: this.bridge.getState().captain.difficulty, attackerIsEnemy: false, captainIsGunner: this.bridge.getState().captain.trait === 'gunner', random: Math.random });
     if (!result.fired) { this.message = result.reason ?? '지금은 발사할 수 없습니다.'; return; }
     this.player = removeCargo(this.player, 'cannonballs', ammo.cost.cannonballs).ship;
     this.player = removeCargo(this.player, 'powder', ammo.cost.powder).ship;
@@ -411,7 +411,7 @@ export class SeaScene extends Phaser.Scene {
     if (!this.enemy || !this.enemyMotion) return;
     const portError = Math.abs(normalizeAngle(bearing - broadsideBearing(this.enemyMotion.heading, 'port')));
     const side: Broadside = portError < Math.PI / 2 ? 'port' : 'starboard';
-    const result = resolveShot({ attacker: this.enemy, target: this.player, ammo: 'round-shot', distance, bearingToTarget: bearing, attackerHeading: this.enemyMotion.heading, attackerSpeed: this.enemyMotion.speed, targetSpeed: this.playerMotion.speed, broadside: side, difficulty: this.bridge.getState().captain.difficulty, captainIsGunner: false, random: Math.random });
+    const result = resolveShot({ attacker: this.enemy, target: this.player, ammo: 'round-shot', distance, bearingToTarget: bearing, attackerHeading: this.enemyMotion.heading, attackerSpeed: this.enemyMotion.speed, targetSpeed: this.playerMotion.speed, broadside: side, difficulty: this.bridge.getState().captain.difficulty, attackerIsEnemy: true, captainIsGunner: false, random: Math.random });
     this.enemyReload = 5.5 + Math.random() * 2.5;
     if (!result.fired) return;
     this.bridge.onSound('cannon');

@@ -12,6 +12,58 @@ const AUDIO_ASSETS = {
 } as const;
 type AudioAssetId = keyof typeof AUDIO_ASSETS;
 
+interface SettlementSoundscape {
+  population: number;
+  activeProduction: number;
+  weather: 'clear' | 'rain' | 'storm' | 'fog';
+  fireCount: number;
+}
+
+export interface SoundscapeMix {
+  ocean: number;
+  harbor: number;
+  weather: number;
+  harborCutoff: number;
+}
+
+export function soundscapeMix(
+  mood: MusicMood,
+  settlement: SettlementSoundscape
+): SoundscapeMix {
+  const activity = Math.min(1, settlement.population / 180 + settlement.activeProduction / 32);
+  const weatherLift = settlement.weather === 'storm' ? 0.18 : settlement.weather === 'rain' ? 0.08 : 0;
+  if (mood === 'storm')
+    return { ocean: 0.74, harbor: 0.008, weather: 0.46, harborCutoff: 520 };
+  if (mood === 'sea')
+    return { ocean: 0.62, harbor: 0.012, weather: 0, harborCutoff: 520 };
+  if (mood === 'battle')
+    return { ocean: 0.44, harbor: 0.008, weather: 0.06, harborCutoff: 580 };
+  if (mood === 'haven')
+    return {
+      ocean: 0.3,
+      harbor: 0.04 + activity * 0.18 + weatherLift + Math.min(0.12, settlement.fireCount * 0.04),
+      weather:
+        settlement.weather === 'storm'
+          ? 0.46
+          : settlement.weather === 'rain'
+            ? 0.28
+            : settlement.weather === 'fog'
+              ? 0.035
+              : 0,
+      harborCutoff: 480 + activity * 920 + weatherLift * 1200
+    };
+  if (mood === 'freeport')
+    return { ocean: 0.36, harbor: 0.2, weather: 0, harborCutoff: 1320 };
+  if (mood === 'aftermath')
+    return { ocean: 0.34, harbor: 0.018, weather: 0, harborCutoff: 560 };
+  return { ocean: 0.28, harbor: 0.025, weather: 0, harborCutoff: 520 };
+}
+
+interface MusicLayer {
+  gain: GainNode;
+  sources: AudioScheduledSourceNode[];
+}
+
 class SoundEngine {
   private context?: AudioContext;
   private master?: GainNode;
@@ -22,13 +74,20 @@ class SoundEngine {
   private reverb?: ConvolverNode;
   private reverbGain?: GainNode;
   private ambientSource?: AudioBufferSourceNode;
+  private ambientGain?: GainNode;
   private harborSource?: AudioBufferSourceNode;
   private weatherSource?: AudioBufferSourceNode;
   private weatherGain?: GainNode;
   private harborGain?: GainNode;
   private harborFilter?: BiquadFilterNode;
-  private musicNodes: AudioScheduledSourceNode[] = [];
+  private musicLayer?: MusicLayer;
   private mood: MusicMood = 'title';
+  private settlementSoundscape: SettlementSoundscape = {
+    population: 0,
+    activeProduction: 0,
+    weather: 'clear',
+    fireCount: 0
+  };
   private settings?: GameSettings;
   private buffers = new Map<AudioAssetId, AudioBuffer>();
   private assetsPromise?: Promise<void>;
@@ -52,23 +111,30 @@ class SoundEngine {
     if (!this.ambientSource) this.startOceanAmbience();
     if (!this.harborSource) this.startHarborAmbience();
     if (!this.weatherSource) this.startWeatherAmbience();
-    if (!this.musicNodes.length) this.startMusic();
+    this.applySoundscape();
+    if (!this.musicLayer) this.startMusic();
   }
 
   setMood(mood: MusicMood): void {
     if (this.mood === mood) return;
     this.mood = mood;
+    this.applySoundscape();
     if (this.context?.state === 'running') this.startMusic();
   }
 
   setSettlementActivity(population: number, activeProduction: number, weather: 'clear' | 'rain' | 'storm' | 'fog', fireCount: number): void {
-    if (!this.context || !this.harborGain || !this.harborFilter) return;
+    this.settlementSoundscape = { population, activeProduction, weather, fireCount };
+    this.applySoundscape();
+  }
+
+  private applySoundscape(): void {
+    if (!this.context || !this.ambientGain || !this.harborGain || !this.harborFilter) return;
     const now = this.context.currentTime;
-    const activity = Math.min(1, population / 180 + activeProduction / 32);
-    const weatherLift = weather === 'storm' ? .18 : weather === 'rain' ? .08 : 0;
-    this.harborGain.gain.setTargetAtTime(.04 + activity * .18 + weatherLift + Math.min(.12, fireCount * .04), now, .8);
-    this.harborFilter.frequency.setTargetAtTime(480 + activity * 920 + weatherLift * 1200, now, .8);
-    this.weatherGain?.gain.setTargetAtTime(weather === 'storm' ? .46 : weather === 'rain' ? .28 : weather === 'fog' ? .035 : 0, now, 1.2);
+    const mix = soundscapeMix(this.mood, this.settlementSoundscape);
+    this.ambientGain.gain.setTargetAtTime(mix.ocean, now, 1.1);
+    this.harborGain.gain.setTargetAtTime(mix.harbor, now, 0.8);
+    this.harborFilter.frequency.setTargetAtTime(mix.harborCutoff, now, 0.8);
+    this.weatherGain?.gain.setTargetAtTime(mix.weather, now, 1.2);
   }
 
   play(sound: GameSound): void {
@@ -168,10 +234,11 @@ class SoundEngine {
     filter.type = 'lowpass';
     filter.frequency.value = 720;
     filter.Q.value = .5;
-    gain.gain.value = .55;
+    gain.gain.value = 0.0001;
     source.connect(filter).connect(gain).connect(this.ambience!);
     source.start();
     this.ambientSource = source;
+    this.ambientGain = gain;
   }
 
   private startHarborAmbience(): void {
@@ -193,14 +260,16 @@ class SoundEngine {
   }
 
   private startWeatherAmbience(): void {
-    const buffer = this.buffers.get('rain');
-    if (!buffer || !this.context || !this.ambience) return;
+    if (!this.context || !this.ambience) return;
     const source = this.context.createBufferSource();
+    const filter = this.context.createBiquadFilter();
     const gain = this.context.createGain();
-    source.buffer = buffer;
+    source.buffer = this.buffers.get('rain') ?? this.noiseBuffer(8);
     source.loop = true;
+    filter.type = 'highpass';
+    filter.frequency.value = 720;
     gain.gain.value = 0;
-    source.connect(gain).connect(this.ambience);
+    source.connect(filter).connect(gain).connect(this.ambience);
     source.start();
     this.weatherSource = source;
     this.weatherGain = gain;
@@ -208,8 +277,6 @@ class SoundEngine {
 
   private startMusic(): void {
     if (!this.context || !this.music) return;
-    for (const node of this.musicNodes) { try { node.stop(); } catch { /* already stopped */ } }
-    this.musicNodes = [];
     const context = this.context;
     const palettes: Record<MusicMood, { root: number; ratios: number[]; pulse: number; color: OscillatorType }> = {
       title: { root: 55, ratios: [1, 1.5, 2], pulse: .055, color: 'triangle' },
@@ -221,24 +288,45 @@ class SoundEngine {
       aftermath: { root: 58.27, ratios: [1, 1.25, 1.498], pulse: .035, color: 'triangle' }
     };
     const palette = palettes[this.mood];
+    const now = context.currentTime;
+    const previousLayer = this.musicLayer;
+    const layerGain = context.createGain();
+    const sources: AudioScheduledSourceNode[] = [];
+    layerGain.gain.setValueAtTime(0.0001, now);
+    layerGain.gain.exponentialRampToValueAtTime(1, now + 2.2);
+    layerGain.connect(this.music);
     palette.ratios.forEach((ratio, index) => {
       const oscillator = context.createOscillator();
       const voiceGain = context.createGain();
       const filter = context.createBiquadFilter();
+      const pan = context.createStereoPanner();
       const lfo = context.createOscillator();
       const lfoGain = context.createGain();
       oscillator.type = index === 0 ? 'sine' : palette.color;
       oscillator.frequency.value = palette.root * ratio;
+      oscillator.detune.value = (index - 1) * 3;
       voiceGain.gain.value = index === 0 ? .13 : .035;
       filter.type = 'lowpass';
       filter.frequency.value = this.mood === 'battle' ? 520 : 340;
+      filter.Q.value = this.mood === 'battle' || this.mood === 'storm' ? 1.4 : 0.7;
+      pan.pan.value = index === 0 ? 0 : index % 2 === 0 ? 0.32 : -0.32;
       lfo.frequency.value = palette.pulse * (1 + index * .17);
-      lfoGain.gain.value = index === 0 ? .025 : .012;
+      lfoGain.gain.value =
+        (this.mood === 'battle' || this.mood === 'storm' ? 1.6 : 1) *
+        (index === 0 ? .025 : .012);
       lfo.connect(lfoGain).connect(voiceGain.gain);
-      oscillator.connect(filter).connect(voiceGain).connect(this.music!);
+      oscillator.connect(filter).connect(voiceGain).connect(pan).connect(layerGain);
       oscillator.start(); lfo.start();
-      this.musicNodes.push(oscillator, lfo);
+      sources.push(oscillator, lfo);
     });
+    this.musicLayer = { gain: layerGain, sources };
+    if (previousLayer) {
+      previousLayer.gain.gain.cancelAndHoldAtTime(now);
+      previousLayer.gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+      for (const source of previousLayer.sources) {
+        try { source.stop(now + 1.9); } catch { /* already stopped */ }
+      }
+    }
   }
 
   private cannon(): void {

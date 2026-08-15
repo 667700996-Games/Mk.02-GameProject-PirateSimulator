@@ -1,7 +1,6 @@
 import type {
   CaptainTrait,
   Difficulty,
-  FacilityId,
   FactionId,
   ResourceId,
   ResourceStock,
@@ -150,38 +149,6 @@ export const SHIP_CLASSES: Record<ShipClass, ShipClassDefinition> = {
   galleon: { id: 'galleon', name: '갤리온', description: '느리지만 거대한 화물창과 두꺼운 선체를 가졌다.', stats: { hullMax: 720, sailMax: 370, speedMax: 5.7, acceleration: 0.55, turnRate: 0.54, cargoMax: 430, crewMax: 180, cannonSlots: 42, armor: 28, stealth: 10, upkeep: 135 }, price: 32000, unlockRenown: 950 },
   'ship-of-the-line': { id: 'ship-of-the-line', name: '전열함', description: '바다 위의 움직이는 요새.', stats: { hullMax: 1100, sailMax: 520, speedMax: 5.4, acceleration: 0.42, turnRate: 0.4, cargoMax: 320, crewMax: 280, cannonSlots: 74, armor: 42, stealth: 2, upkeep: 240 }, price: 68000, unlockRenown: 1600 },
   legendary: { id: 'legendary', name: '전설 함선', description: '폭풍과 대포를 비웃는 이름 없는 고대 함선.', stats: { hullMax: 1500, sailMax: 760, speedMax: 7.2, acceleration: 0.78, turnRate: 0.75, cargoMax: 500, crewMax: 360, cannonSlots: 88, armor: 52, stealth: 34, upkeep: 320 }, price: 120000, unlockRenown: 3000 }
-};
-
-export interface FacilityDefinition {
-  id: FacilityId;
-  name: string;
-  shortDescription: string;
-  icon: string;
-  maxLevel: number;
-  workersPerLevel: number;
-  baseCost: Partial<ResourceStock>;
-  prerequisite?: { id: FacilityId; level: number };
-  unlockTier: number;
-  category: 'command' | 'naval' | 'economy' | 'crew' | 'defense' | 'covert';
-}
-
-export const FACILITIES: Record<FacilityId, FacilityDefinition> = {
-  'captains-lodge': { id: 'captains-lodge', name: '선장 관저', shortDescription: '본거지 정책과 임무를 지휘합니다.', icon: '♜', maxLevel: 7, workersPerLevel: 2, baseCost: { gold: 260, timber: 22, stone: 8 }, unlockTier: 1, category: 'command' },
-  dock: { id: 'dock', name: '부두', shortDescription: '함선 정박·보급·함대 편성을 지원합니다.', icon: '⚓', maxLevel: 7, workersPerLevel: 4, baseCost: { gold: 220, timber: 36, rope: 14 }, unlockTier: 1, category: 'naval' },
-  shipyard: { id: 'shipyard', name: '조선소', shortDescription: '함선을 수리하고 건조·개조합니다.', icon: '◢', maxLevel: 6, workersPerLevel: 8, baseCost: { gold: 480, timber: 58, iron: 18, rope: 12 }, prerequisite: { id: 'dock', level: 1 }, unlockTier: 2, category: 'naval' },
-  forge: { id: 'forge', name: '대장간', shortDescription: '대포와 장비, 탄약을 제작합니다.', icon: '⚒', maxLevel: 6, workersPerLevel: 6, baseCost: { gold: 360, timber: 18, iron: 34, stone: 16 }, unlockTier: 2, category: 'naval' },
-  'powder-magazine': { id: 'powder-magazine', name: '화약고', shortDescription: '화약 생산과 특수 탄약을 해금합니다.', icon: '✹', maxLevel: 5, workersPerLevel: 4, baseCost: { gold: 340, timber: 14, stone: 26, iron: 12, powder: 8 }, prerequisite: { id: 'forge', level: 1 }, unlockTier: 2, category: 'naval' },
-  warehouse: { id: 'warehouse', name: '창고', shortDescription: '자원 저장량과 화재·도난 저항을 높입니다.', icon: '▤', maxLevel: 7, workersPerLevel: 5, baseCost: { gold: 240, timber: 42, stone: 12, rope: 8 }, unlockTier: 1, category: 'economy' },
-  tavern: { id: 'tavern', name: '선술집', shortDescription: '선원과 장교를 모집하고 사기를 회복합니다.', icon: '♨', maxLevel: 7, workersPerLevel: 5, baseCost: { gold: 300, timber: 32, cloth: 12, rum: 8 }, unlockTier: 1, category: 'crew' },
-  infirmary: { id: 'infirmary', name: '의무실', shortDescription: '부상과 질병을 치료하고 사망률을 낮춥니다.', icon: '✚', maxLevel: 5, workersPerLevel: 5, baseCost: { gold: 420, timber: 24, cloth: 18, medicine: 6 }, prerequisite: { id: 'tavern', level: 1 }, unlockTier: 2, category: 'crew' },
-  'black-market': { id: 'black-market', name: '암시장', shortDescription: '장물과 금지품을 거래합니다.', icon: '◈', maxLevel: 6, workersPerLevel: 6, baseCost: { gold: 520, timber: 22, cloth: 15, contraband: 3 }, prerequisite: { id: 'warehouse', level: 1 }, unlockTier: 2, category: 'economy' },
-  'intel-den': { id: 'intel-den', name: '정보상 거점', shortDescription: '항로·방어·추격대 정보를 제공합니다.', icon: '◉', maxLevel: 6, workersPerLevel: 4, baseCost: { gold: 460, timber: 18, cloth: 14, spices: 4 }, unlockTier: 2, category: 'covert' },
-  prison: { id: 'prison', name: '포로 수용소', shortDescription: '포로 몸값, 전향과 정보 획득을 지원합니다.', icon: '▥', maxLevel: 5, workersPerLevel: 4, baseCost: { gold: 400, timber: 30, iron: 24, stone: 20 }, unlockTier: 3, category: 'crew' },
-  'training-yard': { id: 'training-yard', name: '훈련장', shortDescription: '포술·항해·승선 전투력을 높입니다.', icon: '⚔', maxLevel: 6, workersPerLevel: 7, baseCost: { gold: 540, timber: 36, iron: 20, food: 18 }, prerequisite: { id: 'tavern', level: 2 }, unlockTier: 3, category: 'crew' },
-  'coastal-battery': { id: 'coastal-battery', name: '방어 포대', shortDescription: '침공 함대에 해안 포격을 가합니다.', icon: '☄', maxLevel: 7, workersPerLevel: 8, baseCost: { gold: 740, timber: 28, iron: 42, stone: 48, powder: 14 }, prerequisite: { id: 'forge', level: 2 }, unlockTier: 3, category: 'defense' },
-  watchtower: { id: 'watchtower', name: '감시탑', shortDescription: '기습을 막고 주변 해역 시야를 넓힙니다.', icon: '♝', maxLevel: 6, workersPerLevel: 3, baseCost: { gold: 310, timber: 38, stone: 14, rope: 10 }, unlockTier: 2, category: 'defense' },
-  'hidden-dock': { id: 'hidden-dock', name: '은신 부두', shortDescription: '함선 은폐와 비밀 출항을 지원합니다.', icon: '◒', maxLevel: 5, workersPerLevel: 5, baseCost: { gold: 680, timber: 52, stone: 36, rope: 24, contraband: 4 }, prerequisite: { id: 'dock', level: 3 }, unlockTier: 4, category: 'covert' },
-  'pirate-council': { id: 'pirate-council', name: '해적 의회', shortDescription: '동맹·전쟁·세금과 부하 선장을 관리합니다.', icon: '♛', maxLevel: 4, workersPerLevel: 6, baseCost: { gold: 1200, timber: 64, stone: 72, cloth: 28, blueprints: 1 }, prerequisite: { id: 'captains-lodge', level: 4 }, unlockTier: 5, category: 'command' }
 };
 
 const price = (multipliers: Partial<Record<ResourceId, number>> = {}): Partial<ResourceStock> =>

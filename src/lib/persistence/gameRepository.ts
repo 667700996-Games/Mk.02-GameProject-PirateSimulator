@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { DEFAULT_SETTINGS } from '$lib/domain/initialState';
 import { SAVE_VERSION, type GameSettings, type GameState, type SaveRecord } from '$lib/domain/types';
+import { settlementSummary } from '$lib/settlement/summary';
 import { migrateGameState } from './migrations';
 
 const DB_NAME = 'blackwake-pirate-simulator';
@@ -71,7 +72,7 @@ export async function writeSave(state: GameState, name = state.saveName): Promis
     playTimeSeconds: normalizedState.playTimeSeconds,
     captainName: normalizedState.captain.name,
     shipName: activeShip.name,
-    havenTier: normalizedState.haven.tier,
+    havenTier: settlementSummary(normalizedState.settlement).tier,
     state: structuredClone(normalizedState),
     integrity: checksumState(normalizedState)
   };

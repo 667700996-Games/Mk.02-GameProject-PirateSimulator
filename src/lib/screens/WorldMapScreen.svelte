@@ -13,8 +13,11 @@
     game.settlement.expeditions.filter((expedition: StrategicExpedition) => !['COMPLETED', 'LOST'].includes(expedition.state))
   );
   let activeShip = $derived(game.ships.find((ship: Ship) => ship.id === game.activeShipId) ?? game.ships[0]);
+  let activeShipIsDeployed = $derived(
+    activeExpeditions.some((expedition) => expedition.shipIds.includes(game.activeShipId))
+  );
   let canDirectSortie = $derived(
-    !!activeShip && activeShip.hull >= activeShip.stats.hullMax * .35 && activeShip.sails >= activeShip.stats.sailMax * .35 && activeShip.crew >= 4
+    !!activeShip && !activeShipIsDeployed && activeShip.hull >= activeShip.stats.hullMax * .35 && activeShip.sails >= activeShip.stats.sailMax * .35 && activeShip.crew >= 4
   );
   const positions: Record<ZoneId, { x: number; y: number }> = {
     'beginners-bay': { x: 17, y: 70 }, 'merchant-routes': { x: 31, y: 43 }, 'mist-archipelago': { x: 48, y: 21 }, 'naval-patrol': { x: 73, y: 19 }, 'storm-reach': { x: 12, y: 17 }, 'freeport-waters': { x: 81, y: 46 }, 'imperial-heartway': { x: 52, y: 79 }, 'legend-sea': { x: 83, y: 76 }
@@ -96,7 +99,9 @@
       <p class:danger={!canDirectSortie} class="sortie-requirement">
         {canDirectSortie
           ? `${activeShip.name} · 실시간 포격과 승선 지휘`
-          : '선체·돛 35% 이상, 선원 4명 이상의 기함이 필요합니다.'}
+          : activeShipIsDeployed
+            ? '기함이 전략 원정에 투입 중입니다.'
+            : '선체·돛 35% 이상, 선원 4명 이상의 기함이 필요합니다.'}
       </p>
     {/if}
   </aside>

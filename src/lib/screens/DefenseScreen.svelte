@@ -15,15 +15,22 @@
     type PreparationAction
   } from '$lib/domain/defense';
   import { fleetDefensePower } from '$lib/domain/fleet';
+  import { settlementSummary } from '$lib/settlement/summary';
   import { gameSession } from '$lib/stores/gameStore';
   import { aggregateInventory } from '$lib/settlement/construction';
   import { SETTLEMENT_RESOURCES } from '$lib/settlement/catalog';
-  import type { PartialSettlementInventory, SettlementResourceId } from '$lib/settlement/types';
+  import type { PartialSettlementInventory, Resident, SettlementResourceId } from '$lib/settlement/types';
   import type { FactionId, GameState } from '$lib/domain/types';
 
   let { game } = $props<{ game: GameState }>();
   let attacker = $derived(FACTIONS[game.defense.attacker as FactionId]);
   let fleetPower = $derived(fleetDefensePower(game));
+  let havenSummary = $derived(settlementSummary(game.settlement));
+  let fighterCount = $derived(
+    game.settlement.residents.filter((resident: Resident) =>
+      ['guard', 'gunner', 'raider'].includes(resident.job)
+    ).length
+  );
   let remaining = $derived(game.defense.attackerRemaining ?? game.defense.attackStrength);
   let inventory = $derived(aggregateInventory(game.settlement));
   let batteryAmmo = $derived(batteryAmmunition(game.settlement));
@@ -83,10 +90,10 @@
     </nav>
 
     <div class="versus compact">
-      <div class="force-card"><span class="eyebrow">BLACKWAKE DEFENSE</span><div class="force-number">{Math.round(game.defense.defenseStrength || game.haven.defense + fleetPower + (game.defense.preparation ?? 0))}</div><small>포대 {game.haven.defense} · 함대 {fleetPower}</small></div>
+      <div class="force-card"><span class="eyebrow">BLACKWAKE DEFENSE</span><div class="force-number">{Math.round(game.defense.defenseStrength || havenSummary.defense + fleetPower + (game.defense.preparation ?? 0))}</div><small>포대 {havenSummary.defense} · 함대 {fleetPower}</small></div>
       <div class="versus-mark">⚔</div>
       <div class="force-card"><span class="eyebrow danger">INVASION FORCE</span><div class="force-number danger">{Math.round(remaining)}</div><small>초기 전력 {game.defense.attackStrength}</small></div>
-      <div class="force-card"><span class="eyebrow">CIVILIAN RISK</span><div class="force-number">{Math.round(game.defense.civilianRisk ?? 55)}%</div><small>주민 {game.haven.population}명 · 전투원 {game.haven.populationByRole.fighters}명</small></div>
+      <div class="force-card"><span class="eyebrow">CIVILIAN RISK</span><div class="force-number">{Math.round(game.defense.civilianRisk ?? 55)}%</div><small>주민 {havenSummary.population}명 · 전투원 {fighterCount}명</small></div>
     </div>
 
     {#if game.defense.stage === 'warning'}

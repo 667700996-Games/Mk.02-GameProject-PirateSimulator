@@ -2,10 +2,14 @@ import { DIFFICULTIES, FACTIONS } from './catalog';
 import { fleetDefensePower } from './fleet';
 import { progressMissions } from './missions';
 import { clamp } from './physics';
-import type { FacilityId, GameState } from './types';
+import type { GameState } from './types';
 import { spendSettlementResources } from '$lib/settlement/construction';
-import { creditGameResources, spendGameResources } from '$lib/settlement/economyBridge';
-import { settlementSummary } from '$lib/settlement/summary';
+import {
+  creditGameResources,
+  gameResourceStock,
+  spendGameResources
+} from '$lib/settlement/economyBridge';
+import { settlementLegacyHaven, settlementSummary } from '$lib/settlement/summary';
 import type { PartialSettlementInventory, SettlementSimulationState } from '$lib/settlement/types';
 import { createId } from './rng';
 
@@ -102,9 +106,13 @@ export function resolveNavalStage(state: GameState, action: NavalAction, random:
   const shipDamage = Math.round(remaining * choice.shipRisk * (.35 + random() * .45) * lossMultiplier);
   const havenDamage = Math.round(remaining * choice.havenRisk * (.22 + random() * .4) * lossMultiplier);
   const ships = damageFleet(state, shipDamage);
-  const haven = { ...state.haven, defense: Math.max(0, state.haven.defense - havenDamage) };
-  if (attackerRemaining <= 0) return finishDefense({ ...state, settlement: batteryResult, ships, haven, defense: { ...state.defense, attackerRemaining, log: [...(state.defense.log ?? []), choice.label, '적 함대가 상륙하기 전에 퇴각했다.'] } }, true);
-  return { ...state, settlement: batteryResult, ships, haven, defense: { ...state.defense, stage: 'landing', attackerRemaining, selectedActions: [...(state.defense.selectedActions ?? []), action], log: [...(state.defense.log ?? []), choice.label, batteryReadiness < .4 ? '포대 탄약이 바닥나 화망이 끊겼다.' : `${Math.round(attackerRemaining)} 전력의 상륙대가 해변에 도달했다.`] } };
+  const settlement =
+    havenDamage > 0
+      ? damageSettlementBuildings(batteryResult, Math.max(1, Math.ceil(havenDamage / 8)))
+      : batteryResult;
+  const haven = settlementLegacyHaven(settlement, state.haven);
+  if (attackerRemaining <= 0) return finishDefense({ ...state, settlement, ships, haven, defense: { ...state.defense, attackerRemaining, log: [...(state.defense.log ?? []), choice.label, '적 함대가 상륙하기 전에 퇴각했다.'] } }, true);
+  return { ...state, settlement, ships, haven, defense: { ...state.defense, stage: 'landing', attackerRemaining, selectedActions: [...(state.defense.selectedActions ?? []), action], log: [...(state.defense.log ?? []), choice.label, batteryReadiness < .4 ? '포대 탄약이 바닥나 화망이 끊겼다.' : `${Math.round(attackerRemaining)} 전력의 상륙대가 해변에 도달했다.`] } };
 }
 
 export function resolveLandingStage(state: GameState, action: LandingAction, random: () => number = Math.random): GameState {
@@ -116,7 +124,10 @@ export function resolveLandingStage(state: GameState, action: LandingAction, ran
     counterattack: { attack: 1.38, casualty: .4, civilian: 9, label: '해적 전투원들이 해변으로 돌진해 적의 대형을 무너뜨렸다.' }
   };
   const choice = modifiers[action];
-  const fighterPower = (state.haven.populationByRole.fighters * 2.2 + state.crew.roles.marine * 3 + (state.defense.preparation ?? 0) * .65) * choice.attack;
+  const fighters = state.settlement.residents.filter((resident) =>
+    ['guard', 'gunner', 'raider'].includes(resident.job)
+  ).length;
+  const fighterPower = (fighters * 2.2 + state.crew.roles.marine * 3 + (state.defense.preparation ?? 0) * .65) * choice.attack;
   const damage = Math.max(5, Math.round(fighterPower * (.58 + random() * .35)));
   const attackerRemaining = Math.max(0, remaining - damage);
   const wallProtection = Math.min(.38, state.settlement.buildings.filter((building) => building.definitionId === 'fort-wall' && building.state === 'ACTIVE').reduce((sum, wall) => sum + wall.level * wall.condition / 2500, 0));
@@ -126,16 +137,10 @@ export function resolveLandingStage(state: GameState, action: LandingAction, ran
   const fatalityRate = clamp((.08 + civilianRisk / 500) * lossMultiplier, .05, .42);
   const lossResult = applyResidentLosses(state.settlement, casualties, fatalityRate, random, true);
   const settlement = lossResult.settlement;
+  for (const resident of settlement.residents)
+    resident.morale = clamp(resident.morale + (attackerRemaining <= 0 ? 8 : -6), 0, 100);
   const losses = mergeLosses(state, lossResult.wounded, lossResult.killed);
-  const haven = {
-    ...state.haven,
-    population: settlement.residents.length,
-    morale: clamp(state.haven.morale + (attackerRemaining <= 0 ? 8 : -6), 0, 100),
-    populationByRole: {
-      ...state.haven.populationByRole,
-      fighters: settlement.residents.filter((resident) => ['guard', 'gunner', 'raider'].includes(resident.job)).length
-    }
-  };
+  const haven = settlementLegacyHaven(settlement, state.haven);
   if (attackerRemaining <= 0) return finishDefense({ ...state, settlement, haven, defense: { ...state.defense, losses, attackerRemaining, civilianRisk, log: [...(state.defense.log ?? []), choice.label, '상륙대가 해변에서 무너졌다.'] } }, true);
   return { ...state, settlement, haven, defense: { ...state.defense, losses, stage: 'interior', attackerRemaining, civilianRisk, selectedActions: [...(state.defense.selectedActions ?? []), action], log: [...(state.defense.log ?? []), choice.label, lossResult.killed > 0 ? `수비대 ${lossResult.killed}명이 전사하고 ${lossResult.wounded}명이 부상했다.` : `${lossResult.wounded}명의 수비대가 부상했다.`, '남은 적이 부두를 넘어 본거지 내부로 침투했다.'] } };
 }
@@ -150,11 +155,12 @@ export function resolveInteriorStage(state: GameState, action: InteriorAction, r
   };
   const choice = modifiers[action];
   const lossMultiplier = DIFFICULTIES[state.captain.difficulty].losses;
-  const power = (state.crew.roles.marine * 4 + state.haven.order * .7 + state.captain.level * 8) * choice.power * (.72 + random() * .38);
+  const power = (state.crew.roles.marine * 4 + settlementSummary(state.settlement).order * .7 + state.captain.level * 8) * choice.power * (.72 + random() * .38);
   const victory = power >= remaining;
-  const resourceDamage = (victory ? Math.round(remaining * choice.damage * .2) : Math.round(remaining * choice.damage + 35)) * lossMultiplier;
+  const resourceDamage = Math.round(
+    (victory ? remaining * choice.damage * .2 : remaining * choice.damage + 35) * lossMultiplier
+  );
   const civilianRisk = clamp((state.defense.civilianRisk ?? 50) + choice.civilian, 0, 100);
-  const facilities = damageFacilities(state, victory ? Math.ceil(resourceDamage / 12) : Math.ceil(resourceDamage / 5));
   let settlement = damageSettlementBuildings(state.settlement, victory ? Math.ceil(resourceDamage / 14) : Math.ceil(resourceDamage / 6));
   const interiorCasualties = Math.min(
     Math.max(0, settlement.residents.length - 1),
@@ -162,18 +168,25 @@ export function resolveInteriorStage(state: GameState, action: InteriorAction, r
   );
   const interiorLosses = applyResidentLosses(settlement, interiorCasualties, (victory ? .12 : .28) * lossMultiplier, random, false);
   settlement = interiorLosses.settlement;
-  const loss = { gold: Math.min(state.resources.gold, resourceDamage * 4), food: Math.min(state.resources.food, Math.ceil(resourceDamage * .45)), timber: Math.min(state.resources.timber, Math.ceil(resourceDamage * .3)), powder: Math.min(state.resources.powder, Math.ceil(resourceDamage * .12)) };
+  const resources = gameResourceStock(state);
+  const loss = { gold: Math.min(resources.gold, resourceDamage * 4), food: Math.min(resources.food, Math.ceil(resourceDamage * .45)), timber: Math.min(resources.timber, Math.ceil(resourceDamage * .3)), powder: Math.min(resources.powder, Math.ceil(resourceDamage * .12)) };
   const damagedState = { ...state, settlement };
   const paid = spendGameResources(damagedState, loss) ?? damagedState;
   const losses = mergeLosses(paid, interiorLosses.wounded, interiorLosses.killed);
-  const prepared = { ...paid, haven: { ...paid.haven, population: settlement.residents.length, facilities }, defense: { ...paid.defense, losses, attackerRemaining: victory ? 0 : remaining, civilianRisk, log: [...(paid.defense.log ?? []), choice.label, interiorLosses.killed > 0 ? `내부 전투에서 ${interiorLosses.killed}명이 목숨을 잃었다.` : '주민 대피로 추가 사망을 피했다.'] } };
+  const prepared = { ...paid, haven: settlementLegacyHaven(settlement, paid.haven), defense: { ...paid.defense, losses, attackerRemaining: victory ? 0 : remaining, civilianRisk, log: [...(paid.defense.log ?? []), choice.label, interiorLosses.killed > 0 ? `내부 전투에서 ${interiorLosses.killed}명이 목숨을 잃었다.` : '주민 대피로 추가 사망을 피했다.'] } };
   return finishDefense(prepared, victory);
 }
 
 function finishDefense(state: GameState, victory: boolean): GameState {
   const losses = state.defense.losses ?? { wounded: 0, killed: 0, shipsLost: 0 };
+  const settlement = structuredClone(state.settlement);
+  for (const resident of settlement.residents) {
+    resident.morale = clamp(resident.morale + (victory ? 12 : -18), 0, 100);
+    resident.loyalty = clamp(resident.loyalty + (victory ? 6 : -14), 0, 100);
+  }
   let next: GameState = {
     ...state,
+    settlement,
     defense: {
       ...state.defense,
       active: false,
@@ -184,7 +197,7 @@ function finishDefense(state: GameState, victory: boolean): GameState {
         : ['창고 약탈', '시설 파손', `부상 ${losses.wounded}명 · 사망·이탈 ${losses.killed}명`],
       reward: victory ? { gold: Math.round(state.defense.attackStrength * 2.2), iron: Math.max(2, Math.round(state.defense.attackStrength / 35)) } : {}
     },
-    haven: { ...state.haven, raidThreat: 0, morale: clamp(state.haven.morale + (victory ? 12 : -18), 0, 100), order: clamp(state.haven.order + (victory ? 6 : -14), 0, 100) },
+    haven: { ...settlementLegacyHaven(settlement, state.haven), raidThreat: 0 },
     captain: { ...state.captain, renown: state.captain.renown + (victory ? 18 : 0) },
     flags: victory ? { ...state.flags, havenDefenseWon: true } : state.flags
   };
@@ -287,15 +300,4 @@ function damageFleet(state: GameState, damage: number): GameState['ships'] {
   if (!targets.length || damage <= 0) return state.ships;
   const perShip = damage / targets.length;
   return state.ships.map((ship) => targets.some((target) => target.id === ship.id) ? { ...ship, hull: Math.max(1, ship.hull - perShip), morale: clamp(ship.morale - perShip * .15, 0, 100) } : ship);
-}
-
-function damageFacilities(state: GameState, damage: number): GameState['haven']['facilities'] {
-  const facilities = { ...state.haven.facilities };
-  const ids = Object.keys(facilities) as FacilityId[];
-  for (let index = 0; index < Math.min(ids.length, Math.max(1, damage)); index += 1) {
-    const id = ids[(index + state.world.day) % ids.length];
-    const facility = facilities[id];
-    if (facility) facilities[id] = { ...facility, condition: Math.max(10, facility.condition - 8 - damage * 2) };
-  }
-  return facilities;
 }

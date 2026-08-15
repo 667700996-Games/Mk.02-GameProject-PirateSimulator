@@ -12,15 +12,18 @@
   import type { FactionId, FactionRelation, GameState, ResourceId } from '$lib/domain/types';
   import type { SettlementBuilding } from '$lib/settlement/types';
   import { lureRivalFleet } from '$lib/domain/defense';
+  import { gameResourceStock } from '$lib/settlement/economyBridge';
+  import { settlementSummary } from '$lib/settlement/summary';
 
   let { game } = $props<{ game: GameState }>();
   let pursuit = $derived(pursuitTier(game.bounty));
   let relations = $derived(Object.values(game.factions) as FactionRelation[]);
   let quotes = $derived(notorietyActionQuotes(game));
+  let resources = $derived(gameResourceStock(game));
+  let havenSummary = $derived(settlementSummary(game.settlement));
   let selectedFaction = $state<FactionId>('free-pirates');
   let councilLevel = $derived(
     Math.max(
-      game.haven.facilities['pirate-council']?.level ?? 0,
       ...game.settlement.buildings
         .filter(
           (building: SettlementBuilding) =>
@@ -102,14 +105,14 @@
       <div class="force-number danger">{Math.round(game.bounty).toLocaleString()}</div>
       <p class="muted">열기 {Math.round(game.heat)}% · 해군 순찰 ×{pursuit.patrolMultiplier}</p>
       <div class="meter"><span style={`--value:${game.heat}%;--meter-color:#ac4538`}></span></div>
-      <button class="btn danger-button wide" onclick={() => gameSession.updateGame((state) => lureRivalFleet(state), true)} disabled={game.defense.active || game.settlement.threat.active || game.resources.gold < 80 || game.resources.rum < 4}>붉은 파도 유인 · 금화 80 · 럼 4</button>
+      <button class="btn danger-button wide" onclick={() => gameSession.updateGame((state) => lureRivalFleet(state), true)} disabled={game.defense.active || game.settlement.threat.active || resources.gold < 80 || resources.rum < 4}>붉은 파도 유인 · 금화 80 · 럼 4</button>
       <small class="faint">적을 준비된 수역으로 끌어들여 본거지 방어전을 시작합니다. 패배하면 주민과 시설을 실제로 잃습니다.</small>
       <div class="map-details">
         <div class="map-row">
           <span>사냥꾼 조우율</span><b>{Math.round(pursuit.hunterChance * 100)}%</b>
         </div>
         <div class="map-row">
-          <span>본거지 탐지</span><b>{Math.round(game.haven.detectionRisk)}%</b>
+          <span>본거지 탐지</span><b>{Math.round(havenSummary.detectionRisk)}%</b>
         </div>
         <div class="map-row"><span>악명</span><b>{game.captain.infamy}</b></div>
       </div>
@@ -180,7 +183,7 @@
           class="btn"
           onclick={() =>
             gameSession.updateGame((state) => sendFactionGift(state, selectedFaction), true)}
-          disabled={game.resources.gold < 240 ||
+          disabled={resources.gold < 240 ||
             selectedRelation.hostility >= 85 ||
             ['imperial-navy', 'bounty-hunters', 'red-tide'].includes(selectedFaction)}
           >선물 사절 · 240 금화</button

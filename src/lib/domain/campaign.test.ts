@@ -33,6 +33,7 @@ function matureKingdom() {
   for (const zone of Object.values(game.world.zones)) zone.discovered = true;
   game.settlement.progression.unlocked.push('infamy-linebreaker', 'prosperity-galleon', 'seamanship-legendary', 'federation-captains');
   game.flags.havenDefenseWon = true;
+  game.flags.storyArcComplete = true;
   return game;
 }
 

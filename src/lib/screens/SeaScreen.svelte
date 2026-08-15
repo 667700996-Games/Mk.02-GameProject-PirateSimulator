@@ -3,7 +3,7 @@
   import type Phaser from 'phaser';
   import { AMMO } from '$lib/domain/combat';
   import { beginBoarding } from '$lib/domain/boarding';
-  import { finishEncounter } from '$lib/domain/voyage';
+  import { finishEncounter, recoverEncounterLoot } from '$lib/domain/voyage';
   import type { SeaHudSnapshot, SeaScene } from '$lib/game/SeaScene';
   import { gameSession } from '$lib/stores/gameStore';
   import { soundEngine } from '$lib/audio/SoundEngine';
@@ -87,7 +87,8 @@
     const finalOutcome = outcome;
     const enemy = defeatedEnemy;
     gameSession.updateGame((state) => {
-      const next = finishEncounter(state, finalOutcome, enemy, finalOutcome === 'victory' ? { timber: 8, iron: 3 } : {});
+      const recovery = recoverEncounterLoot(state, finalOutcome === 'victory' ? { timber: 8, iron: 3 } : {});
+      const next = finishEncounter(recovery.state, finalOutcome, enemy, recovery.recovered);
       return { ...next, screen: finalOutcome === 'victory' ? 'world-map' : 'haven', voyage: { ...next.voyage, active: false } };
     }, true);
   }

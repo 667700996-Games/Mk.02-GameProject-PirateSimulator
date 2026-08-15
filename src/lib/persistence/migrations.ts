@@ -1,6 +1,7 @@
 import { SAVE_VERSION, type GameState } from '$lib/domain/types';
 import { createInitialSettlement } from '$lib/settlement/initialState';
 import { BUILDINGS, RECIPES, SETTLEMENT_RESOURCE_IDS } from '$lib/settlement/catalog';
+import { storySequelAfter } from '$lib/domain/missions';
 
 export class SaveMigrationError extends Error {
   constructor(message: string) {
@@ -106,6 +107,27 @@ export function migrateGameState(input: unknown): GameState {
   }
   if (migrated.defense) migrated.defense.losses ??= { wounded: 0, killed: 0, shipsLost: 0 };
   if (migrated.settlement) migrated.settlement.residentUpdateCursor ??= 0;
+  if (migrated.missions && migrated.settlement) {
+    const opening = migrated.missions.find((mission) => mission.id === 'story-first-prize');
+    if (opening) {
+      opening.goal = 6;
+      opening.difficulty ??= 1;
+      opening.claimed ??= false;
+      if (opening.status === 'complete' || opening.claimed) opening.progress = 6;
+      else
+        opening.progress = Math.max(
+          opening.progress,
+          Math.min(5, migrated.settlement.tutorialStep)
+        );
+      if (
+        opening.claimed &&
+        !migrated.missions.some((mission) => mission.id === 'story-liberty-ledger')
+      ) {
+        const sequel = storySequelAfter(opening.id);
+        if (sequel) migrated.missions.push(sequel);
+      }
+    }
+  }
   validateRequiredFields(migrated);
   return migrated as GameState;
 }

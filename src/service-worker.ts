@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import { build, files, prerendered, version } from '$service-worker';
+import { build, prerendered, version } from '$service-worker';
 
 const worker = self as unknown as ServiceWorkerGlobalScope;
 const shellCache = `blackwake-shell-${version}`;
@@ -16,7 +16,7 @@ const shellAssets = [
   ...new Set([
     ...build,
     ...prerendered,
-    ...files.filter((asset) => INSTALL_STATIC_ASSETS.has(asset))
+    ...INSTALL_STATIC_ASSETS
   ])
 ];
 const MAX_RUNTIME_ENTRIES = 80;

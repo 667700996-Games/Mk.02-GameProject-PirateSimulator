@@ -150,8 +150,10 @@ function createMissions(): Mission[] {
       reward: { gold: 240, timber: 20, food: 25 },
       renownReward: 22,
       progress: 0,
-      goal: 1,
-      story: true
+      goal: 6,
+      story: true,
+      difficulty: 1,
+      claimed: false
     },
     {
       id: 'rum-for-liberty',

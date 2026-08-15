@@ -16,6 +16,9 @@ export interface SettlementSummary {
   productionBlocked: number;
   housingCapacity: number;
   defense: number;
+  tier: number;
+  order: number;
+  detectionRisk: number;
 }
 
 export function settlementSummary(state: SettlementSimulationState): SettlementSummary {
@@ -38,6 +41,38 @@ export function settlementSummary(state: SettlementSimulationState): SettlementS
     + walls.reduce((sum, wall) => sum + 10 * wall.level * wall.condition / 100, 0)
     + guardPosts.reduce((sum, post) => sum + post.workers.length * (3 + post.level), 0)
     + signals.reduce((sum, signal) => sum + 5 + signal.level * 3, 0);
+  const activeBuildings = storageBuildings.filter(
+    (building) => building.definitionId !== 'wreckage'
+  ).length;
+  const growthScore =
+    activeBuildings + state.residents.length / 8 + state.progression.unlocked.length * 0.6;
+  const tier =
+    growthScore >= 90
+      ? 7
+      : growthScore >= 58
+        ? 6
+        : growthScore >= 36
+          ? 5
+          : growthScore >= 23
+            ? 4
+            : growthScore >= 13
+              ? 3
+              : growthScore >= 6
+                ? 2
+                : 1;
+  const guardCoverage = storageBuildings
+    .filter((building) =>
+      ['guard-post', 'watchtower', 'signal-tower', 'intelligence-network'].includes(
+        building.definitionId
+      )
+    )
+    .reduce((sum, building) => sum + building.workers.length + building.level, 0);
+  const averageLoyalty =
+    state.residents.reduce((sum, resident) => sum + resident.loyalty, 0) /
+    Math.max(1, state.residents.length);
+  const intelligence = storageBuildings
+    .filter((building) => building.definitionId === 'intelligence-network')
+    .reduce((sum, building) => sum + building.level, 0);
   return {
     population: state.residents.length,
     availableWorkers,
@@ -50,15 +85,20 @@ export function settlementSummary(state: SettlementSimulationState): SettlementS
     productionActive: state.buildings.filter((building) => building.state === 'ACTIVE' && !!building.recipeId && !building.statusReason).length,
     productionBlocked: state.buildings.filter((building) => building.state === 'BLOCKED' || building.statusReason?.includes('대기') || building.statusReason?.includes('부족')).length,
     housingCapacity,
-    defense: Math.round(defense)
+    defense: Math.round(defense),
+    tier,
+    order: Math.max(0, Math.min(100, averageLoyalty * 0.72 + guardCoverage * 2.2)),
+    detectionRisk: Math.max(
+      4,
+      Math.min(65, 6 + activeBuildings * 0.35 + tier * 1.5 - guardCoverage * 0.35 - intelligence * 1.5)
+    )
   };
 }
 
-export function settlementLegacyResources(state: SettlementSimulationState, current: ResourceStock): ResourceStock {
+export function settlementLegacyResources(state: SettlementSimulationState): ResourceStock {
   const total = aggregateInventory(state);
   const get = (id: SettlementResourceId) => total[id] ?? 0;
   return {
-    ...current,
     gold: Math.floor(get('gold')),
     timber: Math.floor(get('logs') + get('planks')),
     iron: Math.floor(get('iron-ingots') + get('iron-ore') * 0.35),
@@ -92,27 +132,22 @@ export function settlementLegacyHaven(state: SettlementSimulationState, current:
     'intelligence-network': 'intel-den', 'training-yard': 'training-yard', 'coastal-battery': 'coastal-battery',
     watchtower: 'watchtower', 'pirate-council': 'pirate-council'
   };
-  const facilities = { ...current.facilities };
+  const facilities: HavenState['facilities'] = {};
   for (const building of state.buildings.filter((item) => item.state === 'ACTIVE')) {
     const legacyId = facilityMap[building.definitionId];
     if (!legacyId) continue;
     const previous = facilities[legacyId];
     if (!previous || building.level >= previous.level) facilities[legacyId] = { id: legacyId, level: building.level, condition: building.condition, workers: building.workers.length };
   }
-  const activeBuildings = state.buildings.filter((building) => building.state === 'ACTIVE' && building.definitionId !== 'wreckage').length;
-  const growthScore = activeBuildings + summary.population / 8 + state.progression.unlocked.length * 0.6;
-  const tier = growthScore >= 90 ? 7 : growthScore >= 58 ? 6 : growthScore >= 36 ? 5 : growthScore >= 23 ? 4 : growthScore >= 13 ? 3 : growthScore >= 6 ? 2 : 1;
-  const guardCoverage = state.buildings.filter((building) => ['guard-post', 'watchtower', 'signal-tower'].includes(building.definitionId) && building.state === 'ACTIVE').reduce((sum, building) => sum + building.workers.length + building.level, 0);
-  const averageLoyalty = state.residents.reduce((sum, resident) => sum + resident.loyalty, 0) / Math.max(1, state.residents.length);
   return {
     ...current,
-    tier: Math.max(current.tier, tier),
+    tier: summary.tier,
     population: summary.population,
     food: summary.food,
     morale: summary.morale,
     defense: summary.defense,
-    order: Math.max(0, Math.min(100, averageLoyalty * 0.72 + guardCoverage * 2.2)),
-    detectionRisk: Math.max(4, current.detectionRisk - guardCoverage * 0.35),
+    order: summary.order,
+    detectionRisk: summary.detectionRisk,
     production: summary.productionActive,
     storageMax: summary.storageCapacity,
     facilities,

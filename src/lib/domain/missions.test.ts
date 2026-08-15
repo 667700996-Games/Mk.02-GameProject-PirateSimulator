@@ -3,6 +3,27 @@ import { createNewGame } from './initialState';
 import { acceptMission, claimMissionReward, expireAndRefreshMissions, generateMissionBoard, progressMissions } from './missions';
 
 describe('mission system', () => {
+  it('tracks the opening settlement milestones and unlocks a five-chapter story arc', () => {
+    let game = createNewGame({ captainName: '연대기', crewName: '검은 물결', shipName: '첫 깃발', flagMark: '✥', flagColor: '#222', trait: 'navigator', difficulty: 'captain', seed: 8 }, 1000);
+    game = progressMissions(game, {
+      kind: 'settlement-milestone', zoneId: 'beginners-bay', amount: 5
+    });
+    expect(game.missions[0].progress).toBe(5);
+    expect(game.missions[0].status).toBe('active');
+    game = progressMissions(game, {
+      kind: 'ship-defeated', zoneId: 'beginners-bay', opponent: 'merchant'
+    });
+    expect(game.missions[0].status).toBe('active');
+    game = progressMissions(game, { kind: 'raid-complete', zoneId: 'beginners-bay' });
+    expect(game.missions[0].status).toBe('complete');
+
+    const claimed = claimMissionReward(game, 'story-first-prize');
+    const sequel = claimed.missions.find((mission) => mission.id === 'story-liberty-ledger');
+    expect(sequel?.status).toBe('active');
+    expect(sequel?.story).toBe(true);
+    expect(claimed.world.recentEvents[0]).toContain(sequel?.title);
+  });
+
   it('generates faction-backed procedural missions', () => {
     const game = createNewGame({ captainName: '계약', crewName: '장부', shipName: '서명', flagMark: '▤', flagColor: '#222', trait: 'negotiator', difficulty: 'captain', seed: 8 }, 1000);
     const missions = generateMissionBoard(game, 5, 2000);

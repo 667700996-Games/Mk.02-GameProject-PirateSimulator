@@ -1,4 +1,3 @@
-import { calculateHavenDefense, completeConstructions } from './haven';
 import { clamp } from './physics';
 import { createId } from './rng';
 import { updateFleetAssignments } from './fleet';
@@ -6,7 +5,11 @@ import { expireAndRefreshMissions, progressMissions } from './missions';
 import { applyNotoriety, NOTORIETY_EVENTS } from './factions';
 import type { GameState } from './types';
 import { advanceSettlement } from '$lib/settlement/simulation';
-import { settlementLegacyHaven, settlementLegacyResources } from '$lib/settlement/summary';
+import {
+  settlementLegacyHaven,
+  settlementLegacyResources,
+  settlementSummary
+} from '$lib/settlement/summary';
 import { advanceShipConstruction } from '$lib/settlement/shipbuilding';
 import { advanceExpeditions } from '$lib/settlement/expeditions';
 import { tickDefenseCountdown } from './defense';
@@ -27,17 +30,34 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
     consumptionMultiplier: difficulty.consumption
   });
   const shipbuilding = advanceShipConstruction(advancedSettlement, state.ships, realSeconds * advancedSettlement.speed);
-  const expeditions = advanceExpeditions(shipbuilding.settlement, shipbuilding.ships, realSeconds * shipbuilding.settlement.speed, now);
+  const expeditions = advanceExpeditions(
+    shipbuilding.settlement,
+    shipbuilding.ships,
+    realSeconds * shipbuilding.settlement.speed,
+    now,
+    { trait: state.captain.trait, difficulty: state.captain.difficulty }
+  );
   const settlement = expeditions.settlement;
   let next: GameState = expireAndRefreshMissions(updateFleetAssignments({
     ...state,
     playTimeSeconds: state.playTimeSeconds + realSeconds,
     settlement,
-    haven: settlementLegacyHaven(settlement, completeConstructions(state.haven, now)),
-    resources: settlementLegacyResources(settlement, state.resources),
+    haven: settlementLegacyHaven(settlement, state.haven),
+    resources: settlementLegacyResources(settlement),
     ships: expeditions.ships,
     world: { ...state.world, day, hour }
   }, now), now);
+
+  const settlementMilestones = Math.max(
+    0,
+    settlement.tutorialStep - state.settlement.tutorialStep
+  );
+  if (settlementMilestones > 0)
+    next = progressMissions(next, {
+      kind: 'settlement-milestone',
+      zoneId: 'beginners-bay',
+      amount: settlementMilestones
+    });
 
   const newlyCompleted = settlement.expeditions.filter((expedition) => expedition.state === 'COMPLETED' && state.settlement.expeditions.find((previous) => previous.id === expedition.id)?.state !== 'COMPLETED');
   if (newlyCompleted.length > 0) {
@@ -61,10 +81,11 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
     next = { ...next, world: { ...next.world, marketCycle: next.world.marketCycle + (day - previousDay) } };
   }
 
+  const havenSummary = settlementSummary(next.settlement);
   const detectionFactor = next.captain.trait === 'smuggler' ? 0.85 : 1;
   const threatGain =
     realSeconds *
-    (next.bounty / 10000 + next.haven.detectionRisk / 5000) *
+    (next.bounty / 10000 + havenSummary.detectionRisk / 5000) *
     difficulty.pursuit *
     detectionFactor;
   const raidThreat = clamp(next.haven.raidThreat + threatGain, 0, 100);
@@ -75,12 +96,16 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
       active: true,
       source: next.bounty > 1600 ? 'imperial-navy' : 'red-tide',
       discovered: watchtower,
-      strength: Math.round(48 + next.haven.tier * 32 + next.bounty / 85),
+      strength: Math.round(48 + havenSummary.tier * 32 + next.bounty / 85),
       etaHours: watchtower ? 18 : 7,
       fleetDescription: next.bounty > 1600 ? '프리깃과 해병 수송선' : '무장 브리그와 화공선'
     };
   } else if (invasion.active) invasion.etaHours = Math.max(0, invasion.etaHours - elapsedGameHours);
-  next = { ...next, settlement: { ...next.settlement, threat: invasion }, haven: { ...next.haven, raidThreat, defense: Math.max(next.haven.defense, calculateHavenDefense(next.haven)) } };
+  next = {
+    ...next,
+    settlement: { ...next.settlement, threat: invasion },
+    haven: { ...next.haven, raidThreat, defense: havenSummary.defense }
+  };
   if ((raidThreat >= 100 || (invasion.active && invasion.etaHours <= 0)) && !next.defense.active && next.screen === 'haven') {
     next = {
       ...next,
@@ -89,10 +114,10 @@ export function advanceSimulation(state: GameState, realSeconds: number, now = D
         active: true,
         attacker: next.bounty > 1600 ? 'imperial-navy' : 'red-tide',
         stage: 'warning',
-        attackStrength: invasion.strength || Math.round(48 + next.haven.tier * 32 + next.bounty / 85),
-        defenseStrength: calculateHavenDefense(next.haven),
+        attackStrength: invasion.strength || Math.round(48 + havenSummary.tier * 32 + next.bounty / 85),
+        defenseStrength: havenSummary.defense,
         timeToAttack: 90,
-        attackerRemaining: invasion.strength || Math.round(48 + next.haven.tier * 32 + next.bounty / 85),
+        attackerRemaining: invasion.strength || Math.round(48 + havenSummary.tier * 32 + next.bounty / 85),
         preparation: 0,
         civilianRisk: 55,
         selectedActions: [],

@@ -38,6 +38,11 @@ export function canAffordGameResources(state: GameState, cost: Partial<ResourceS
   return (Object.entries(cost) as [ResourceId, number][]).every(([id, required]) => channelAmount(available, id) >= required);
 }
 
+/** Compatibility projection for legacy ResourceId consumers; settlement inventory is authoritative. */
+export function gameResourceStock(state: GameState): ResourceStock {
+  return settlementLegacyResources(state.settlement);
+}
+
 function debitFromInventory(inventory: PartialSettlementInventory, resource: SettlementResourceId, amount: number): number {
   const stored = inventory[resource] ?? 0;
   const spent = Math.min(stored, amount);
@@ -66,7 +71,7 @@ export function spendGameResources(state: GameState, cost: Partial<ResourceStock
   if (!canAffordGameResources(state, cost)) return undefined;
   const settlement = structuredClone(state.settlement);
   for (const [id, required] of Object.entries(cost) as [ResourceId, number][]) debitSettlementChannel(settlement, id, required);
-  return { ...state, settlement, resources: settlementLegacyResources(settlement, state.resources) };
+  return { ...state, settlement, resources: settlementLegacyResources(settlement) };
 }
 
 export function creditGameResources(state: GameState, reward: Partial<ResourceStock>): GameState {
@@ -77,5 +82,5 @@ export function creditGameResources(state: GameState, reward: Partial<ResourceSt
     mapped[target] = (mapped[target] ?? 0) + value;
   }
   const settlement = creditSettlementResources(state.settlement, mapped);
-  return { ...state, settlement, resources: settlementLegacyResources(settlement, state.resources) };
+  return { ...state, settlement, resources: settlementLegacyResources(settlement) };
 }

@@ -1,5 +1,5 @@
 import { DIFFICULTIES, SHIP_CLASSES, ZONES } from './catalog';
-import { cargoWeight } from './economy';
+import { addCargo, cargoWeight } from './economy';
 import { applyNotoriety, NOTORIETY_EVENTS, pursuitTier } from './factions';
 import { clamp } from './physics';
 import { progressMissions } from './missions';
@@ -84,6 +84,11 @@ export function createEncounter(state: GameState, forcedType?: 'merchant' | 'nav
 }
 
 export function departForZone(state: GameState, zoneId: ZoneId): GameState {
+  const activeShip = state.ships.find((ship) => ship.id === state.activeShipId);
+  const shipIsBusy = state.settlement.expeditions.some((expedition) =>
+    !['COMPLETED', 'LOST'].includes(expedition.state) && expedition.shipIds.includes(state.activeShipId)
+  );
+  if (!activeShip || activeShip.hull < activeShip.stats.hullMax * .35 || activeShip.sails < activeShip.stats.sailMax * .35 || activeShip.crew < 4 || shipIsBusy) return state;
   const firstTutorial = state.tutorialStep < 2 && zoneId === 'beginners-bay';
   return {
     ...state,
@@ -102,6 +107,22 @@ export function departForZone(state: GameState, zoneId: ZoneId): GameState {
       currentEncounter: createEncounter({ ...state, voyage: { ...state.voyage, zoneId } }, firstTutorial ? 'merchant' : undefined)
     },
     combat: { ...state.combat, active: true, enemyShipId: undefined, lastResult: undefined }
+  };
+}
+
+export function recoverEncounterLoot(state: GameState, loot: Partial<Record<ResourceId, number>>): { state: GameState; recovered: Partial<Record<ResourceId, number>> } {
+  let activeShip = state.ships.find((ship) => ship.id === state.activeShipId);
+  if (!activeShip) return { state, recovered: {} };
+  const recovered: Partial<Record<ResourceId, number>> = {};
+  for (const [resource, requested] of Object.entries(loot) as [ResourceId, number][]) {
+    if (!Number.isFinite(requested) || requested <= 0) continue;
+    const transfer = addCargo(activeShip, resource, requested);
+    activeShip = transfer.ship;
+    if (transfer.added > 0) recovered[resource] = transfer.added;
+  }
+  return {
+    state: { ...state, ships: state.ships.map((ship) => ship.id === activeShip.id ? activeShip : ship) },
+    recovered
   };
 }
 

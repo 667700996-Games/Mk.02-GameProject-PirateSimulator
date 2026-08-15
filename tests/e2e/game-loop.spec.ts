@@ -241,6 +241,47 @@ test('traps keyboard focus inside modal surfaces and exposes named controls', as
   expect(unnamedButtons).toBe(0);
 });
 
+test('requires confirmation before demolishing facilities or deleting saves', async ({ page }) => {
+  await createCaptain(page);
+  if ((page.viewportSize()?.width ?? 1280) <= 760) {
+    await page.getByRole('button', { name: '시설 장부 열기' }).click();
+  }
+  await expect(page.getByTestId('facility-tent')).toHaveCount(4);
+  await page.getByTestId('facility-tent').first().click();
+  await page.getByRole('button', { name: '철거', exact: true }).click();
+
+  const demolition = page.getByRole('dialog', { name: '임시 천막을 철거합니까?' });
+  await expect(demolition).toBeVisible();
+  await expect(demolition.getByRole('button', { name: '취소' })).toBeFocused();
+  await demolition.getByRole('button', { name: '취소' }).click();
+  await expect(demolition).toBeHidden();
+  await expect(page.getByRole('heading', { name: '임시 천막' })).toBeVisible();
+
+  await page.getByRole('button', { name: '철거', exact: true }).click();
+  await demolition.getByRole('button', { name: '철거 확정' }).click();
+  await expect(page.getByText('임시 천막 철거', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('facility-tent')).toHaveCount(3);
+
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.getByText('항해 기록을 안전하게 보관했습니다.')).toBeVisible();
+  await page.getByRole('button', { name: '설정' }).click();
+  await expect(page.getByRole('heading', { name: '설정과 항해일지' })).toBeVisible();
+  const saveCard = page.locator('.save-card').filter({ hasText: '검은수염 테스트 선장의 항해' });
+  await expect(saveCard).toHaveCount(1);
+  await saveCard.getByRole('button', { name: '삭제' }).click();
+
+  const deletion = page.getByRole('dialog', { name: '항해일지를 삭제합니까?' });
+  await expect(deletion).toBeVisible();
+  await expect(deletion.getByRole('button', { name: '취소' })).toBeFocused();
+  await deletion.getByRole('button', { name: '취소' }).click();
+  await expect(deletion).toBeHidden();
+  await expect(saveCard).toHaveCount(1);
+
+  await saveCard.getByRole('button', { name: '삭제' }).click();
+  await deletion.getByRole('button', { name: '영구 삭제' }).click();
+  await expect(saveCard).toHaveCount(0);
+});
+
 test('keeps game chrome fixed and supports timed or manual notification dismissal', async ({ page }) => {
   await createCaptain(page);
   const chrome = await page.evaluate(() => {

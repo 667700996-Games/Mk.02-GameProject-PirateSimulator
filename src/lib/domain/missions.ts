@@ -4,11 +4,60 @@ import type { FactionId, GameState, Mission, MissionType, ResourceStock, ZoneId 
 import { creditGameResources } from '$lib/settlement/economyBridge';
 
 export interface MissionEvent {
-  kind: 'ship-defeated' | 'ship-captured' | 'cargo-stolen' | 'raid-complete' | 'contraband-delivered' | 'treasure-found' | 'survivor-rescued' | 'haven-defended';
+  kind: 'settlement-milestone' | 'ship-defeated' | 'ship-captured' | 'cargo-stolen' | 'raid-complete' | 'contraband-delivered' | 'treasure-found' | 'survivor-rescued' | 'haven-defended';
   zoneId: ZoneId;
   targetId?: string;
   amount?: number;
   opponent?: 'merchant' | 'navy' | 'pirate';
+}
+
+export const STORY_MISSION_IDS = [
+  'story-first-prize',
+  'story-liberty-ledger',
+  'story-red-tide-debt',
+  'story-crown-cipher',
+  'story-blackwake-siege'
+] as const;
+
+const STORY_SEQUELS: Record<string, Mission> = {
+  'story-first-prize': {
+    id: 'story-liberty-ledger', title: '자유항의 검은 장부',
+    description: '자유항의 밀수 연락망에 금지품 6묶을 넘겨 왕실 검문망의 빈틈을 확보하라.',
+    type: 'smuggling', status: 'active', zoneId: 'freeport-waters', targetId: 'liberty-cove',
+    reward: { gold: 320, medicine: 6, contraband: 2 }, renownReward: 25,
+    progress: 0, goal: 6, story: true, difficulty: 2, claimed: false
+  },
+  'story-liberty-ledger': {
+    id: 'story-red-tide-debt', title: '붉은 파도의 빚',
+    description: '상업 항로에서 우리 깃발을 사칭하는 경쟁 해적선을 찾아 침몵시켜라.',
+    type: 'rival-hunt', status: 'active', zoneId: 'merchant-routes',
+    reward: { gold: 520, powder: 12, cannonballs: 24 }, renownReward: 34,
+    progress: 0, goal: 1, story: true, difficulty: 3, claimed: false
+  },
+  'story-red-tide-debt': {
+    id: 'story-crown-cipher', title: '왕관의 암호문',
+    description: '군함 순찰 해역을 밝히고 왕실 호송선 두 척을 무너뜨려 본거지를 찾는 암호문을 빼앗아라.',
+    type: 'convoy', status: 'active', zoneId: 'naval-patrol',
+    reward: { gold: 760, blueprints: 1, iron: 18 }, renownReward: 48,
+    progress: 0, goal: 2, story: true, difficulty: 4, claimed: false
+  },
+  'story-crown-cipher': {
+    id: 'story-blackwake-siege', title: '검은물결의 새벽',
+    description: '훈련된 수비대와 포대, 함대를 준비하고 암호문을 따라온 침공군을 본거지 해안에서 격파하라.',
+    type: 'haven-defense', status: 'active', zoneId: 'beginners-bay',
+    reward: { gold: 1200, bullion: 8, blueprints: 2 }, renownReward: 70,
+    progress: 0, goal: 1, story: true, difficulty: 5, claimed: false
+  }
+};
+
+export function storyChapter(missionId: string): number | undefined {
+  const index = STORY_MISSION_IDS.indexOf(missionId as (typeof STORY_MISSION_IDS)[number]);
+  return index >= 0 ? index + 1 : undefined;
+}
+
+export function storySequelAfter(missionId: string): Mission | undefined {
+  const sequel = STORY_SEQUELS[missionId];
+  return sequel ? structuredClone(sequel) : undefined;
 }
 
 const MISSION_TITLES: Record<MissionType, string[]> = {
@@ -91,7 +140,22 @@ export function progressMissions(state: GameState, event: MissionEvent): GameSta
   return {
     ...state,
     missions: state.missions.map((mission) => {
-      if (mission.status !== 'active' || mission.zoneId !== event.zoneId || !missionMatches(mission, event)) return mission;
+      if (mission.status !== 'active' || mission.zoneId !== event.zoneId) return mission;
+      if (mission.id === 'story-first-prize') {
+        const advancesSettlement = event.kind === 'settlement-milestone';
+        const completesVoyage = event.kind === 'raid-complete' && mission.progress >= 5;
+        if (!advancesSettlement && !completesVoyage) return mission;
+        const progress = Math.min(
+          mission.goal,
+          mission.progress + (advancesSettlement ? Math.max(1, event.amount ?? 1) : 1)
+        );
+        return {
+          ...mission,
+          progress,
+          status: progress >= mission.goal ? 'complete' as const : mission.status
+        };
+      }
+      if (!missionMatches(mission, event)) return mission;
       if (mission.targetId && event.targetId && mission.targetId !== event.targetId) return mission;
       const progress = Math.min(mission.goal, mission.progress + Math.max(1, event.amount ?? 1));
       return { ...mission, progress, status: progress >= mission.goal ? 'complete' as const : mission.status };
@@ -108,11 +172,38 @@ export function claimMissionReward(state: GameState, missionId: string): GameSta
     const relation = factions[mission.issuerFactionId];
     factions[mission.issuerFactionId] = { ...relation, favor: Math.min(100, relation.favor + 5 + (mission.difficulty ?? 1)), respect: Math.min(100, relation.respect + 3), lastChangedAt: Date.now() };
   }
+  const claimedMissions = credited.missions.map((item) =>
+    item.id === missionId ? { ...item, claimed: true } : item
+  );
+  const sequel = storySequelAfter(mission.id);
+  const unlocksSequel = sequel && !claimedMissions.some((item) => item.id === sequel.id);
+  const storyComplete = mission.id === STORY_MISSION_IDS.at(-1);
+  const storyDetail = unlocksSequel
+    ? `${sequel.title}이(가) 선장의 장부에 추가되었다.`
+    : storyComplete
+      ? '왕실 침공함대가 물러나고 검은물결 은신처가 자유 항구로 일어섰다.'
+      : undefined;
   return {
     ...credited,
     factions,
     captain: { ...credited.captain, renown: credited.captain.renown + mission.renownReward, experience: credited.captain.experience + mission.renownReward * 4 },
-    missions: credited.missions.map((item) => item.id === missionId ? { ...item, claimed: true } : item)
+    missions: unlocksSequel ? [...claimedMissions, sequel] : claimedMissions,
+    flags: storyComplete ? { ...credited.flags, storyArcComplete: true } : credited.flags,
+    world: storyDetail
+      ? {
+          ...credited.world,
+          recentEvents: [storyDetail, ...credited.world.recentEvents].slice(0, 8)
+        }
+      : credited.world,
+    toasts: storyDetail
+      ? [...credited.toasts.slice(-3), {
+          id: `toast-story-${mission.id}-${Date.now()}`,
+          kind: 'success',
+          title: storyComplete ? '검은물결 연대기 완결' : '새 이야기 장',
+          detail: storyDetail,
+          createdAt: Date.now()
+        }]
+      : credited.toasts
   };
 }
 
@@ -137,6 +228,7 @@ function missionGoal(type: MissionType, danger: number): number {
 }
 
 function missionMatches(mission: Mission, event: MissionEvent): boolean {
+  if (event.kind === 'settlement-milestone') return false;
   if (mission.type === 'merchant-raid') return event.kind === 'ship-defeated' && event.opponent === 'merchant';
   if (mission.type === 'convoy') return event.kind === 'ship-defeated' && (event.opponent === 'merchant' || event.opponent === 'navy');
   if (mission.type === 'cargo-theft') return event.kind === 'cargo-stolen';

@@ -1,9 +1,8 @@
 <script lang="ts">
   import { resolveBoardingRound, type BoardingAction } from '$lib/domain/boarding';
-  import { addCargo } from '$lib/domain/economy';
-  import { finishEncounter } from '$lib/domain/voyage';
+  import { finishEncounter, recoverEncounterLoot } from '$lib/domain/voyage';
   import { gameSession } from '$lib/stores/gameStore';
-  import type { GameState, ResourceId, Ship } from '$lib/domain/types';
+  import type { GameState, Ship } from '$lib/domain/types';
 
   let { game } = $props<{ game: GameState }>();
   let boarding = $derived(game.boarding);
@@ -34,14 +33,9 @@
   function settle(choice: 'loot' | 'capture' | 'recruit' | 'sink'): void {
     gameSession.updateGame((state) => {
       const enemy = state.boarding.enemyShip!;
-      let active = state.ships.find((ship) => ship.id === state.activeShipId) ?? state.ships[0];
-      const recovered: Partial<Record<ResourceId, number>> = {};
-      for (const [id, amount] of Object.entries(enemy.cargo) as [ResourceId, number][]) {
-        const transfer = addCargo(active, id, amount);
-        active = transfer.ship;
-        recovered[id] = transfer.added;
-      }
-      let ships: Ship[] = state.ships.map((ship) => ship.id === active.id ? active : ship);
+      const recovery = recoverEncounterLoot(state, enemy.cargo);
+      let active = recovery.state.ships.find((ship) => ship.id === state.activeShipId) ?? recovery.state.ships[0];
+      let ships: Ship[] = recovery.state.ships;
       if (choice === 'capture' && active.crew >= 8) {
         const prizeCrew = 4;
         active = { ...active, crew: active.crew - prizeCrew };
@@ -53,7 +47,7 @@
         active = { ...active, crew: Math.min(active.stats.crewMax, active.crew + recruits), morale: Math.min(100, active.morale + 2) };
         ships = ships.map((ship) => ship.id === active.id ? active : ship);
       }
-      const next = finishEncounter({ ...state, ships }, choice === 'capture' ? 'captured' : 'victory', enemy, recovered);
+      const next = finishEncounter({ ...recovery.state, ships }, choice === 'capture' ? 'captured' : 'victory', enemy, recovery.recovered);
       return {
         ...next,
         screen: 'world-map',

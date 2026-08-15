@@ -21,6 +21,7 @@ export function campaignObjectives(state: GameState): CampaignObjective[] {
   const capitalShips = state.ships.filter((ship) => CAPITAL_SHIPS.has(ship.class)).length;
   const discoveredZones = Object.values(state.world.zones).filter((zone) => zone.discovered).length;
   return [
+    { id: 'chronicle', name: '검은물결 연대기', detail: '5장으로 이어지는 본거지·자유항·왕실 침공 이야기를 완결한다.', current: state.flags.storyArcComplete ? 1 : 0, target: 1, complete: !!state.flags.storyArcComplete },
     { id: 'capital', name: '절벽 위의 해적 도시', detail: '인구 120명과 가동 시설 36개를 유지한다.', current: Math.min(120, state.settlement.residents.length) + Math.min(36, activeBuildings), target: 156, complete: state.settlement.residents.length >= 120 && activeBuildings >= 36 },
     { id: 'vertical', name: '입체 항만망', detail: '교량·계단·승강기 등 수직 물류 구조 6개를 가동한다.', current: verticalWorks, target: 6, complete: verticalWorks >= 6 },
     { id: 'fleet', name: '검은 함대', detail: '함선 4척과 프리깃급 이상 주력함 1척을 보유한다.', current: Math.min(4, state.ships.length) + Math.min(1, capitalShips), target: 5, complete: state.ships.length >= 4 && capitalShips >= 1 },

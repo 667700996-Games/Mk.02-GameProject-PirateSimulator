@@ -35,6 +35,7 @@ export interface ShotContext {
   targetSpeed: number;
   broadside: Broadside;
   difficulty: Difficulty;
+  attackerIsEnemy: boolean;
   captainIsGunner: boolean;
   random: () => number;
 }
@@ -87,7 +88,9 @@ export function resolveShot(context: ShotContext): ShotResult {
   }
 
   const armorMitigation = clamp((context.target.stats.armor * (1 - profile.penetration)) / 100, 0, 0.66);
-  const difficultyScale = context.difficulty === 'story' ? 1.16 : context.difficulty === 'black-flag' ? 0.92 : 1;
+  const difficultyScale = context.attackerIsEnemy
+    ? enemyDamageScale(context.difficulty)
+    : context.difficulty === 'story' ? 1.16 : context.difficulty === 'black-flag' ? 0.92 : 1;
   const volley = cannonCount * (0.82 + context.random() * 0.38) * difficultyScale;
   const criticalScale = critical ? 1.75 : 1;
   const hullDamage = Math.round(volley * profile.hull * (1 - armorMitigation) * criticalScale);

@@ -33,26 +33,33 @@ export function hireCaptain(state: GameState, candidate: Officer, cost: number):
   if (!paid) return state;
   return {
     ...paid,
-    officers: [...paid.officers, { ...candidate, isCaptain: true }],
-    haven: { ...paid.haven, populationByRole: { ...paid.haven.populationByRole, captains: paid.haven.populationByRole.captains + 1 } }
+    officers: [...paid.officers, { ...candidate, isCaptain: true }]
   };
 }
 
 export function assignCaptain(state: GameState, captainId: string, shipId: string): GameState {
   const ship = state.ships.find((vessel) => vessel.id === shipId);
   const captain = state.officers.find((officer) => officer.id === captainId && officer.isCaptain);
-  if (!ship || ship.isFlagship || !captain || state.fleet.assignments.some((assignment) => assignment.shipId === shipId && !['complete', 'failed', 'deserted'].includes(assignment.status))) return state;
+  const captainCommandsAnotherShip = !!captain?.assignedShipId && captain.assignedShipId !== shipId;
+  const anotherShipUsesCaptain = state.ships.some((vessel) => vessel.id !== shipId && vessel.captainId === captainId);
+  if (!ship || ship.isFlagship || !captain || captainCommandsAnotherShip || anotherShipUsesCaptain || state.fleet.assignments.some((assignment) => assignment.shipId === shipId && !['complete', 'failed', 'deserted'].includes(assignment.status))) return state;
+  const previousCaptainId = ship.captainId;
   return {
     ...state,
     ships: state.ships.map((vessel) => vessel.id === shipId ? { ...vessel, captainId } : vessel),
-    officers: state.officers.map((officer) => officer.id === captainId ? { ...officer, assignedShipId: shipId } : officer)
+    officers: state.officers.map((officer) => officer.id === captainId
+      ? { ...officer, assignedShipId: shipId }
+      : officer.id === previousCaptainId && officer.assignedShipId === shipId
+        ? { ...officer, assignedShipId: undefined }
+        : officer)
   };
 }
 
 export function issueFleetOrder(state: GameState, shipId: string, order: FleetOrderType, zoneId: ZoneId, now = Date.now()): GameState {
   const ship = state.ships.find((vessel) => vessel.id === shipId);
-  const captain = state.officers.find((officer) => officer.id === ship?.captainId);
-  if (!ship || ship.isFlagship || !captain || ship.crew < 4 || state.fleet.assignments.some((assignment) => assignment.shipId === shipId && !['complete', 'failed', 'deserted'].includes(assignment.status))) return state;
+  const captain = state.officers.find((officer) => officer.id === ship?.captainId && officer.isCaptain && officer.assignedShipId === shipId);
+  const seaworthy = !!ship && ship.hull >= ship.stats.hullMax * .35 && ship.sails >= ship.stats.sailMax * .35;
+  if (!ship || ship.isFlagship || !captain || !seaworthy || ship.crew < 4 || state.fleet.assignments.some((assignment) => assignment.shipId === shipId && !['complete', 'failed', 'deserted'].includes(assignment.status))) return state;
   const zone = ZONES[zoneId];
   const durationMinutes = 2.5 + zone.difficulty * .7 + (order === 'scout' ? -1 : order === 'raid' ? 1.4 : 0);
   const riskModifier: Record<FleetOrderType, number> = { patrol: .9, raid: 1.25, escort: .78, smuggle: .86, scout: .68, defend: .45 };

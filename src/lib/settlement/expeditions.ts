@@ -1,6 +1,6 @@
 import { createId, hashString, mulberry32 } from '$lib/domain/rng';
-import { ZONES } from '$lib/domain/catalog';
-import type { Officer, Ship, ZoneId } from '$lib/domain/types';
+import { DIFFICULTIES, ZONES } from '$lib/domain/catalog';
+import type { CaptainTrait, Difficulty, Officer, Ship, ZoneId } from '$lib/domain/types';
 import { aggregateInventory } from './construction';
 import type { PartialSettlementInventory, SettlementResourceId, SettlementSimulationState, StrategicExpedition } from './types';
 import { policyModifiers } from './progression';
@@ -8,6 +8,15 @@ import { policyModifiers } from './progression';
 export type ExpeditionPurpose = 'explore' | 'raid' | 'trade' | 'rescue';
 export type ExpeditionChoice = 'cautious' | 'bold' | 'parley';
 export type ExpeditionCombatCommand = 'maneuver' | 'round-shot' | 'chain-shot' | 'grape-shot' | 'repair' | 'board' | 'retreat';
+
+export interface ExpeditionCommandContext {
+  trait?: CaptainTrait;
+  difficulty?: Difficulty;
+}
+
+function difficultyModifiers(context: ExpeditionCommandContext) {
+  return DIFFICULTIES[context.difficulty ?? 'captain'];
+}
 
 export interface ExpeditionEventDefinition {
   id: string;
@@ -53,26 +62,41 @@ export interface ExpeditionEstimate {
   cargoCapacity: number;
 }
 
-export function estimateExpedition(zoneId: ZoneId, ships: Ship[], crewCount: number, purpose: ExpeditionPurpose): ExpeditionEstimate {
+export function estimateExpedition(
+  zoneId: ZoneId,
+  ships: Ship[],
+  crewCount: number,
+  purpose: ExpeditionPurpose,
+  context: ExpeditionCommandContext = {}
+): ExpeditionEstimate {
   const zone = ZONES[zoneId];
+  const difficulty = difficultyModifiers(context);
   const slowest = ships.length > 0 ? Math.min(...ships.map((ship) => ship.stats.speedMax)) : 1;
   const distanceFactor = 1 + zone.difficulty * 0.34;
-  const durationHours = Math.ceil((7 + distanceFactor * 5) * (7 / Math.max(2.8, slowest)) * (purpose === 'explore' ? 1.2 : 1));
+  const durationHours = Math.ceil((7 + distanceFactor * 5) * (7 / Math.max(2.8, slowest)) * (purpose === 'explore' ? 1.2 : 1) * (context.trait === 'navigator' ? 0.92 : 1));
   const requiredCrew = ships.reduce((sum, ship) => sum + Math.max(4, Math.ceil(ship.stats.crewMax * 0.32)), 0);
-  const combatPower = ships.reduce((sum, ship) => sum + ship.stats.cannonSlots + ship.stats.hullMax / 35, 0) + crewCount * 0.45;
+  const combatPower = (ships.reduce((sum, ship) => sum + ship.stats.cannonSlots + ship.stats.hullMax / 35, 0) + crewCount * 0.45) * (context.trait === 'admiral' ? 1.1 : 1);
   const purposeRisk = purpose === 'raid' ? 13 : purpose === 'rescue' ? 6 : purpose === 'trade' ? -4 : 2;
-  const risk = Math.max(5, Math.min(92, zone.difficulty * 11 + purposeRisk - combatPower * 0.42));
+  const traitRisk = context.trait === 'admiral' ? 0.9 : context.trait === 'smuggler' && purpose === 'trade' ? 0.85 : 1;
+  const risk = Math.max(5, Math.min(92, (zone.difficulty * 11 + purposeRisk - combatPower * 0.42) * difficulty.enemy * traitRisk));
+  const supplies = (values: PartialSettlementInventory): PartialSettlementInventory =>
+    Object.fromEntries(
+      Object.entries(values).map(([id, amount]) => [
+        id,
+        Math.max(1, Math.ceil((amount ?? 0) * difficulty.consumption))
+      ])
+    ) as PartialSettlementInventory;
   return {
     durationHours,
     risk,
     requiredCrew,
-    supplies: {
+    supplies: supplies({
       water: Math.ceil(crewCount * durationHours / 24 * 0.75),
       hardtack: Math.ceil(crewCount * durationHours / 24 * 0.55),
       medicine: Math.max(1, Math.ceil(crewCount / 18)),
       cannonballs: purpose === 'raid' ? Math.max(12, ships.reduce((sum, ship) => sum + ship.stats.cannonSlots, 0)) : Math.max(4, ships.length * 4),
       powder: purpose === 'raid' ? Math.max(6, ships.reduce((sum, ship) => sum + Math.ceil(ship.stats.cannonSlots * 0.45), 0)) : Math.max(2, ships.length * 2)
-    },
+    }),
     cargoCapacity: ships.reduce((sum, ship) => sum + ship.stats.cargoMax, 0)
   };
 }
@@ -91,7 +115,8 @@ export function prepareExpedition(
   state: SettlementSimulationState,
   ships: Ship[],
   officers: Officer[],
-  options: PrepareExpeditionOptions
+  options: PrepareExpeditionOptions,
+  context: ExpeditionCommandContext = {}
 ): { state: SettlementSimulationState; ok: boolean; reason?: string; expeditionId?: string } {
   if (!state.progression.unlocked.includes('seamanship-expeditions')) return { state, ok: false, reason: '군도 원정술 발전이 필요합니다.' };
   const activeLimit = state.progression.unlocked.includes('federation-captains') ? 3 : 1;
@@ -103,7 +128,7 @@ export function prepareExpedition(
   if (selectedShips.some((ship) => ship.hull < ship.stats.hullMax * 0.35 || ship.sails < ship.stats.sailMax * 0.35)) return { state, ok: false, reason: '파손이 심한 함선이 포함되어 있습니다.' };
   if (state.expeditions.some((expedition) => !['COMPLETED', 'LOST'].includes(expedition.state) && expedition.shipIds.some((id) => options.shipIds.includes(id)))) return { state, ok: false, reason: '선택한 함선이 이미 원정 중입니다.' };
   const crew = state.residents.filter((resident) => options.crewIds.includes(resident.id));
-  const baseEstimate = estimateExpedition(options.zoneId, selectedShips, crew.length, options.purpose);
+  const baseEstimate = estimateExpedition(options.zoneId, selectedShips, crew.length, options.purpose, context);
   const modifiers = policyModifiers(state);
   const estimate = { ...baseEstimate, risk: Math.max(3, Math.min(95, baseEstimate.risk * modifiers.patrolRisk)) };
   if (crew.length < estimate.requiredCrew) return { state, ok: false, reason: `${estimate.requiredCrew - crew.length}명의 원정 선원이 더 필요합니다.` };
@@ -159,17 +184,22 @@ function loseFleetVessel(ships: Ship[], expedition: StrategicExpedition): string
   return lost.name;
 }
 
-function expeditionLoot(expedition: StrategicExpedition, state: SettlementSimulationState): PartialSettlementInventory {
+function expeditionLoot(
+  expedition: StrategicExpedition,
+  state: SettlementSimulationState,
+  context: ExpeditionCommandContext
+): PartialSettlementInventory {
   const random = mulberry32(hashString(expedition.id));
   const zone = ZONES[expedition.zoneId];
   const modifiers = policyModifiers(state);
+  const rewardMultiplier = difficultyModifiers(context).rewards * (context.trait === 'raider' ? 1.15 : 1);
   const purposeFactor = expedition.purpose === 'raid' ? 1.25 : expedition.purpose === 'trade' ? 1.05 : expedition.purpose === 'rescue' ? 0.72 : 0.88;
-  const gold = Math.floor((18 + zone.difficulty * 12) * (0.75 + random() * 0.6) * purposeFactor * modifiers.allLoot * modifiers.goldLoot);
+  const gold = Math.floor((18 + zone.difficulty * 12) * (0.75 + random() * 0.6) * purposeFactor * modifiers.allLoot * modifiers.goldLoot * rewardMultiplier);
   const loot: PartialSettlementInventory = { gold, 'royal-coins': Math.floor(gold * 0.28) };
   const rare: SettlementResourceId[] = expedition.purpose === 'explore'
     ? (zone.difficulty >= 6 ? ['military-maps', 'naval-ciphers', 'ancient-relics'] : ['foreign-textiles', 'wine', 'spices'])
     : zone.difficulty >= 7 ? ['rare-metal', 'military-maps', 'naval-ciphers'] : zone.difficulty >= 4 ? ['spices', 'silver', 'foreign-textiles'] : ['fruit', 'tobacco', 'wine'];
-  loot[rare[Math.floor(random() * rare.length)]] = Math.max(1, Math.floor((2 + random() * (4 + zone.difficulty)) * modifiers.allLoot));
+  loot[rare[Math.floor(random() * rare.length)]] = Math.max(1, Math.floor((2 + random() * (4 + zone.difficulty)) * modifiers.allLoot * rewardMultiplier));
   if (random() > 0.78 - zone.difficulty * 0.025) loot['rare-blueprints'] = 1;
   return loot;
 }
@@ -178,7 +208,8 @@ export function advanceExpeditions(
   input: SettlementSimulationState,
   ships: Ship[],
   gameMinutes: number,
-  now = Date.now()
+  now = Date.now(),
+  context: ExpeditionCommandContext = {}
 ): { settlement: SettlementSimulationState; ships: Ship[] } {
   if (gameMinutes <= 0 || input.expeditions.length === 0) return { settlement: input, ships };
   const settlement = structuredClone(input);
@@ -216,7 +247,7 @@ export function advanceExpeditions(
         expedition.currentEventId = event.id;
         expedition.log.push(event.description);
       } else if (expedition.routeProgress >= 1) {
-        const earned = expeditionLoot(expedition, settlement);
+        const earned = expeditionLoot(expedition, settlement, context);
         for (const [id, cargo] of Object.entries(earned) as [SettlementResourceId, number][]) expedition.cargo[id] = (expedition.cargo[id] ?? 0) + cargo;
         expedition.state = 'RETURNING';
         expedition.routeProgress = 0;
@@ -244,7 +275,8 @@ export function resolveExpeditionEvent(
   input: SettlementSimulationState,
   ships: Ship[],
   expeditionId: string,
-  choice: ExpeditionChoice
+  choice: ExpeditionChoice,
+  context: ExpeditionCommandContext = {}
 ): { settlement: SettlementSimulationState; ships: Ship[] } {
   const settlement = structuredClone(input);
   const nextShips = structuredClone(ships);
@@ -257,8 +289,10 @@ export function resolveExpeditionEvent(
     expedition.morale = Math.min(100, expedition.morale + (event?.kind === 'social' ? 4 : 2));
     expedition.log.push(`사건 ${eventNumber} 해결 · ${event?.kind === 'social' ? '선원들의 말을 듣고 질서를 회복했다.' : '돛을 줄이고 안전한 항로를 택했다.'}`);
   } else if (choice === 'bold') {
+    const admiralProtection = context.trait === 'admiral' ? 1 / 1.1 : 1;
+    const lossMultiplier = difficultyModifiers(context).losses * admiralProtection;
     const damageFactor = event?.kind === 'weather' || event?.kind === 'hazard' ? 0.3 : 0.2;
-    const damage = Math.max(3, Math.round(expedition.risk * damageFactor));
+    const damage = Math.max(3, Math.round(expedition.risk * damageFactor * lossMultiplier));
     for (const ship of nextShips.filter((item) => expedition.shipIds.includes(item.id))) ship.hull = Math.max(1, ship.hull - damage);
     expedition.cargo['royal-coins'] = (expedition.cargo['royal-coins'] ?? 0) + Math.ceil(expedition.risk * 0.8);
     if (event?.kind === 'discovery') expedition.cargo['rare-blueprints'] = (expedition.cargo['rare-blueprints'] ?? 0) + 1;
@@ -267,9 +301,9 @@ export function resolveExpeditionEvent(
       expedition.cargo['powder-kegs'] = (expedition.cargo['powder-kegs'] ?? 0) + 4;
     }
     const casualtyNames = event && ['weather', 'hazard'].includes(event.kind) && expedition.risk >= 48
-      ? applyPermanentCrewLoss(settlement, expedition, Math.max(1, Math.floor(expedition.crewIds.length * 0.04)), `${event.id}:bold`)
+      ? applyPermanentCrewLoss(settlement, expedition, Math.max(1, Math.round(expedition.crewIds.length * 0.04 * lossMultiplier)), `${event.id}:bold`)
       : [];
-    expedition.morale = Math.max(0, expedition.morale - 3);
+    expedition.morale = Math.max(0, expedition.morale - (context.trait === 'agitator' ? 2.25 : 3));
     expedition.log.push(`사건 ${eventNumber} 해결 · 위험을 돌파해 전리품과 정보를 확보했다. 선체 피해 ${damage}${casualtyNames.length ? `, 전사 ${casualtyNames.length}명` : ''}.`);
   } else {
     if (event?.kind === 'weather' || event?.kind === 'hazard') {
@@ -277,8 +311,9 @@ export function resolveExpeditionEvent(
       expedition.cargo['navigation-tools'] = (expedition.cargo['navigation-tools'] ?? 0) + 1;
       expedition.log.push(`사건 ${eventNumber} 해결 · 현지 도선사에게 금화를 약속하고 위험 수역을 빠져나왔다.`);
     } else {
-      expedition.cargo.spices = (expedition.cargo.spices ?? 0) + 3;
-      expedition.cargo.wine = (expedition.cargo.wine ?? 0) + 2;
+      const parleyReward = context.trait === 'negotiator' ? 1.25 : 1;
+      expedition.cargo.spices = (expedition.cargo.spices ?? 0) + Math.round(3 * parleyReward);
+      expedition.cargo.wine = (expedition.cargo.wine ?? 0) + Math.round(2 * parleyReward);
       if (event?.id === 'distress-flare') expedition.morale = Math.min(100, expedition.morale + 8);
       expedition.log.push(`사건 ${eventNumber} 해결 · 거짓 깃발과 협상으로 교역품과 현지 정보를 얻었다.`);
     }
@@ -291,7 +326,8 @@ export function resolveExpeditionEvent(
 export function beginExpeditionCombat(
   input: SettlementSimulationState,
   ships: Ship[],
-  expeditionId: string
+  expeditionId: string,
+  context: ExpeditionCommandContext = {}
 ): { settlement: SettlementSimulationState; ships: Ship[]; ok: boolean; reason?: string } {
   const settlement = structuredClone(input);
   const nextShips = structuredClone(ships);
@@ -302,7 +338,7 @@ export function beginExpeditionCombat(
   const fleet = nextShips.filter((ship) => expedition.shipIds.includes(ship.id));
   const playerHull = fleet.reduce((sum, ship) => sum + ship.hull, 0);
   const playerHullMax = fleet.reduce((sum, ship) => sum + ship.stats.hullMax, 0);
-  const enemyHullMax = Math.round(72 + expedition.risk * 1.7 + ZONES[expedition.zoneId].difficulty * 12);
+  const enemyHullMax = Math.round((72 + expedition.risk * 1.7 + ZONES[expedition.zoneId].difficulty * 12) * difficultyModifiers(context).enemy);
   expedition.combat = {
     turn: 1, playerHull, playerHullMax, enemyHull: enemyHullMax, enemyHullMax, enemySails: 100, enemyMorale: 82,
     ammo: Math.max(4, expedition.supplies.cannonballs ?? 4), windAngle: Math.round((hashString(expedition.id) % 150) - 75),
@@ -341,7 +377,8 @@ export function resolveExpeditionCombatTurn(
   input: SettlementSimulationState,
   ships: Ship[],
   expeditionId: string,
-  command: ExpeditionCombatCommand
+  command: ExpeditionCombatCommand,
+  context: ExpeditionCommandContext = {}
 ): { settlement: SettlementSimulationState; ships: Ship[]; outcome?: 'victory' | 'retreat' | 'defeat'; reason?: string } {
   const settlement = structuredClone(input);
   const nextShips = structuredClone(ships);
@@ -349,12 +386,15 @@ export function resolveExpeditionCombatTurn(
   const combat = expedition?.combat;
   if (!expedition || expedition.state !== 'COMBAT' || !combat) return { settlement: input, ships, reason: '진행 중인 해전이 없습니다.' };
   const fleet = nextShips.filter((ship) => expedition.shipIds.includes(ship.id));
-  const firepower = fleet.reduce((sum, ship) => sum + ship.stats.cannonSlots * (ship.cannonCondition / 100), 0);
+  const admiralFactor = context.trait === 'admiral' ? 1.1 : 1;
+  const lossMultiplier = difficultyModifiers(context).losses / admiralFactor;
+  const rewardMultiplier = difficultyModifiers(context).rewards * (context.trait === 'raider' ? 1.15 : 1);
+  const firepower = fleet.reduce((sum, ship) => sum + ship.stats.cannonSlots * (ship.cannonCondition / 100), 0) * admiralFactor;
   const rng = mulberry32(hashString(`${expedition.id}:${combat.turn}:${command}`));
   const rangeFactor = combat.range === 'broadside' ? 1.25 : combat.range === 'far' ? 0.68 : 0.48;
   let maneuverEvasion = 1;
   if (command === 'retreat') {
-    distributeFleetDamage(nextShips, expedition.shipIds, Math.ceil(4 + expedition.risk * 0.08));
+    distributeFleetDamage(nextShips, expedition.shipIds, Math.ceil((4 + expedition.risk * 0.08) * lossMultiplier));
     expedition.state = 'RETURNING'; expedition.routeProgress = 0; expedition.currentEventId = undefined; expedition.combat = undefined;
     expedition.log.push('연막과 사슬탄을 뿌리며 귀환 항로로 이탈했다.');
     return { settlement, ships: nextShips, outcome: 'retreat' };
@@ -408,21 +448,21 @@ export function resolveExpeditionCombatTurn(
   }
   if (combat.enemyHull <= 0 || combat.enemyMorale <= 0) {
     const eventNumber = expedition.routeProgress < 0.6 ? 1 : 2;
-    expedition.cargo['royal-coins'] = (expedition.cargo['royal-coins'] ?? 0) + Math.ceil(28 + expedition.risk * 1.4);
+    expedition.cargo['royal-coins'] = (expedition.cargo['royal-coins'] ?? 0) + Math.ceil((28 + expedition.risk * 1.4) * rewardMultiplier);
     expedition.cargo['military-maps'] = (expedition.cargo['military-maps'] ?? 0) + 1;
     expedition.log.push(`사건 ${eventNumber} 해결 · 전술 해전 승리, 왕실 금화와 군사 지도를 확보했다.`);
     expedition.state = 'TRAVELING'; expedition.currentEventId = undefined; expedition.combat = undefined;
     settlement.progression.points.infamy += 4;
     return { settlement, ships: nextShips, outcome: 'victory' };
   }
-  const enemyDamage = Math.max(3, Math.round((5 + expedition.risk * 0.11 + rng() * 7) * maneuverEvasion * (combat.enemySails < 35 ? 0.68 : 1)));
+  const enemyDamage = Math.max(3, Math.round((5 + expedition.risk * 0.11 + rng() * 7) * maneuverEvasion * (combat.enemySails < 35 ? 0.68 : 1) * lossMultiplier));
   combat.playerHull = Math.max(0, combat.playerHull - enemyDamage);
   distributeFleetDamage(nextShips, expedition.shipIds, enemyDamage);
   combat.log.push(`적의 응사로 함대 선체 ${enemyDamage} 피해.`);
   combat.turn += 1;
   if (combat.playerHull <= combat.playerHullMax * 0.12) {
     const lostVessel = loseFleetVessel(nextShips, expedition);
-    const lostCrew = applyPermanentCrewLoss(settlement, expedition, Math.max(1, Math.ceil(expedition.crewIds.length * (0.08 + expedition.risk / 500))), 'combat-defeat');
+    const lostCrew = applyPermanentCrewLoss(settlement, expedition, Math.max(1, Math.ceil(expedition.crewIds.length * (0.08 + expedition.risk / 500) * lossMultiplier)), 'combat-defeat');
     for (const id of Object.keys(expedition.cargo) as SettlementResourceId[]) expedition.cargo[id] = Math.floor((expedition.cargo[id] ?? 0) * 0.6);
     expedition.state = 'RETURNING'; expedition.routeProgress = 0; expedition.currentEventId = undefined; expedition.combat = undefined;
     expedition.morale = Math.max(0, expedition.morale - 18);

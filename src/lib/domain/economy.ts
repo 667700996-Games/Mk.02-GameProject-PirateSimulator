@@ -40,20 +40,3 @@ export function marketPrice(
   const spread = mode === 'buy' ? 1.12 : 0.78;
   return Math.max(1, Math.round(listed * fluctuation * attitudeFactor * negotiatorFactor * smugglerFactor * spread));
 }
-
-export function canTradeResource(settlement: SettlementState, resource: ResourceId): boolean {
-  if (!RESOURCE_META[resource].illegal) return true;
-  return settlement.type === 'freeport' || settlement.type === 'smuggler-hideout';
-}
-
-export function transferStock(stock: ResourceStock, costs: Partial<ResourceStock>, multiplier = -1): ResourceStock {
-  const next = { ...stock };
-  for (const [id, amount] of Object.entries(costs) as [ResourceId, number][]) {
-    next[id] = Math.max(0, next[id] + amount * multiplier);
-  }
-  return next;
-}
-
-export function hasResources(stock: ResourceStock, costs: Partial<ResourceStock>): boolean {
-  return (Object.entries(costs) as [ResourceId, number][]).every(([id, amount]) => stock[id] >= amount);
-}

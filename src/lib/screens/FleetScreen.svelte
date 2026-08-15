@@ -58,7 +58,10 @@
       .slice(0, crewCount)
   );
   let estimate = $derived(
-    estimateExpedition(selectedZone, selectedShips, eligibleCrew.length, purpose)
+    estimateExpedition(selectedZone, selectedShips, eligibleCrew.length, purpose, {
+      trait: game.captain.trait,
+      difficulty: game.captain.difficulty
+    })
   );
   let inventory = $derived(aggregateInventory(game.settlement));
   let hasOffice = $derived(
@@ -102,7 +105,7 @@
         captainIds: state.officers.slice(0, selectedShipIds.length).map((officer) => officer.id),
         crewIds: eligibleCrew.map((resident) => resident.id),
         missionId: matchedMission?.id
-      });
+      }, { trait: state.captain.trait, difficulty: state.captain.difficulty });
       ok = result.ok;
       reason = result.reason ?? '';
       return ok ? { ...state, settlement: result.state } : state;
@@ -120,7 +123,10 @@
 
   function resolve(expeditionId: string, choice: ExpeditionChoice): void {
     gameSession.updateGame((state) => {
-      const result = resolveExpeditionEvent(state.settlement, state.ships, expeditionId, choice);
+      const result = resolveExpeditionEvent(state.settlement, state.ships, expeditionId, choice, {
+        trait: state.captain.trait,
+        difficulty: state.captain.difficulty
+      });
       return { ...state, settlement: result.settlement, ships: result.ships };
     }, true);
   }
@@ -128,7 +134,10 @@
   function beginCombat(expeditionId: string): void {
     let reason = '';
     gameSession.updateGame((state) => {
-      const result = beginExpeditionCombat(state.settlement, state.ships, expeditionId);
+      const result = beginExpeditionCombat(state.settlement, state.ships, expeditionId, {
+        trait: state.captain.trait,
+        difficulty: state.captain.difficulty
+      });
       reason = result.reason ?? '';
       return result.ok ? { ...state, settlement: result.settlement, ships: result.ships } : state;
     }, true);
@@ -143,7 +152,8 @@
         state.settlement,
         state.ships,
         expeditionId,
-        command
+        command,
+        { trait: state.captain.trait, difficulty: state.captain.difficulty }
       );
       reason = result.reason ?? '';
       outcome = result.outcome;

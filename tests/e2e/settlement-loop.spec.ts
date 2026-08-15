@@ -64,6 +64,14 @@ async function createSettlement(page: import('@playwright/test').Page): Promise<
   }
 }
 
+async function openOnboarding(page: import('@playwright/test').Page): Promise<void> {
+  if ((page.viewportSize()?.width ?? 1280) <= 760) {
+    await page.getByRole('button', { name: '초기 임무 열기' }).click();
+  } else {
+    await page.getByRole('button', { name: '표류 일지' }).click();
+  }
+}
+
 test('publishes complete non-core tier bodies without loading them into a fresh settlement', async ({
   page
 }) => {
@@ -133,6 +141,9 @@ test('places a terrain-bound building and runs its physical construction flow', 
 }, testInfo) => {
   test.slow();
   await createSettlement(page);
+  await openOnboarding(page);
+  await expect(page.getByText('THE WRECKED CROWN · 0/6', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '첫 물 한 모금' })).toBeVisible();
   const buildPanel = page.getByTestId('build-panel');
   if (!(await buildPanel.getByRole('heading', { name: '도시 건설' }).isVisible())) {
     await page.getByRole('button', { name: '건설 메뉴 열기' }).click();
@@ -165,6 +176,9 @@ test('places a terrain-bound building and runs its physical construction flow', 
   await page.getByRole('button', { name: '3×', exact: true }).click();
   // The construction is intentionally gated by two physical deliveries before builders begin.
   await expect(page.getByText(/CONSTRUCTING|ACTIVE/)).toBeVisible({ timeout: 75_000 });
+  await openOnboarding(page);
+  await expect(page.getByText('THE WRECKED CROWN · 1/6', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '숲을 깨우는 도끼' })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('settlement-city.png'), fullPage: true });
 });
 

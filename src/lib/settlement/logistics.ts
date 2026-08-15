@@ -17,6 +17,8 @@ function amount(inventory: PartialSettlementInventory, resource: SettlementResou
   return inventory[resource] ?? 0;
 }
 
+const MIN_TRANSFER_AMOUNT = 0.001;
+
 function deployedCrewIds(state: SettlementSimulationState): Set<string> {
   return new Set(
     state.expeditions
@@ -79,10 +81,11 @@ function requestResource(
   priority: number
 ): void {
   let remaining = requested - incomingAmount(state, target.id, resourceId);
-  while (remaining > 0) {
+  while (remaining >= MIN_TRANSFER_AMOUNT) {
     const candidate = findSource(state, resourceId, target);
     if (!candidate) break;
     const transfer = Math.min(6, remaining, candidate.available);
+    if (transfer < MIN_TRANSFER_AMOUNT) break;
     const path = route(
       state,
       { x: candidate.source.x, y: candidate.source.y },
@@ -546,7 +549,9 @@ export function advanceTransports(
     } else {
       const targetDefinition = BUILDINGS[target.definitionId];
       const inventory =
-        targetDefinition?.category === 'logistics' ? target.outputInventory : target.inputInventory;
+        targetDefinition?.category === 'logistics' && target.state === 'ACTIVE'
+          ? target.outputInventory
+          : target.inputInventory;
       inventory[job.resourceId] = amount(inventory, job.resourceId) + job.amount;
       next.statistics.delivered[job.resourceId] =
         amount(next.statistics.delivered, job.resourceId) + job.amount;

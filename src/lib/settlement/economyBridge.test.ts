@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createNewGame } from '$lib/domain/initialState';
 import { advanceSimulation } from '$lib/domain/simulation';
 import { claimMissionReward } from '$lib/domain/missions';
-import { canAffordGameResources, spendGameResources } from './economyBridge';
+import { canAffordGameResources, gameResourceStock, spendGameResources } from './economyBridge';
 
 function game() {
   return createNewGame(
@@ -21,6 +21,14 @@ function game() {
 }
 
 describe('authoritative settlement economy', () => {
+  it('ignores a stale compatibility resource snapshot', () => {
+    const initial = game();
+    initial.resources.gold = 0;
+    expect(gameResourceStock(initial).gold).toBe(520);
+    expect(canAffordGameResources(initial, { gold: 100 })).toBe(true);
+    expect(spendGameResources(initial, { gold: 100 })?.resources.gold).toBe(420);
+  });
+
   it('credits mission rewards into spatial storage and keeps them after simulation advances', () => {
     const initial = game();
     initial.missions[0] = { ...initial.missions[0], status: 'complete', claimed: false };

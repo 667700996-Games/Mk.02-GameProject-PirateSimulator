@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BUILDINGS, RECIPES, SETTLEMENT_RESOURCE_IDS } from './catalog';
 import {
   beginBuildingUpgrade,
+  buildingConstructionCost,
   buildingUpgradeCost,
   cancelBuildingWork,
   moveBuilding,
@@ -25,6 +26,7 @@ import {
 import { createNewGame } from '$lib/domain/initialState';
 import type { SettlementBuilding } from './types';
 import { policyModifiers } from './progression';
+import { settlementLegacyHaven, settlementSummary } from './summary';
 
 function advanceMany<T extends ReturnType<typeof createInitialSettlement>>(
   state: T,
@@ -36,10 +38,67 @@ function advanceMany<T extends ReturnType<typeof createInitialSettlement>>(
 }
 
 describe('settlement simulation', () => {
+  it('applies the architect contract to spatial construction and upgrades', () => {
+    const regularBuild = buildingConstructionCost('coastal-battery');
+    const architectBuild = buildingConstructionCost('coastal-battery', 'architect');
+    const regularUpgrade = buildingUpgradeCost('coastal-battery', 2);
+    const architectUpgrade = buildingUpgradeCost('coastal-battery', 2, 'architect');
+    const total = (cost: typeof regularBuild) =>
+      Object.values(cost).reduce((sum, value) => sum + (value ?? 0), 0);
+
+    expect(total(architectBuild)).toBeLessThan(total(regularBuild));
+    expect(total(architectUpgrade)).toBeLessThan(total(regularUpgrade));
+  });
+
+  it('reduces hourly morale loss for agitators and scales resident consumption', () => {
+    const base = createInitialSettlement(31, 1000);
+    base.simulationMinutes = 479;
+    for (const resident of base.residents) {
+      resident.homeId = undefined;
+      resident.morale = 50;
+    }
+    const ordinary = advanceSettlement(base, 1, { captainTrait: 'navigator' });
+    const rallied = advanceSettlement(base, 1, { captainTrait: 'agitator' });
+    expect(rallied.residents[0].morale).toBeGreaterThan(ordinary.residents[0].morale);
+
+    const supplied = createInitialSettlement(32, 1000);
+    supplied.simulationMinutes = 479;
+    for (const home of supplied.buildings.filter((building) => building.definitionId === 'tent'))
+      home.inputInventory = { water: 20, hardtack: 20, clothes: 10 };
+    const generous = advanceSettlement(supplied, 1, { consumptionMultiplier: 0.85 });
+    const harsh = advanceSettlement(supplied, 1, { consumptionMultiplier: 1.12 });
+    expect(harsh.statistics.consumed.water ?? 0).toBeGreaterThan(
+      generous.statistics.consumed.water ?? 0
+    );
+  });
+
   it('defines an extensible catalog with more than forty spatial resources', () => {
     expect(SETTLEMENT_RESOURCE_IDS.length).toBeGreaterThanOrEqual(40);
     expect(Object.keys(RECIPES).length).toBeGreaterThanOrEqual(20);
     expect(BUILDINGS.shipyard?.terrainRules).toContain('coast');
+  });
+
+  it('derives stable haven metrics from the spatial settlement instead of legacy snapshots', () => {
+    const game = createNewGame(
+      {
+        captainName: '투영', crewName: '단일 상태', shipName: '장부', flagMark: '◇', flagColor: '#222',
+        trait: 'architect', difficulty: 'captain', seed: 37
+      },
+      1000
+    );
+    game.haven.detectionRisk = 64;
+    game.haven.defense = 999;
+    game.haven.facilities['hidden-dock'] = {
+      id: 'hidden-dock', level: 5, condition: 100, workers: 5
+    };
+    const summary = settlementSummary(game.settlement);
+    const first = settlementLegacyHaven(game.settlement, game.haven);
+    const second = settlementLegacyHaven(game.settlement, first);
+
+    expect(first.detectionRisk).toBe(summary.detectionRisk);
+    expect(second.detectionRisk).toBe(first.detectionRisk);
+    expect(first.defense).toBe(summary.defense);
+    expect(first.facilities['hidden-dock']).toBeUndefined();
   });
 
   it('keeps the first expedition and advanced ship supply chains reachable', () => {
@@ -115,6 +174,45 @@ describe('settlement simulation', () => {
   it('uses a data-driven expedition event deck with varied encounter kinds', () => {
     expect(EXPEDITION_EVENTS.length).toBeGreaterThanOrEqual(12);
     expect(new Set(EXPEDITION_EVENTS.map((event) => event.kind)).size).toBeGreaterThanOrEqual(5);
+  });
+
+  it('applies captain and difficulty contracts to strategic expedition planning', () => {
+    const game = createNewGame(
+      {
+        captainName: '함대장',
+        crewName: '파도',
+        shipName: '원정선',
+        flagMark: '♛',
+        flagColor: '#222',
+        trait: 'admiral',
+        difficulty: 'captain',
+        seed: 18
+      },
+      1000
+    );
+    const ships = [game.ships[0]];
+    const story = estimateExpedition('naval-patrol', ships, 12, 'raid', {
+      trait: 'admiral',
+      difficulty: 'story'
+    });
+    const blackFlag = estimateExpedition('naval-patrol', ships, 12, 'raid', {
+      trait: 'navigator',
+      difficulty: 'black-flag'
+    });
+    const regular = estimateExpedition('legend-sea', ships, 12, 'explore', {
+      trait: 'gunner',
+      difficulty: 'captain'
+    });
+    const navigator = estimateExpedition('legend-sea', ships, 12, 'explore', {
+      trait: 'navigator',
+      difficulty: 'captain'
+    });
+    const supplies = (estimate: ReturnType<typeof estimateExpedition>) =>
+      Object.values(estimate.supplies).reduce((sum, value) => sum + (value ?? 0), 0);
+
+    expect(story.risk).toBeLessThan(blackFlag.risk);
+    expect(supplies(story)).toBeLessThan(supplies(blackFlag));
+    expect(navigator.durationHours).toBeLessThan(regular.durationHours);
   });
 
   it('enforces terrain, elevation and occupied footprints during placement', () => {
@@ -311,6 +409,39 @@ describe('settlement simulation', () => {
     expect(completed.statistics.delivered.logs).toBeGreaterThanOrEqual(6);
     expect(completed.statistics.completedBuildings).toBe(1);
     expect(completed.tutorialStep).toBe(1);
+  });
+
+  it('delivers construction materials to a planned logistics building instead of its storage', () => {
+    const initial = createInitialSettlement(18, 1000);
+    const source = initial.buildings.find((building) => building.definitionId === 'wreckage')!;
+    const tile = initial.island.tiles.find(
+      (candidate) =>
+        validatePlacement(
+          initial.island,
+          initial.buildings,
+          'warehouse',
+          candidate.x,
+          candidate.y,
+          0
+        ).valid &&
+        findPath(
+          initial.island,
+          { x: source.x, y: source.y },
+          { x: candidate.x, y: candidate.y },
+          initial.buildings
+        ).length > 0
+    )!;
+    const placed = placeBuilding(initial, 'warehouse', tile.x, tile.y, 0, 1100);
+    expect(placed.ok).toBe(true);
+
+    const delivered = advanceMany(placed.state, 80);
+    const warehouse = delivered.buildings.find(
+      (building) => building.id === placed.buildingId
+    )!;
+
+    expect(warehouse.state).toBe('ACTIVE');
+    expect(delivered.statistics.completedBuildings).toBe(1);
+    expect(delivered.tutorialStep).toBe(3);
   });
 
   it('moves and cancels a building plan without duplicating reserved cargo', () => {

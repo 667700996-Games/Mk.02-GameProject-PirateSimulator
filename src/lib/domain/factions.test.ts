@@ -19,7 +19,12 @@ describe('faction diplomacy and notoriety', () => {
 
   it('requires real diplomatic standing and a council for an alliance', () => {
     const state = createNewGame({ captainName: 'Anne', crewName: 'Tide', shipName: 'Gull', flagMark: 'skull', flagColor: '#fff', trait: 'negotiator', difficulty: 'captain' });
-    state.haven.facilities['pirate-council'] = { id: 'pirate-council', level: 1, condition: 100, workers: 2 };
+    state.settlement.buildings.push({
+      id: 'diplomacy-council', definitionId: 'pirate-council', x: 12, y: 11, rotation: 0,
+      level: 1, state: 'ACTIVE', constructionProgress: 1, constructionPriority: 3,
+      workers: [], inputInventory: {}, outputInventory: {}, reservedInventory: {},
+      recipeProgress: 0, condition: 100, fire: 0, paused: false, createdAt: 1000
+    });
     state.factions['free-pirates'] = { ...state.factions['free-pirates'], favor: 60, respect: 40, hostility: 10 };
     const allied = formAlliance(state, 'free-pirates');
     expect(allied.flags['alliance:free-pirates']).toBe(true);
@@ -40,6 +45,9 @@ describe('faction diplomacy and notoriety', () => {
   it('turns a high bounty into active voyage pursuit pressure', () => {
     const state = createNewGame({ captainName: 'Anne', crewName: 'Tide', shipName: 'Gull', flagMark: 'skull', flagColor: '#fff', trait: 'negotiator', difficulty: 'captain', seed: 4 });
     state.bounty = 8_000;
+    state.ships[0].hull = state.ships[0].stats.hullMax;
+    state.ships[0].sails = state.ships[0].stats.sailMax;
+    state.ships[0].crew = 8;
     const departed = departForZone(state, 'merchant-routes');
     expect(departed.voyage.pursuit).toBe(42);
     expect(departed.haven.raidThreat).toBe(state.haven.raidThreat);
