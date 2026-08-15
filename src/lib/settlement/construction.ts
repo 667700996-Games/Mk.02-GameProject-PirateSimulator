@@ -1,4 +1,5 @@
 import { createId } from '$lib/domain/rng';
+import type { CaptainTrait } from '$lib/domain/types';
 import { BUILDINGS } from './catalog';
 import { validatePlacement } from './island';
 import type { BuildingState, PartialSettlementInventory, SettlementBuilding, SettlementBuildingId, SettlementResourceId, SettlementSimulationState } from './types';
@@ -53,13 +54,38 @@ export function creditSettlementResources(
   return next;
 }
 
-export function buildingUpgradeCost(definitionId: SettlementBuildingId, currentLevel: number): PartialSettlementInventory {
+function applyArchitectDiscount(
+  cost: PartialSettlementInventory,
+  trait?: CaptainTrait
+): PartialSettlementInventory {
+  const factor = trait === 'architect' ? 0.88 : 1;
+  return Object.fromEntries(
+    (Object.entries(cost) as [SettlementResourceId, number][]).map(([resource, value]) => [
+      resource,
+      Math.max(1, Math.ceil(value * factor))
+    ])
+  ) as PartialSettlementInventory;
+}
+
+export function buildingConstructionCost(
+  definitionId: SettlementBuildingId,
+  trait?: CaptainTrait
+): PartialSettlementInventory {
+  const definition = BUILDINGS[definitionId];
+  return definition ? applyArchitectDiscount(definition.constructionCost, trait) : {};
+}
+
+export function buildingUpgradeCost(
+  definitionId: SettlementBuildingId,
+  currentLevel: number,
+  trait?: CaptainTrait
+): PartialSettlementInventory {
   const definition = BUILDINGS[definitionId];
   if (!definition) return {};
   const factor = 0.45 + currentLevel * 0.2;
-  return Object.fromEntries(
+  return applyArchitectDiscount(Object.fromEntries(
     (Object.entries(definition.constructionCost) as [SettlementResourceId, number][]).map(([resource, value]) => [resource, Math.max(1, Math.ceil(value * factor))])
-  ) as PartialSettlementInventory;
+  ) as PartialSettlementInventory, trait);
 }
 
 export function buildingMaxLevel(definitionId: SettlementBuildingId): number {
@@ -95,14 +121,15 @@ export function placeBuilding(
   x: number,
   y: number,
   rotation: 0 | 1 | 2 | 3,
-  now = Date.now()
+  now = Date.now(),
+  trait?: CaptainTrait
 ): BuildCommandResult {
   const definition = BUILDINGS[definitionId];
   if (!definition) return { state, ok: false, reason: '아직 사용할 수 없는 설계입니다.' };
   if (definition.unlock && !state.progression.unlocked.includes(definition.unlock)) return { state, ok: false, reason: '발전 항목을 먼저 해금해야 합니다.' };
   const placement = validatePlacement(state.island, state.buildings, definitionId, x, y, rotation);
   if (!placement.valid) return { state, ok: false, reason: placement.reason };
-  if (!hasSettlementResources(state, definition.constructionCost)) return { state, ok: false, reason: '정착지 재고가 부족합니다.' };
+  if (!hasSettlementResources(state, buildingConstructionCost(definitionId, trait))) return { state, ok: false, reason: '정착지 재고가 부족합니다.' };
   const newBuilding: SettlementBuilding = {
     id: createId('building'), definitionId, x, y, rotation, level: 1, state: 'PLANNED', constructionProgress: 0, constructionPriority: 3,
     workers: [], inputInventory: {}, outputInventory: {}, reservedInventory: {}, recipeId: definition.recipes[0], recipeProgress: 0,
@@ -180,7 +207,11 @@ function releaseTransportReservations(state: SettlementSimulationState, building
   }
 }
 
-export function cancelBuildingWork(state: SettlementSimulationState, id: string): BuildCommandResult {
+export function cancelBuildingWork(
+  state: SettlementSimulationState,
+  id: string,
+  trait?: CaptainTrait
+): BuildCommandResult {
   const building = state.buildings.find((item) => item.id === id);
   if (!building || building.definitionId === 'wreckage') return { state, ok: false, reason: '취소할 공사를 찾을 수 없습니다.' };
   const effectiveState: BuildingState | undefined = building.state === 'PAUSED'
@@ -194,7 +225,7 @@ export function cancelBuildingWork(state: SettlementSimulationState, id: string)
   for (const [resource, value] of Object.entries(target.inputInventory) as [SettlementResourceId, number][]) next.looseInventory[resource] = (next.looseInventory[resource] ?? 0) + value;
   if (effectiveState === 'UPGRADING') {
     if (target.upgradeMaterialsCommitted) {
-      for (const [resource, value] of Object.entries(buildingUpgradeCost(target.definitionId, target.level)) as [SettlementResourceId, number][]) next.looseInventory[resource] = (next.looseInventory[resource] ?? 0) + Math.floor(value * 0.6);
+      for (const [resource, value] of Object.entries(buildingUpgradeCost(target.definitionId, target.level, trait)) as [SettlementResourceId, number][]) next.looseInventory[resource] = (next.looseInventory[resource] ?? 0) + Math.floor(value * 0.6);
     }
     target.inputInventory = {};
     target.state = 'ACTIVE';
@@ -205,20 +236,22 @@ export function cancelBuildingWork(state: SettlementSimulationState, id: string)
     target.statusReason = undefined;
   } else {
     if (effectiveState === 'CONSTRUCTING') {
-      const definition = BUILDINGS[target.definitionId];
-      if (definition) for (const [resource, value] of Object.entries(definition.constructionCost) as [SettlementResourceId, number][]) next.looseInventory[resource] = (next.looseInventory[resource] ?? 0) + Math.floor(value * 0.6);
+      for (const [resource, value] of Object.entries(buildingConstructionCost(target.definitionId, trait)) as [SettlementResourceId, number][]) next.looseInventory[resource] = (next.looseInventory[resource] ?? 0) + Math.floor(value * 0.6);
     }
     next.buildings = next.buildings.filter((item) => item.id !== id);
   }
   return { state: next, ok: true, buildingId: id };
 }
 
-export function demolishBuilding(state: SettlementSimulationState, id: string): SettlementSimulationState {
+export function demolishBuilding(
+  state: SettlementSimulationState,
+  id: string,
+  trait?: CaptainTrait
+): SettlementSimulationState {
   const building = state.buildings.find((item) => item.id === id);
   if (!building || building.definitionId === 'wreckage') return state;
-  const definition = BUILDINGS[building.definitionId];
   const salvage = { ...state.looseInventory };
-  if (definition) for (const [resource, amount] of Object.entries(definition.constructionCost) as [SettlementResourceId, number][]) salvage[resource] = (salvage[resource] ?? 0) + Math.floor(amount * 0.4 * Math.max(0.25, building.condition / 100));
+  for (const [resource, amount] of Object.entries(buildingConstructionCost(building.definitionId, trait)) as [SettlementResourceId, number][]) salvage[resource] = (salvage[resource] ?? 0) + Math.floor(amount * 0.4 * Math.max(0.25, building.condition / 100));
   const residentIds = new Set(building.workers);
   return {
     ...state,

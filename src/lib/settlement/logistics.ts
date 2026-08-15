@@ -1,6 +1,7 @@
 import { createId } from '$lib/domain/rng';
+import type { CaptainTrait } from '$lib/domain/types';
 import { BUILDINGS, RECIPES } from './catalog';
-import { buildingUpgradeCost } from './construction';
+import { buildingConstructionCost, buildingUpgradeCost } from './construction';
 import { SHIP_PLANS } from './shipbuilding';
 import { buildingCells, findCachedPath, pathTravelCost } from './island';
 import type {
@@ -108,7 +109,8 @@ function requestResource(
 
 export function scheduleLogistics(
   state: SettlementSimulationState,
-  copyState = true
+  copyState = true,
+  trait?: CaptainTrait
 ): SettlementSimulationState {
   const next = copyState ? structuredClone(state) : state;
   const targets = [...next.buildings].sort(
@@ -137,8 +139,8 @@ export function scheduleLogistics(
       if (building.constructionMaterialsCommitted || building.upgradeMaterialsCommitted) continue;
       const constructionCost =
         building.state === 'UPGRADING' || building.pausedFrom === 'UPGRADING'
-          ? buildingUpgradeCost(building.definitionId, building.level)
-          : definition.constructionCost;
+          ? buildingUpgradeCost(building.definitionId, building.level, trait)
+          : buildingConstructionCost(building.definitionId, trait);
       for (const [resourceId, required] of Object.entries(constructionCost) as [
         SettlementResourceId,
         number

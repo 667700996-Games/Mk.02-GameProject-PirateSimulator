@@ -30,11 +30,23 @@ export const TRAITS: TraitDefinition[] = [
   { id: 'admiral', name: '제독', title: '검은 함대', description: '함대 함선 공격·방어 효율 +10%', icon: '♛' }
 ];
 
-export const DIFFICULTIES: Record<Difficulty, { name: string; description: string; enemy: number; rewards: number; autosave: boolean }> = {
-  story: { name: '항해담', description: '관대한 경제와 약한 추격대', enemy: 0.72, rewards: 1.2, autosave: true },
-  corsair: { name: '사략선장', description: '이야기와 전투의 균형', enemy: 0.9, rewards: 1.08, autosave: true },
-  captain: { name: '해적선장', description: '의도된 전술과 경제 난이도', enemy: 1, rewards: 1, autosave: true },
-  'black-flag': { name: '검은 깃발', description: '치명적인 전투와 가혹한 손실', enemy: 1.28, rewards: 0.92, autosave: true }
+export interface DifficultyDefinition {
+  name: string;
+  description: string;
+  enemy: number;
+  rewards: number;
+  production: number;
+  consumption: number;
+  pursuit: number;
+  losses: number;
+  autosave: boolean;
+}
+
+export const DIFFICULTIES: Record<Difficulty, DifficultyDefinition> = {
+  story: { name: '항해담', description: '관대한 경제와 약한 추격대', enemy: 0.72, rewards: 1.2, production: 1.15, consumption: 0.85, pursuit: 0.72, losses: 0.72, autosave: true },
+  corsair: { name: '사략선장', description: '이야기와 전투의 균형', enemy: 0.9, rewards: 1.08, production: 1.06, consumption: 0.94, pursuit: 0.9, losses: 0.9, autosave: true },
+  captain: { name: '해적선장', description: '의도된 전술과 경제 난이도', enemy: 1, rewards: 1, production: 1, consumption: 1, pursuit: 1, losses: 1, autosave: true },
+  'black-flag': { name: '검은 깃발', description: '치명적인 전투와 가혹한 손실', enemy: 1.28, rewards: 0.92, production: 0.92, consumption: 1.12, pursuit: 1.28, losses: 1.28, autosave: true }
 };
 
 export const RESOURCE_META: Record<ResourceId, { name: string; icon: string; weight: number; basePrice: number; illegal?: boolean }> = {
