@@ -174,10 +174,13 @@ test('places a terrain-bound building and runs its physical construction flow', 
   });
   await expect(page.getByText('빗물 집수장 계획 배치')).toBeVisible();
   await page.getByRole('button', { name: '3×', exact: true }).click();
-  // The construction is intentionally gated by two physical deliveries before builders begin.
-  await expect(page.getByText(/CONSTRUCTING|ACTIVE/)).toBeVisible({ timeout: 75_000 });
   await openOnboarding(page);
-  await expect(page.getByText('THE WRECKED CROWN · 1/6', { exact: true })).toBeVisible();
+  // Completion is authoritative only after the two physical deliveries have
+  // advanced the opening mission; the transient selection panel can close as
+  // soon as the building becomes ACTIVE.
+  await expect(page.getByText('THE WRECKED CROWN · 1/6', { exact: true })).toBeVisible({
+    timeout: 75_000
+  });
   await expect(page.getByRole('heading', { name: '숲을 깨우는 도끼' })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('settlement-city.png'), fullPage: true });
 });
