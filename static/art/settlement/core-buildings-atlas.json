@@ -14,7 +14,7 @@
     "coastal-battery": { "frame": { "x": 1152, "y": 683, "w": 384, "h": 341 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 341 }, "sourceSize": { "w": 384, "h": 341 } }
   },
   "meta": {
-    "app": "Mk.02-GameProject-PirateSimulator",
+    "app": "Mk.03-PirateSimulator",
     "version": "1.0",
     "image": "core-buildings-atlas.png",
     "format": "RGBA8888",

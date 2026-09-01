@@ -10,7 +10,7 @@
     "officer": { "frame": { "x": 1152, "y": 512, "w": 384, "h": 512 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 384, "h": 512 }, "sourceSize": { "w": 384, "h": 512 } }
   },
   "meta": {
-    "app": "Mk.02-GameProject-PirateSimulator",
+    "app": "Mk.03-PirateSimulator",
     "version": "1.0",
     "image": "resident-roles-atlas.png",
     "format": "RGBA8888",

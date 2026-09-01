@@ -33,5 +33,5 @@
       <button class="btn ghost wide" onclick={onSettings}>설정</button>
     </div>
   </section>
-  <div class="title-version">MK.02 · BUILD 0.1.0 · SINGLE PLAYER</div>
+  <div class="title-version">MK.03 · BUILD 0.1.0 · SINGLE PLAYER</div>
 </main>

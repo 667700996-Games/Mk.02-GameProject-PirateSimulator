@@ -482,7 +482,7 @@
     }
   },
   "meta": {
-    "app": "Mk.02-GameProject-PirateSimulator",
+    "app": "Mk.03-PirateSimulator",
     "version": "1.0",
     "image": "resident-work-front-atlas.png",
     "format": "RGBA8888",

@@ -17,7 +17,7 @@
     "copper-vein": { "frame": { "x": 1019, "y": 801, "w": 367, "h": 174 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 367, "h": 174 }, "sourceSize": { "w": 367, "h": 174 } }
   },
   "meta": {
-    "app": "Mk.02-GameProject-PirateSimulator",
+    "app": "Mk.03-PirateSimulator",
     "version": "2",
     "image": "terrain-surfaces-atlas-v2.png",
     "format": "RGBA8888",

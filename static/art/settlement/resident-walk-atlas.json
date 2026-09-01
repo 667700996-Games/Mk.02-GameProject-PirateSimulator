@@ -26,7 +26,7 @@
     "officer-walk-2": { "frame": { "x": 1344, "y": 682, "w": 192, "h": 342 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 342 }, "sourceSize": { "w": 192, "h": 342 } }
   },
   "meta": {
-    "app": "Mk.02-GameProject-PirateSimulator",
+    "app": "Mk.03-PirateSimulator",
     "version": "1.0",
     "image": "resident-walk-front-atlas.png",
     "format": "RGBA8888",

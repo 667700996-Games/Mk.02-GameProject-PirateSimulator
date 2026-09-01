@@ -11,7 +11,7 @@
     "legendary": { "frame": { "x": 836, "y": 836, "w": 418, "h": 418 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 418, "h": 418 }, "sourceSize": { "w": 418, "h": 418 } }
   },
   "meta": {
-    "app": "Mk.02-GameProject-PirateSimulator",
+    "app": "Mk.03-PirateSimulator",
     "version": "1.0",
     "image": "fleet-classes-atlas.png",
     "format": "RGBA8888",
